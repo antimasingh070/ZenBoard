@@ -107,7 +107,6 @@ class ProjectsController < ApplicationController
     @trackers = Tracker.sorted.to_a
     @project = Project.new
     @project.safe_attributes = params[:project]
-    @project.status = params[:project][:status]
     @parent = Project.where(id: @project.parent_id).first
     if @project.id.nil? && !@project.parent_id.nil? && !@parent.nil?
       new_identifier = "#{Project.where(parent_id: @project.parent_id).count + 1}"
@@ -231,25 +230,19 @@ class ProjectsController < ApplicationController
 
     parent_id = @project.parent_id
     project_id = @project.id
-
     if project_id.nil? && !parent_id.nil? && (parent_project = Project.find_by(id: parent_id))
-      # If project ID is nil, parent ID is present, and parent project exists
       new_identifier = "#{parent_project.identifier}_#{Project.where(parent_id: parent_id).count + 1}"
     elsif project_id.nil? && !parent_id.nil?
-      # If project ID is nil and parent ID is present but parent project is missing
-      new_identifier = "#{parent_id}_#{Project.where(parent_id: parent_id).count + 1}"
+      new_identifier = "hdbfs_#{parent_id}_#{Project.where(parent_id: parent_id).count + 1}"
     elsif !project_id.nil? && !parent_id.nil?
-      # If both project ID and parent ID are present
       count = Project.where(parent_id: parent_id).where('id <= ?', project_id).count
-      new_identifier = "#{parent_id}_#{count}"
+      new_identifier = "#{Project.find_by(id: parent_id).identifier}_#{count}"
     elsif !project_id.nil?
-      # If only project ID is present
-      new_identifier = "#{project_id}"
+      new_identifier = "hdbfs_#{project_id}"
     else
-      # Default case
-      new_identifier = "#{Project.where(parent_id: parent_id).last.id + 1}"
+      new_identifier = "hdbfs_#{Project.where(parent_id: parent_id).last.id + 1}"
     end
-    @project.update_columns(identifier: "hdbfs_#{new_identifier}")
+    @project.update_columns(identifier: "#{new_identifier}")
     if @project.save
       respond_to do |format|
         format.html do

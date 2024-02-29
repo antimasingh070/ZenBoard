@@ -21,7 +21,7 @@
     <% @project.identifier = "hdbfs_#{Project.where(parent_id: @project.parent_id).last.id + 1}" %>
   <% end %>
 
-  <%= f.text_field :identifier, :required => true, :size => 60, :disabled => @project.identifier_frozen?, :maxlength => Project::IDENTIFIER_MAX_LENGTH %>
+  <%= f.text_field :identifier, :required => true, :size => 60, :maxlength => Project::IDENTIFIER_MAX_LENGTH %>
 
   <% unless @project.identifier_frozen? %>
     <em class="info">
@@ -30,7 +30,7 @@
     </em>
   <% end %>
 </p>
-<p><%= f.text_field :homepage, :size => 60 %></p>
+
 <p>
   <%= f.check_box :is_public, :disabled => !@project.safe_attribute?(:is_public) %>
   <em class="info"><%= Setting.login_required? ? l(:text_project_is_public_non_member) : l(:text_project_is_public_anonymous) %></em>

@@ -25,7 +25,7 @@
 <% if @issue.safe_attribute? 'assigned_to_id' %>
 <p>
   <%= f.select :assigned_to_id, principals_options_for_select(@issue.assignable_users, @issue.assigned_to),
-                  :include_blank => true, :required => @issue.required_attribute?('assigned_to_id') %>
+                  :include_blank => true, :required => !@issue.required_attribute?('assigned_to_id') %>
   <% if @issue.assignable_users.include?(User.current) %>
     <a class="assign-to-me-link<%= ' hidden' if @issue.assigned_to_id == User.current.id %>" href="#" data-id="<%= User.current.id %>"><%= l(:label_assign_to_me) %></a>
   <% end %>
@@ -71,14 +71,14 @@
 
 <% if @issue.safe_attribute? 'start_date' %>
 <p id="start_date_area">
-  <%= f.date_field(:start_date, :size => 10, :required => @issue.required_attribute?('start_date')) %>
+  <%= f.date_field(:start_date, :size => 10, :required => !@issue.required_attribute?('start_date')) %>
   <%= calendar_for('issue_start_date') %>
 </p>
 <% end %>
 
 <% if @issue.safe_attribute? 'due_date' %>
 <p id="due_date_area">
-  <%= f.date_field(:due_date, :size => 10, :required => @issue.required_attribute?('due_date')) %>
+  <%= f.date_field(:due_date, :size => 10, :required => !@issue.required_attribute?('due_date')) %>
   <%= calendar_for('issue_due_date') %>
 </p>
 <% end %>

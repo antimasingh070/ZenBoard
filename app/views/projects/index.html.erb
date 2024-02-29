@@ -14,8 +14,7 @@
   <% if @entries.empty? %>
     <p class="nodata"><%= l(:label_no_data) %></p>
   <% else %>
-  <%= render :partial => @query.display_type, :locals => { :entries => @entries.sort_by! { |project| project.created_on.to_i }
-  }%>
+  <%= render :partial => @query.display_type, :locals => { :entries => @entries.sort_by! { |project| project.identifier.to_i  }}%>
   <% end %>
 <% end %>
 
@@ -38,3 +37,23 @@
 <% end %>
 
 <% html_title(l(:label_project_plural)) -%>
+
+<script>
+$(document).ready(function() {
+  $('tr.odd, tr.even').each(function() {
+    var startAt = $(this).find('.cf_11').text();
+    var endAt = $(this).find('.cf_12').text();
+    var currentDate = new Date();
+    var parts = endAt.split("/");
+    var formattedDate = new Date(parts[2], parts[1] - 1, parts[0]);
+    if (formattedDate == 'Invalid Date') {
+      $(this).find('td').css('background-color', "inherit"); 
+    } else if (formattedDate < currentDate) {
+      $(this).find('td').css('background-color', "rgba(255, 0, 0, 0.3)");
+    } else {
+      $(this).find('td').css('background-color', "rgba(0, 255, 0, 0.3)");
+    }    
+  });
+});
+
+</script>

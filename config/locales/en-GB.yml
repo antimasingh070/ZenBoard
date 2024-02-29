@@ -453,13 +453,13 @@ en-GB:
     other: "%{count} projects"
   label_project_all: All Projects
   label_project_latest: Latest projects
-  label_issue: Project Task
-  label_issue_new: New Project Task
-  label_issue_plural: Project Tasks
-  label_issue_view_all: View all Project Tasks
-  label_issues_by: "Project Tasks by %{value}"
-  label_issue_added: Project Task added
-  label_issue_updated: Project Task updated
+  label_issue: Issue
+  label_issue_new: New Issue
+  label_issue_plural: Issues
+  label_issue_view_all: View all Issues
+  label_issues_by: "Issues by %{value}"
+  label_issue_added: Issue added
+  label_issue_updated: Issue updated
   label_document: Document
   label_document_new: New document
   label_document_plural: Documents
