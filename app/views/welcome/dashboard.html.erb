@@ -1,0 +1,71 @@
+<h1>Dashboard</h1>
+
+
+<style>
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid black;
+    padding: 8px;
+    text-align: left;
+  }
+
+  th {
+    background-color: #f2f2f2;
+  }
+</style>
+
+<table>
+  <thead>
+    <tr>
+      <th>Project Name</th>
+      <th>Status</th>
+      <th>Project Manager/Project Lead</th>
+      <th>Last Activity Completed</th>
+      <th>Open Risk</th>
+      <th>Activity In Progress</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @projects.each do |project| %>
+        <tr>
+        <td><%= link_to project.name, project_path(project) %></td>
+        <td><%= @project_status_text[project.status] || 'Unknown' %></td>
+        
+        <% custom_field = CustomField.find_by(name: "Project Manager") %>
+        <% custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: custom_field.id) %>
+        <% custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value.to_i) if custom_value %>
+        <% project_manager_name = custom_field_enumeration&.name || '' %>
+        <% custom_field = CustomField.find_by(name: "Project Lead") %>
+        <% custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: custom_field.id) %>
+        <% custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value.to_i) if custom_value %>
+        <% project_lead_name = custom_field_enumeration&.name || '' %>
+        <% custom_field = CustomField.find_by(name: "Start at") %>
+        <% custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: custom_field.id) %>
+        <% (start_at = custom_value.value) if custom_value %>
+        <% custom_field = CustomField.find_by(name: "Due at") %>
+        <% custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: custom_field.id) %>
+        <% (due_at = custom_value.value) if custom_value %>
+        <% open_issue = Issue.where(project_id: project.id, tracker_id: 4, status_id: 1).count %>
+        
+        <% time_entries = TimeEntry.where(project_id: project.id) %>
+        <% activity_details = time_entries.map do |time_entry|
+            activity = TimeEntryActivity.find_by(id: time_entry.activity_id)
+            "Activity: #{activity.name}, Hours: #{time_entry.hours}"
+            end.join(', ') %>
+        <% if project_manager_name.present? && project_lead_name.present? %>
+            <td><%= "#{project_manager_name}/#{project_lead_name}" %></td>
+        <% else %>
+            <td><%= "" %></td>
+        <% end %>
+        <td><%= "Some value" %></td> <!-- Replace "Some value" with the correct value for this column -->
+        <td><%= open_issue %></td>
+        <td><%= activity_details %></td>
+  
+        </tr>
+    <% end %>
+  </tbody>
+</table>

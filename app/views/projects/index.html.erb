@@ -44,16 +44,29 @@ $(document).ready(function() {
     var startAt = $(this).find('.cf_11').text();
     var endAt = $(this).find('.cf_12').text();
     var currentDate = new Date();
-    var parts = endAt.split("/");
-    var formattedDate = new Date(parts[2], parts[1] - 1, parts[0]);
-    if (formattedDate == 'Invalid Date') {
-      $(this).find('td').css('background-color', "inherit"); 
-    } else if (formattedDate < currentDate) {
-      $(this).find('td').css('background-color', "rgba(255, 0, 0, 0.3)");
+    var partsStart = startAt.split("/");
+    var partsEnd = endAt.split("/");
+    var formattedStartDate = new Date(partsStart[2], partsStart[1] - 1, partsStart[0]);
+    var formattedEndDate = new Date(partsEnd[2], partsEnd[1] - 1, partsEnd[0]);
+
+    if (formattedEndDate == 'Invalid Date') {
+      $(this).find('td').css('background-color', "inherit");
     } else {
-      $(this).find('td').css('background-color', "rgba(0, 255, 0, 0.3)");
-    }    
+      var timeDiff = Math.abs(formattedEndDate.getTime() - currentDate.getTime());
+      var diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+      var totalDays = Math.ceil((formattedEndDate.getTime() - formattedStartDate.getTime()) / (1000 * 3600 * 24));
+      var percentage = (diffDays / totalDays) * 100;
+      console.log(diffDays);
+      console.log(totalDays);
+console.log(percentage);
+      if (formattedEndDate < currentDate) {
+        $(this).find('td').css('background-color', "rgba(255, 0, 0, 0.3)");
+      } else if (formattedEndDate > currentDate && (percentage <  20)) {
+        $(this).find('td').css('background-color', "rgba(255, 165, 0, 0.3)"); // Amber color
+      } else {
+        $(this).find('td').css('background-color', "rgba(0, 255, 0, 0.3)");
+      }
+    }
   });
 });
-
 </script>
