@@ -22,7 +22,7 @@ class WelcomeController < ApplicationController
 
   skip_before_action :check_if_login_required, only: [:robots]
 
-  def dashboard
+  def project_dashboard
     @projects = Project.all
     @project_status_text = {
       Project::STATUS_ACTIVE => 'Active',
@@ -30,14 +30,24 @@ class WelcomeController < ApplicationController
       Project::STATUS_ARCHIVED => 'Archived',
       Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion'
     }
-    custom_field = CustomField.find_by(name: "Project Manager")
-    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: Project.find_by(name: "AwesomeApp").id, custom_field_id: custom_field.id)
-    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value.to_i)
-    @project_manager_name = custom_field_enumeration.name
+    @categories = @projects.map { |project| custom_field_value(project, "Project Category") }.uniq.compact
+    @functions = @projects.map { |project| custom_field_value(project, "User Function") }.uniq.compact
 
+    if params[:category_filter].present?
+      @projects = @projects.select { |project| custom_field_value(project, "Project Category") == params[:category_filter] }
+    end
+
+    if params[:function_filter].present?
+      @projects = @projects.select { |project| custom_field_value(project, "Project Category") == params[:function_filter] }
+    end
   end
-  
-  
+
+  def custom_field_value(project, field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
+    custom_field_enumeration&.name
+  end
 
   def index
     @news = News.latest User.current

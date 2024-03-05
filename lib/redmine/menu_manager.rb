@@ -116,7 +116,7 @@ module Redmine
           links << render_menu_node(node, project)
         end
         # Add a custom tab
-        links << content_tag('li', link_to('Dashboard', dashboard_path)) if User.current.logged?
+        links << content_tag('li', link_to('Project Dashboard', project_dashboard_path)) if User.current.logged?
         links.empty? ? nil : content_tag('ul', links.join.html_safe)
       end
       

@@ -32,6 +32,9 @@
 
     <p id="attachments_form"><label><%= l(:label_attachment_plural) %></label><%= render :partial => 'attachments/form', :locals => {:container => @issue} %></p>
   </div>
+  <div id="watchers_form_container">
+    <%= render :partial => 'issues/watchers_form' %>
+  </div>
 
   <%= submit_tag l(:button_create) %>
   <% if params[:back_url] && params[:issue] && params[:issue][:parent_issue_id] %>
