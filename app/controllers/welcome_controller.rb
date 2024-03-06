@@ -23,7 +23,16 @@ class WelcomeController < ApplicationController
   skip_before_action :check_if_login_required, only: [:robots]
 
   def project_dashboard
-    @projects = Project.all
+    if params[:function_filter].present? && params[:category_filter].present?
+      @projects = Project.select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && custom_field_value(project, "User Function") == params[:function_filter] }
+    elsif params[:function_filter].present?
+      @projects = Project.select { |project| custom_field_value(project, "User Function") == params[:function_filter] }
+    elsif params[:category_filter].present?
+      @projects = Project.select { |project| custom_field_value(project, "Project Category") == params[:category_filter] }
+    else
+      @projects = Project.all
+    end
+  
     @project_status_text = {
       Project::STATUS_ACTIVE => 'Active',
       Project::STATUS_CLOSED => 'Closed',
@@ -32,14 +41,6 @@ class WelcomeController < ApplicationController
     }
     @categories = @projects.map { |project| custom_field_value(project, "Project Category") }.uniq.compact
     @functions = @projects.map { |project| custom_field_value(project, "User Function") }.uniq.compact
-
-    if params[:category_filter].present?
-      @projects = @projects.select { |project| custom_field_value(project, "Project Category") == params[:category_filter] }
-    end
-
-    if params[:function_filter].present?
-      @projects = @projects.select { |project| custom_field_value(project, "Project Category") == params[:function_filter] }
-    end
   end
 
   def custom_field_value(project, field_name)

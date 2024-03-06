@@ -1,73 +1,9 @@
-<h1>Project Dashboard</h1>
-
-<form action="/" method="get">
-  <label for="category_filter">Project Category:</label>
-  <select name="category_filter" id="category_filter">
-    <option value="">All</option>
-    <% @categories.each do |category| %>
-      <option value="<%= category %>" <%= 'selected' if params[:category_filter] == category %>><%= category %></option>
-    <% end %>
-  </select>
-
-  <label for="function_filter">Function Name:</label>
-  <select name="function_filter" id="function_filter">
-    <option value="">All</option>
-    <% @functions.each do |function| %>
-      <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
-    <% end %>
-  </select>
-
-  <input type="submit" value="Filter">
-</form>
-
-<table>
-  <thead>
-    <tr>
-      <th>Project Name</th>
-      <th>Status</th>
-      <th>Project Manager</th>
-      <th>Project Lead</th>
-      <th>Last Activity Completed</th>
-      <th>Open Risk</th>
-      <th>Project Category(Portfolio Name)</th>
-      <th>Scheduled Start Date</th>
-      <th>Scheduled End Date</th>
-      <th>Go Live Date</th>
-      <th>Revised Planned Due Date</th>
-      <th>Function Name</th>
-      <th>% Done</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% @projects.each do |project| %>
-      <tr>
-        <td><%= link_to project.name, project_path(project) %></td>
-        <% if Date.parse(date_value(project, "Due Date")) < Date.today %>
-          <td><input type="text" value="red" style="background-color: red;" readonly></td>
-        <% else %>
-          <td><input type="text" value="green" style="background-color: green;" readonly></td>
-        <% end %>
-
-        <td><%= custom_field_value(project, "Project Sponsor") %></td>
-        <td><%= custom_field_value(project, "Project Lead") %></td>
-        <td><%= custom_field_value(project, "Custom Activity") %></td>
-        <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
-        <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: 1).count %>
-        <% id = project.identifier %>
-        <td><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
-        <td><%= custom_field_value(project, "Project Category") %></td>
-        <td><%= date_value(project, "Scheduled Start Date") %></td>
-        <td><%= date_value(project, "Scheduled End Date") %></td>
-        <td><%= date_value(project, "Go Live Date") %></td>
-        <td><%= date_value(project, "Planned Project Go Live date") %></td>
-        <td><%= custom_field_value(project, "User Function") %></td>
-        <td><%= percentage_done(project) %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
-
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Dashboard</title>
 <style>
   form {
     margin-bottom: 20px;
@@ -122,3 +58,116 @@
     background-color: #f2f2f2;
   }
 </style>
+</head>
+<body>
+
+<h1>Project Dashboard</h1>
+
+<form action="" method="get">
+  <label for="category_filter">Project Category:</label>
+  <select name="category_filter" id="category_filter">
+    <option value="">All</option>
+    <% @categories.each do |category| %>
+      <option value="<%= category %>" <%= 'selected' if params[:category_filter] == category %>><%= category %></option>
+    <% end %>
+  </select>
+
+  <label for="function_filter">Function Name:</label>
+  <select name="function_filter" id="function_filter">
+    <option value="">All</option>
+    <% @functions.each do |function| %>
+      <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
+    <% end %>
+  </select>
+
+  <input type="submit" value="Filter">
+  <button onclick="exportToCsv()">Export as CSV</button>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Project Name</th>
+      <th>Status</th>
+      <th>Project Manager</th>
+      <th>Project Lead</th>
+      <th>Last Activity Completed</th>
+      <th>Open Risk</th>
+      <th>Project Category(Portfolio Name)</th>
+      <th>Scheduled Start Date</th>
+      <th>Scheduled End Date</th>
+      <th>Go Live Date</th>
+      <th>Revised Due Date</th>
+      <th>Function Name</th>
+      <th>% Done</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @projects.each do |project| %>
+      <tr>
+        <td><%= link_to project.name, project_path(project) %></td>
+        <% due_date = Date.parse(date_value(project, "Due Date")) rescue nil %>
+        <% revised_due_date = Date.parse(date_value(project, "Revised Due Date")) rescue nil %>
+        <% if due_date.present? && due_date > Date.today && revised_due_date.blank?  %>
+          <td style="background-color: green;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% elsif due_date.present? && due_date < Date.today || revised_due_date.blank? %>
+          <td style="background-color: red;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% elsif revised_due_date.present? && due_date.present? && due_date > Date.today && revised_due_date < Date.today + 30.days %>
+          <td style="background-color: #FFBF00;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% elsif revised_due_date.present? && due_date.present? && due_date > Date.today && revised_due_date >= Date.today + 30.days %>
+          <td style="background-color: red;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% else %>
+        <td style="background-color: inherit;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% end %>
+        <td><%= custom_field_value(project, "Project Sponsor") %></td>
+        <td><%= custom_field_value(project, "Project Lead") %></td>
+        <td><%= custom_field_value(project, "Custom Activity") %></td>
+        <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
+        <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: 1).count %>
+        <% id = project.identifier %>
+        <td><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
+        <td><%= custom_field_value(project, "Project Category") %></td>
+        <td><%= date_value(project, "Scheduled Start Date") %></td>
+        <td><%= date_value(project, "Scheduled End Date") %></td>
+        <td><%= date_value(project, "Go Live Date") %></td>
+        <td><%= date_value(project, "Revised due date") %></td>
+        <td><%= custom_field_value(project, "User Function") %></td>
+        <td><%= percentage_done(project) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+
+<script>
+function exportToPdf() {
+  html2canvas(document.querySelector('table')).then(canvas => {
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF();
+    pdf.addImage(imgData, 'PNG', 0, 0);
+    pdf.save('project_dashboard.pdf');
+  });
+}
+
+function exportToCsv() {
+  const rows = [];
+  const table = document.querySelector('table');
+  table.querySelectorAll('tr').forEach(row => {
+    const rowData = [];
+    row.querySelectorAll('th, td').forEach(cell => {
+      rowData.push(cell.innerText);
+    });
+    rows.push(rowData.join(','));
+  });
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  saveAs(blob, 'project_dashboard.csv');
+}
+
+</script>
+
+</body>
+</html>

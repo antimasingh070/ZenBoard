@@ -45,14 +45,12 @@
     <% end %>
     <% @query.inline_columns.each do |column| %>
       <% if column.name == :name %>
-        <% classes = column.name == :name ? 'identifier' : column.css_classes %>
+        <%= content_tag('td', column_content(column, entry), :class => :identifier) %>
       <% elsif column.name == :identifier %>
-        <% classes = column.name == :identifier ? 'name' : column.css_classes %>
+        <%= content_tag('td', column_content(column, entry), :class => :name) %>
+      <% else %>
+        <%= content_tag('td', column_content(column, entry), :class => column.css_classes) %>
       <% end %>
-      <% if column&.instance_variable_get(:@cf)&.present? %>
-        <% classes =  column.css_classes %>
-      <% end %>
-      <%= content_tag('td', column_content(column, entry), class: classes) %>
     <% end %>
     <% if @admin_list && !entry.scheduled_for_deletion? %>
       <td class="buttons"><%= link_to_context_menu %></td>
