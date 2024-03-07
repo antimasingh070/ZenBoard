@@ -20,6 +20,16 @@
 module WelcomeHelper
 
     def custom_field_value(project, field_name)
+      if field_name == "Project Activity"
+        custom_field = CustomField.find_by(name: field_name)
+        return "" unless custom_field
+
+        custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: project.issues.where(status: 3)&.last&.id, custom_field_id: custom_field&.id)
+        return "" unless custom_value
+
+        custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
+        custom_field_enumeration&.name || ''
+      else
         custom_field = CustomField.find_by(name: field_name)
         return "" unless custom_field
       
@@ -28,6 +38,7 @@ module WelcomeHelper
       
         custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
         custom_field_enumeration&.name || ''
+      end
     end
 
     def date_value(project, field_name)
