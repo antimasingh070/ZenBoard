@@ -57,15 +57,7 @@
 
 </div>
 
-<div id="header">
-    <a href="#" class="mobile-toggle-button js-flyout-menu-toggle-button"></a>
-    <% if User.current.logged? || !Setting.login_required? %>
-    
-    <% end %>
-    <div style="display: flex; flex-direction: column; position: relative;">
-    <%= image_tag("../images/hdbfs.png", size: "200x50", style: "margin: 5px 0 0 auto; position: absolute; right: 50px; top: 0px; ") %>
-    <h1 style="margin: 10px; padding: 5px; " > <%= page_header_title %> </h1>
-  </div>
+
 <div id="top-menu">
     <div id="account">
         <%= render_menu :account_menu -%>
@@ -74,7 +66,29 @@
     <%= render_menu :top_menu if User.current.logged? || !Setting.login_required? -%>
 </div>
 
+<div id="header">
 
+    <a href="#" class="mobile-toggle-button js-flyout-menu-toggle-button"></a>
+
+    <% if User.current.logged? || !Setting.login_required? %>
+    <div id="quick-search">
+        <%= form_tag(search_path(id: @project), :method => :get ) do %>
+        <%= hidden_field_tag 'scope', default_search_project_scope, :id => nil %>
+        <%= hidden_field_tag(controller.default_search_scope, 1, :id => nil) if controller.default_search_scope %>
+        <label for='q'>
+          <%= link_to l(:label_search), search_path(id: @project, :scope => default_search_project_scope), :accesskey => accesskey(:search) %>:
+        </label>
+        <%= text_field_tag 'q', @question, :size => 20, :class => 'small', :accesskey => accesskey(:quick_search),
+                            :data => {
+                                :auto_complete => true
+                            } %>
+        <% end %>
+        <%= render_project_jump_box %>
+    </div>
+    <% end %>
+
+    <h1><%= page_header_title %></h1>
+    <%= image_tag("../images/hdbfs.png", size: "200x50", style: "margin: 5px 0 0 auto; position: absolute; right: 50px; top: 0px; ") %>
     <% if display_main_menu?(@project) %>
     <div id="main-menu" class="tabs">
         <%= render_main_menu(@project) %>

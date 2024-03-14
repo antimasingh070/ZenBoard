@@ -23,25 +23,54 @@ class WelcomeController < ApplicationController
   skip_before_action :check_if_login_required, only: [:robots]
 
   def project_dashboard
-    if params[:function_filter].present? && params[:category_filter].present?
-      @projects = Project.select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && custom_field_value(project, "User Function") == params[:function_filter] }
-    elsif params[:function_filter].present?
-      @projects = Project.select { |project| custom_field_value(project, "User Function") == params[:function_filter] }
-    elsif params[:category_filter].present?
-      @projects = Project.select { |project| custom_field_value(project, "Project Category") == params[:category_filter] }
-    else
-      @projects = Project.all
-    end
-  
     @project_status_text = {
       Project::STATUS_ACTIVE => 'Active',
       Project::STATUS_CLOSED => 'Closed',
       Project::STATUS_ARCHIVED => 'Archived',
       Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion'
     }
-    @categories = @projects.map { |project| custom_field_value(project, "Project Category") }.uniq.compact
+    if params[:function_filter].present? && params[:category_filter].present?
+      @projects = Project.where(parent_id: nil).select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && custom_field_value(project, "User Function") == params[:function_filter] }
+    elsif params[:function_filter].present?
+      @projects = Project.where(parent_id: nil).select { |project| custom_field_value(project, "User Function") == params[:function_filter] }
+    elsif params[:category_filter].present?
+      @projects = Project.where(parent_id: nil).select { |project| custom_field_value(project, "Project Category") == params[:category_filter] }
+    elsif params[:status_filter].present?
+      @projects = Project.where(parent_id: nil).select { |project| project.status == params[:status_filter].to_i }
+    elsif params[:name_filter].present?
+      @projects = Project.where(parent_id: nil).select { |project| project.name == params[:name_filter].to_s }
+    elsif params[:manager_filter].present?
+      manager_filter = params[:manager_filter].strip
+      @projects = Project.where(parent_id: nil).select do |project|
+        member_names = member_name(project, "Project Manager")
+        member_names.any? { |name| name.include?(manager_filter) }
+      end
+    else
+      @projects = Project.where(parent_id: nil)
+    end
+
+    @categories = @projects.map { |project| custom_field_value(project, "Portfolio Category") }.uniq.compact
     @functions = @projects.map { |project| custom_field_value(project, "User Function") }.uniq.compact
+    @statuses = @projects.map { |project| @project_status_text[project.status]}.uniq.compact
+    @manageres = @projects.map { |project| member_name(project, "Project Manager") }.flatten.compact.map { |name| name.split(',').map(&:strip) }.flatten.uniq
+    @names = @projects.map { |project| project.name  }.uniq.compact
+    
   end
+  
+  def member_name(project, field_name)
+    project_lead_role = Role.find_by(name: field_name)
+  
+    member_ids_with_lead_role = MemberRole.where(role_id: project_lead_role.id).pluck(:member_id)
+    project_lead_user_ids = Member.where(project_id: project.id, id: member_ids_with_lead_role).pluck(:user_id)
+  
+    if project_lead_user_ids.present?
+      project_lead_users = User.where(id: project_lead_user_ids)
+      project_lead_names = project_lead_users.pluck(:firstname, :lastname)
+      return project_lead_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
+    else
+      return []
+    end
+  end  
 
   def custom_field_value(project, field_name)
     custom_field = CustomField.find_by(name: field_name)

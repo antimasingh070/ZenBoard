@@ -115,8 +115,10 @@ module Redmine
         menu_items_for(menu, project) do |node|
           links << render_menu_node(node, project)
         end
-        # Add a custom tab
-        links << content_tag('li', link_to('Project Dashboard', project_dashboard_path)) if User.current.logged?
+        
+        if menu == :top_menu
+          links << content_tag('li', link_to('Project Dashboard', project_dashboard_path)) if User.current.logged?
+        end
         links.empty? ? nil : content_tag('ul', links.join.html_safe)
       end
       

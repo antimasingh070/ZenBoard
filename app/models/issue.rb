@@ -72,7 +72,7 @@ class Issue < ActiveRecord::Base
   validates :estimated_hours, :numericality => {:greater_than_or_equal_to => 0, :allow_nil => true, :message => :invalid}
   validates :start_date, :date => true
   validates :due_date, :date => true
-  validate :validate_issue, :validate_required_fields, :validate_permissions
+  # validates :validate_issue, :validate_required_fields, :validate_permissions
 
   scope :visible, (lambda do |*args|
     joins(:project).

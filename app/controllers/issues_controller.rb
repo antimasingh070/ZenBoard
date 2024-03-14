@@ -19,7 +19,7 @@
 
 class IssuesController < ApplicationController
   default_search_scope :issues
-
+  before_action :set_issue_status
   before_action :find_issue, :only => [:show, :edit, :update, :issue_tab]
   before_action :find_issues, :only => [:bulk_edit, :bulk_update, :destroy]
   before_action :authorize, :except => [:index, :new, :create]
@@ -717,4 +717,29 @@ class IssuesController < ApplicationController
       redirect_back_or_default issue_path(@issue)
     end
   end
+
+  def set_issue_status
+    @issues = Issue.all
+    current_date = Date.current
+    @issues.each do |issue|
+      actual_end_date_custom_field = CustomField.find_by(name: "Actual End Date")
+      # next unless actual_end_date_custom_field
+      custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: actual_end_date_custom_field&.id, customized_id: issue&.id)
+      # next unless custom_value
+  
+      custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
+      actual_end_date = custom_field_enumeration&.name
+  
+      if actual_end_date.present? && Date.parse(actual_end_date) < current_date
+        issue.update_columns(status_id: 3)
+        issue.update_columns(done_ratio: 100)
+      # elsif issue.done_ratio == 100
+      #   actual_end_date_custom_field.is_required = true
+      # elsif issue.status_id == 3
+      #   actual_end_date_custom_field.is_required = true
+      end
+    end
+  end
+  
+
 end
