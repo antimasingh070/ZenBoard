@@ -22,6 +22,20 @@ class WelcomeController < ApplicationController
 
   skip_before_action :check_if_login_required, only: [:robots]
 
+  def send_weekly_report
+    report_type = params[:reportType]
+
+    # Logic to generate the CSV or PDF file
+    file_path = generate_report_file(report_type)
+
+    # Logic to send email with the file attached
+    UserMailer.send_weekly_report(file_path).deliver_now
+
+    head :ok
+  end
+
+
+
   def project_dashboard
     @project_status_text = {
       Project::STATUS_ACTIVE => 'Active',
@@ -86,5 +100,17 @@ class WelcomeController < ApplicationController
   def robots
     @projects = Project.visible(User.anonymous) unless Setting.login_required?
     render :layout => false, :content_type => 'text/plain'
+  end
+
+  private
+
+  def generate_report_file(report_type)
+    # Logic to generate the CSV or PDF file
+    # ...
+
+    file_path = "/path/to/generated/file.#{report_type}"
+    # ...
+
+    file_path
   end
 end

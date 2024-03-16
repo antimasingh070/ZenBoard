@@ -24,7 +24,7 @@ module WelcomeHelper
       custom_field = CustomField.find_by(name: field_name)
       return "" unless custom_field
 
-      custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: project.issues.where(status: [3,5])&.order(updated_on: :desc)&.last&.id, custom_field_id: custom_field&.id)
+      custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: project.issues.where(status: 5)&.order(updated_on: :desc)&.last&.id, custom_field_id: custom_field&.id)
       return "" unless custom_value
 
       custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
@@ -66,12 +66,12 @@ module WelcomeHelper
     
   # Helper method to calculate % done
   def percentage_done(project)
-    tracker_id = Tracker.find_by(name: "Risk Register")&.id
+    tracker_id = Tracker.find_by(name: "Project- Activity List")&.id
     total_issue_count = Issue.where(project_id: project&.id, tracker_id: tracker_id).count
     return 0 if total_issue_count.zero?
   
     closed_issue_count = Issue.where(project_id: project&.id, tracker_id: tracker_id, status_id: [3,5])&.count
-    ((closed_issue_count.to_f / total_issue_count.to_f ) * 100).round(2)
+    ((closed_issue_count.to_f / total_issue_count.to_f ) * 100).round()
 
   end
 
@@ -87,6 +87,12 @@ module WelcomeHelper
     end
   end
 
+  def tracker_count(project, field_name)
+    tracker_id = Tracker.find_by(name: field_name)&.id
+    open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count 
+    total_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id).count 
+    return "#{open_issue_count} / #{total_issue_count}"
+  end
 
   def status_id(status)
     case status

@@ -63,6 +63,17 @@ class MembersController < ApplicationController
         members << member
       end
       @project.members << members
+      user_ids = params[:membership][:user_ids]
+      role_ids = params[:membership][:role_ids]
+      
+      user_ids.each do |user_id|
+        @user = User.find(user_id)
+        roles = Role.where(id: role_ids) # Retrieve roles based on the role_ids array
+        roles.each do |role|
+          @role = role
+          Mailer.deliver_membership_added_email(@user, @role, @project)
+        end
+      end
     end
 
     respond_to do |format|
@@ -107,6 +118,7 @@ class MembersController < ApplicationController
   def destroy
     if @member.deletable?
       @member.destroy
+      Mailer.deliver_membership_deleted_email(@user, @role, @project)
     end
     respond_to do |format|
       format.html {redirect_to_settings_in_projects}

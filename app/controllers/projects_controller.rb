@@ -119,6 +119,7 @@ class ProjectsController < ApplicationController
       }"
     end
     if @project.save
+      Mailer.deliver_project_created(User.current, @project)
       unless User.current.admin?
         @project.add_default_member(User.current)
       end
@@ -244,6 +245,7 @@ class ProjectsController < ApplicationController
     end
     @project.update_columns(identifier: "#{new_identifier}")
     if @project.save
+      Mailer.deliver_project_updated(User.current, @project)  
       respond_to do |format|
         format.html do
           flash[:notice] = l(:notice_successful_update)

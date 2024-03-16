@@ -722,24 +722,22 @@ class IssuesController < ApplicationController
     @issues = Issue.all
     current_date = Date.current
     @issues.each do |issue|
-      actual_end_date_custom_field = CustomField.find_by(name: "Actual End Date")
+      actual_end_date_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")
       # next unless actual_end_date_custom_field
       custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: actual_end_date_custom_field&.id, customized_id: issue&.id)
       # next unless custom_value
   
-      custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
-      actual_end_date = custom_field_enumeration&.name
-  
-      if actual_end_date.present? && Date.parse(actual_end_date) < current_date
-        issue.update_columns(status_id: 3)
-        issue.update_columns(done_ratio: 100)
-      # elsif issue.done_ratio == 100
-      #   actual_end_date_custom_field.is_required = true
-      # elsif issue.status_id == 3
-      #   actual_end_date_custom_field.is_required = true
-      end
+      # custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
+      actual_end_date = custom_value&.value
+
+        if actual_end_date.present? && Date.parse(actual_end_date) < current_date
+          issue.update(status_id: 3, done_ratio: 100)
+        # elsif issue.done_ratio == 100
+        #   actual_end_date_custom_field.is_required = true
+        # elsif issue.status_id == 3
+        #   actual_end_date_custom_field.is_required = true
+        end
     end
   end
-  
 
 end

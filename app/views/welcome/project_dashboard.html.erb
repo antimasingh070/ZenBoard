@@ -4,7 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Project Dashboard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 <style>
+label {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+select, input[type="number"], input[type="submit"], button {
+  padding: 5px 10px;
+  font-size: 13px;
+  border: none;
+  border-radius: 3px;
+  margin-top: 5px;
+}
+.hover-red:hover {
+  background-color: red;
+}
+
+button:hover {
+  background-color: #218838;
+}
+
   form {
     margin-bottom: 20px;
   }
@@ -16,26 +38,15 @@
 
   select {
     padding: 5px;
-    font-size: 14px;
+    font-size: 13px;
   }
 
-  input[type="submit"] {
-    padding: 5px 10px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    cursor: pointer;
-  }
 
-  input[type="submit"]:hover {
-    background-color: #0056b3;
-  }
-
-  h1 {
-    font-size: 24px;
-    font-weight: bold;
-    margin-bottom: 20px;
-  } 
+  # h1 {
+  #   font-size: 24px;
+  #   font-weight: bold;
+  #   margin-bottom: 20px;
+  # } 
 
   table {
     border-collapse: collapse;
@@ -47,6 +58,7 @@
     border: 1px solid #dddddd;
     padding: 8px;
     text-align: left;
+    font-size: 13px;
   }
 
   th {
@@ -57,117 +69,370 @@
   tr:nth-child(even) {
     background-color: #f2f2f2;
   }
+  .flex-container {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+  }
+  
+  # .flex-container > .container-1 {
+  #   # background-color: #f4f4f4;
+  #   # background-color: grey;
+  #   padding: 10px;
+  #   border-radius: 5px;
+  #   margin-top: 10px;
+  #   width: 100%;
+  #   box-sizing: border-box;
+  #   margin: 20px;
+  #   flex-direction: column;
+  # }
+  .dashboard {
+    font-family: Arial, sans-serif;
+    padding: 5px;
+    margin: 20px;
+    font-size: 13px;
+    # background-color: #f4f4f4;
+  }
+  
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  
+  .filter-group {
+    margin-right: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .filter-group label {
+    margin-right: 5px;
+  }
+  
+  .filter-group select,
+  .filter-group input[type="number"] {
+    padding: 5px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+  }
+  
+  .filter-group input[type="number"] {
+    width: 50px;
+  }
+  
+  .filter-group select {
+    min-width: 120px;
+  }
+
+  .flex-container > .container-2 {
+    # background-color: #f4f4f4;
+    padding-top: -200px;
+    display: flex;
+    flex-direction: column;
+    width: 450px;
+  
+  }
+  
+  input[type="number"],
+  input,
+  select {
+    flex: 1;
+    margin-left: 10px;
+    border: 1px solid #ccc;
+    padding: 3px;
+  }
+  
+  .item {
+    font-size: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .text {
+  flex: 1;
+  margin-right: 10px;
+}
+
+
+  .color-box {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+  }
+  
+  @media (min-width: 768px) {
+    .container-1,
+    .container-2 {
+      width: 45%;
+      margin-left: 2.5%;
+    }
+  
+    .form-container {
+      width: 100%;
+    }
+  }
+  
+  @media (min-width: 1200px) {
+    .container-1,
+    .container-2 {
+      width: 45%;
+      margin-left: 2.5%;
+    }
+  
+    .form-container {
+      width: 45%;
+      margin-left: 2.5%;
+    }
+  }  
+  @media print {
+  body {
+    -webkit-print-color-adjust: exact; /* Chrome, Safari */
+    color-adjust: exact; /* Firefox */
+  }
+}
+
 </style>
 </head>
 <body>
 
-<h1>Project Dashboard</h1>
+<h1 style="font-weight: bold; font-size: 18px; text-align: center;">Project Dashboard</h1>
+  <form action="" method="get">
+  <div class="flex-container">
+  <div class="dashboard">
+    <div class="filters">
+  <div class="container">
+  <div class="row">
+      <div class="filter-group col-sm-3">
+        <label for="name_filter">Project Name:</label>
+        <select name="name_filter" id="name_filter">
+          <option value="">All</option>
+          <% @names.each do |name| %>
+            <option value="<%= name %>" <%= 'selected' if params[:name_filter] == name %>><%= name %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class= "col-sm-2">
+      </div>
+      <div class="filter-group col-sm-3">
+        <label for="category_filter">Portfolio Category:</label>
+        <select name="category_filter" id="category_filter">
+          <option value="">All</option>
+          <% @categories.each do |category| %>
+            <option value="<%= category %>" <%= 'selected' if params[:category_filter] == category %>><%= category %></option>
+          <% end %>
+        </select>
+      </div>
+      </div>
+      </div>
+      <div class="container">
+      <div class="row">
+      <div class="filter-group col-sm-3">
+        <label for="function_filter">Function Name:</label>
+        <select name="function_filter" id="function_filter">
+          <option value="">All</option>
+          <% @functions.each do |function| %>
+            <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class= "col-sm-2">
+      </div>
+      <div class="filter-group col-sm-3">
+        <label for="manager_filter">Project Manager:</label>
+        <select name="manager_filter" id="manager_filter">
+          <option value="">All</option>
+          <% @manageres.each do |manager| %>
+            <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
+          <% end %>
+        </select>
+      </div>
+      </div>
+      </div>
+      <div class="container">
+      <div class="row">
+      <div class="filter-group col-sm-3">
+      <label for="status_filter">Status:</label>
+      <select name="status_filter" id="status_filter">
+        <option value="">All</option>
+        <% @statuses.each do |status| %>
+          <% selected = (params[:status_filter] == status_id(status) || (status == 'Active' && params[:status_filter].blank?)) ? 'selected' : '' %>
+          <option value="<%= status_id(status) %>" <%= selected %>><%= status %></option>
+        <% end %>
+      </select>
+      </div> 
+      <div class= "col-sm-2">
+      </div>   
+      <div class="filter-group col-sm-3">
+        <label for="days_input">Project Variance:</label>
+        <input type="number" name="days" id="days_input" value="<%= (params[:days].present? ? params[:days].to_i : 30) %>">
+        </div>
+        </div>
+        <input type="submit" value="Filter">
+        <button type="submit" onclick="clearFilters()" class="hover-red">Clear</button>
+        <button onclick="exportToCsv()">Export as CSV</button>
+        <button onclick="exportToPdf()">Export as PDf</button>
+      </div>
+    </div>
+  </div>
+  </form>
 
-<form action="" method="get">
-  <label for="category_filter">Project Category:</label>
-  <select name="category_filter" id="category_filter">
-    <option value="">All</option>
-    <% @categories.each do |category| %>
-      <option value="<%= category %>" <%= 'selected' if params[:category_filter] == category %>><%= category %></option>
-    <% end %>
-  </select>
 
-  <label for="function_filter">Function Name:</label>
-  <select name="function_filter" id="function_filter">
-    <option value="">All</option>
-    <% @functions.each do |function| %>
-      <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
-    <% end %>
-  </select>
-
-  <input type="submit" value="Filter">
-  <button onclick="exportToCsv()">Export as CSV</button>
-</form>
-
-<table>
+  <div class="container-2">
+  <h5>RAG  Status</h5>
+    <div class="item">
+      <div class="text">Sch. end date  < today or no revised date</div>
+      <div class="color-box" style="background-color: red;"></div>
+    </div>
+    <div class="item">
+      <div class="text">Sch. end date  > today or revised date after <%= (params[:days].present? ? params[:days].to_i : 30) %> days</div>
+      <div class="color-box" style="background-color: red;"></div>
+    </div>
+    <div class="item">
+      <div class="text">Sch. end date >= today or revised date within <%= (params[:days].present? ? params[:days].to_i : 30) %> days</div>
+      <div class="color-box" style="background-color: #FFBF00;"></div>
+    </div>
+    <div class="item">
+      <div class="text">Sch. end date  > today & no revised date</div>
+      <div class="color-box" style="background-color: green;"></div>
+    </div>
+  </div>
+  </div>
+<div style="overflow-y: auto; height: 100%; width: 100%; text-align: center;">
+<table  style="table-layout: fixed; width: 100%;" >
   <thead>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <tr>
-      <th>Project Name</th>
-      <th>Status</th>
-      <th>Project Manager</th>
-      <th>Project Lead</th>
-      <th>Last Activity Completed</th>
-      <th>Open Risk</th>
-      <th>Project Category(Portfolio Name)</th>
-      <th>Scheduled Start Date</th>
-      <th>Scheduled End Date</th>
-      <th>Go Live Date</th>
-      <th>Revised Due Date</th>
-      <th>Function Name</th>
-      <th>% Done</th>
+      <th rowspan="2" style="width: 10%; white-space: normal;">Project Name</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Status</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Project Manager</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Project Lead</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Last Activity Completed</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Portfolio Category</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Scheduled Start Date</th>
+      <th rowspan="2" style="width: 10%;  white-space: normal;">Scheduled End Date</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Go Live date</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Revised End Date</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">Function Name</th>
+      <th colspan="3" style="width: 30%; white-space: normal; text-align: center;">Open / Total</th>
+      <th rowspan="2" style="width: 10%;  white-space: normal;">Open Risk</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;">% Done</th>
+    </tr>
+    <tr>
+      <th style="width: 10%; white-space: normal; text-align: center;">UAT</th>
+      <th style="width: 10%; white-space: normal; text-align: center;">Project Task View</th>
+      <th style="width: 10%; white-space: normal; text-align: center;">CR</th>
     </tr>
   </thead>
   <tbody>
+    <% portfolio_category_counts = Hash.new(0) %>
     <% @projects.each do |project| %>
+      <% category = custom_field_value(project, "Portfolio Category") %>
+      <% portfolio_category_counts[category] += 1 %>
       <tr>
         <td><%= link_to project.name, project_path(project) %></td>
-        <% due_date = Date.parse(date_value(project, "Due Date")) rescue nil %>
+        <% scheduled_end_date = Date.parse(date_value(project, "Scheduled End Date")) rescue nil %>
         <% revised_due_date = Date.parse(date_value(project, "Revised Due Date")) rescue nil %>
-        <% if due_date.present? && due_date > Date.today && revised_due_date.blank?  %>
-          <td style="background-color: green;" readonly size="5"><%= @project_status_text[project.status] %></td>
-        <% elsif due_date.present? && due_date < Date.today || revised_due_date.blank? %>
-          <td style="background-color: red;" readonly size="5"><%= @project_status_text[project.status] %></td>
-        <% elsif revised_due_date.present? && due_date.present? && (due_date > Date.today || due_date <= Date.today) && revised_due_date < Date.today + 30.days %>
-          <td style="background-color: #FFBF00;" readonly size="5"><%= @project_status_text[project.status] %></td>
-        <% elsif revised_due_date.present? && due_date.present? && due_date > Date.today && revised_due_date >= Date.today + 30.days %>
-          <td style="background-color: red;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% if scheduled_end_date.present? && scheduled_end_date > Date.today && revised_due_date.blank?  %>
+          <td style="background-color: green; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% elsif scheduled_end_date.present? && scheduled_end_date < Date.today || revised_due_date.blank? %>
+          <td style="background-color: red; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
+      <% elsif revised_due_date.present? && scheduled_end_date.present? && (scheduled_end_date > Date.today || scheduled_end_date <= Date.today) && revised_due_date < Date.today + (params[:days].present? ? params[:days].to_i : 30).days %>
+          <td style="background-color: #FFBF00; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <% elsif revised_due_date.present? && scheduled_end_date.present? && scheduled_end_date > Date.today && revised_due_date >= Date.today + (params[:days].present? ? params[:days].to_i : 30).to_i.days %>
+          <td style="background-color: red; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% else %>
-        <td style="background-color: inherit;" readonly size="5"><%= @project_status_text[project.status] %></td>
+        <td style="background-color: red; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% end %>
-        <td><%= custom_field_value(project, "Project Sponsor") %></td>
-        <td><%= custom_field_value(project, "Project Lead") %></td>
+        <td><%= member_name(project, "Project Manager") %></td>
+        <td><%= member_name(project, "Project Lead") %></td>
         <td><%= custom_field_value(project, "Project Activity") %></td>
         <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
-        <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: 1).count %>
+        <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
         <% id = project.identifier %>
-        <td><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
-        <td><%= custom_field_value(project, "Project Category") %></td>
-        <td><%= date_value(project, "Scheduled Start Date") %></td>
-        <td><%= date_value(project, "Scheduled End Date") %></td>
-        <td><%= date_value(project, "Go Live Date") %></td>
-        <td><%= date_value(project, "Revised due date") %></td>
-        <td><%= custom_field_value(project, "User Function") %></td>
+        <td><%= custom_field_value(project, "Portfolio Category") %></td>
+        <td><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
+        <td><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
+        <td><%= formatted_date(date_value(project, "Go Live date")) %></td>
+        <td><%= formatted_date(date_value(project, "Revised End Date")) %></td>        
+        <td><%= custom_field_value(project, "User function") %></td>
+        <td><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}&status_id=[1,3,4]" %></td>
+        <td><%= tracker_count(project, "Bug") %></td>
+        <td><%= tracker_count(project, "Bug") %></td>
+        <td><%= tracker_count(project, "Bug") %></td>
         <td><%= percentage_done(project) %></td>
       </tr>
     <% end %>
   </tbody>
 </table>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
-
-<script>
-function exportToPdf() {
-  html2canvas(document.querySelector('table')).then(canvas => {
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF();
-    pdf.addImage(imgData, 'PNG', 0, 0);
-    pdf.save('project_dashboard.pdf');
-  });
-}
-
-function exportToCsv() {
-  const rows = [];
-  const table = document.querySelector('table');
-  table.querySelectorAll('tr').forEach(row => {
-    const rowData = [];
-    row.querySelectorAll('th, td').forEach(cell => {
-      rowData.push(cell.innerText);
-    });
-    rows.push(rowData.join(','));
-  });
-  const csv = rows.join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-  saveAs(blob, 'project_dashboard.csv');
-}
-
-</script>
-
+</div>
 </body>
 </html>
+
+<script>
+  function exportToPdf() {
+    window.print();
+
+    $.ajax({
+    url: '/send_weekly_report',
+    type: 'POST',
+    data: { reportType: 'pdf' },
+    success: function(response) {
+      console.log('Email sent successfully');
+    },
+    error: function(xhr, status, error) {
+      console.error('Error sending email:', error);
+    }
+  });
+  }
+
+  function exportToCsv() {
+    const rows = [];
+    const table = document.querySelector('table');
+    table.querySelectorAll('tr').forEach(row => {
+      const rowData = [];
+      row.querySelectorAll('th, td').forEach(cell => {
+        if (cell.classList.contains('multiple-values')) {
+          const values = [];
+          cell.querySelectorAll('.value').forEach(value => {
+            values.push(value.innerText);
+          });
+          rowData.push(values.join(', ')); // Concatenate multiple values into a single string
+        } else {
+          rowData.push(cell.innerText);
+        }
+      });
+      rows.push(rowData.join(','));
+    });
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, 'project_dashboard.csv');
+
+    $.ajax({
+    url: '/send_weekly_report',
+    type: 'POST',
+    data: { reportType: 'csv' },
+    success: function(response) {
+      console.log('Email sent successfully');
+    },
+    error: function(xhr, status, error) {
+      console.error('Error sending email:', error);
+    }
+  });
+  }
+
+  function clearFilters() {
+    document.getElementById('category_filter').value = '';
+    document.getElementById('function_filter').value = '';
+    document.getElementById('status_filter').value = '';
+    document.getElementById('manager_filter').value = '';
+    document.getElementById('name_filter').value = '';
+    document.getElementById('days_input').value = '30';
+
+    document.getElementById('filter_form').submit();
+  }
+  
+</script>

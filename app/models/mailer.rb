@@ -72,11 +72,11 @@ class Mailer < ActionMailer::Base
   # Builds a mail for notifying user about a new issue
   def issue_add(user, issue)
     redmine_headers 'Project' => issue.project.identifier,
-                    'Issue-Tracker' => issue.tracker.name,
-                    'Issue-Id' => issue.id,
-                    'Issue-Author' => issue.author.login,
-                    'Issue-Assignee' => assignee_for_header(issue)
-    redmine_headers 'Issue-Priority' => issue.priority.name if issue.priority
+                     'Issue-Tracker' => issue.tracker.name,
+                     'Issue-Id' => issue.id,
+                     'Issue-Author' => issue.author.login,
+                     'Issue-Assignee' => assignee_for_header(issue)
+     redmine_headers 'Issue-Priority' => issue.priority.name if issue.priority
     message_id issue
     references issue
     @author = issue.author
@@ -216,9 +216,9 @@ class Mailer < ActionMailer::Base
     @user = user
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
     mail :to => user,
-      :subject => "[#{news.project.name}] #{l(:label_news)}: #{news.title}"
+      :subject => "[ProjectHUB] Project NEWS: #{news.project.name}  #{news.project.identifier}"
   end
-
+  
   # Notifies users about new news
   #
   # Example:
@@ -242,7 +242,7 @@ class Mailer < ActionMailer::Base
     @user = user
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
     mail :to => user,
-     :subject => "Re: [#{news.project.name}] #{l(:label_news)}: #{news.title}"
+     :subject => "Re: [ProjectHUB] Project NEWS: #{news.project.name} #{news.project.identifier}"
   end
 
   # Notifies users about a new comment on a news
@@ -557,7 +557,8 @@ class Mailer < ActionMailer::Base
     raise_delivery_errors_was = self.raise_delivery_errors
     self.raise_delivery_errors = true
     # Email must be delivered synchronously so we can catch errors
-    test_email(user).deliver_now
+    # test_email(user).deliver_now
+    project_created(User.first, Project.first).deliver_now
   ensure
     self.raise_delivery_errors = raise_delivery_errors_was
   end
@@ -748,6 +749,64 @@ class Mailer < ActionMailer::Base
         pluck(:address)
     end
     mails
+  end
+
+  def project_created(user, project)
+    @project = project
+    # @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
+    mail :to => user.mail,
+      :subject => "New Project Created"
+  end
+
+  def self.deliver_project_created(user, project)
+    project_created(user, project).deliver_now
+  end
+
+  def project_updated(user, member_role, role, project)
+    @project = project
+    @user = user
+    @member_role = member_role
+    @role = role
+    # @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
+    mail :to => user.mail,
+      :subject => "Project Updated"
+  end
+
+  def self.deliver_project_updated(user, project)
+    @members = Member.where(project_id: project.id)
+    if  @members.any?
+      @members.each do |member|
+        @member_role = MemberRole.find_by(member_id: member.id)
+        @role = Role.find_by(id: @member_role.role_id)
+        @user = User.find(member.user_id)
+        @project = project
+        project_updated(@user, @member_role, @role, @project).deliver_now
+      end
+    end
+  end
+
+  def membership_added_email(user, role, project)
+    @user = user
+    @role = role
+    @project = project
+    mail :to => user.mail,
+      :subject => "[ProjectHUB] New Project Created: #{@project.name}  #{@project.identifier} "
+  end
+
+  def self.deliver_membership_added_email(user, role, project)
+    membership_added_email(user, role, project).deliver_now
+  end
+
+  def membership_deleted_email(user, role, project)
+    @user = user
+    @role = role
+    @project = project
+    mail :to => user.mail,
+      :subject => "[ProjectHUB] New Project Created: #{@project.name}  #{@project.identifier} "
+  end
+
+  def self.deliver_membership_deleted_email(user, role, project)
+    membership_deleted_email(user, role, project).deliver_now
   end
 
   private
