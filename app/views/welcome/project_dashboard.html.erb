@@ -389,40 +389,29 @@ button:hover {
   });
   }
 
-  function exportToCsv() {
+ function exportToCsv() {
     const rows = [];
     const table = document.querySelector('table');
     table.querySelectorAll('tr').forEach(row => {
-      const rowData = [];
-      row.querySelectorAll('th, td').forEach(cell => {
-        if (cell.classList.contains('multiple-values')) {
-          const values = [];
-          cell.querySelectorAll('.value').forEach(value => {
-            values.push(value.innerText);
-          });
-          rowData.push(values.join(', ')); // Concatenate multiple values into a single string
-        } else {
-          rowData.push(cell.innerText);
-        }
-      });
-      rows.push(rowData.join(','));
+        const rowData = [];
+        row.querySelectorAll('th, td').forEach(cell => {
+            if (cell.classList.contains('multiple-values')) {
+                const values = [];
+                cell.querySelectorAll('.value').forEach(value => {
+                    values.push(value.innerText);
+                });
+                rowData.push(values.join(', ')); // Concatenate multiple values into a single string
+            } else {
+                rowData.push(cell.innerText);
+            }
+        });
+        rows.push('"' + rowData.join('","') + '"');
     });
     const csv = rows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     saveAs(blob, 'project_dashboard.csv');
+}
 
-    $.ajax({
-    url: '/send_weekly_report',
-    type: 'POST',
-    data: { reportType: 'csv' },
-    success: function(response) {
-      console.log('Email sent successfully');
-    },
-    error: function(xhr, status, error) {
-      console.error('Error sending email:', error);
-    }
-  });
-  }
 
   function clearFilters() {
     document.getElementById('category_filter').value = '';
