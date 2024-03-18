@@ -215,6 +215,8 @@ Rails.application.routes.draw do
 
   resources :issues do
     member do
+      post :approve
+      post :decline
       # Used when updating the form of an existing issue
       patch 'edit', :to => 'issues#edit'
       get 'tab/:name', :action => 'issue_tab', :as => 'tab'

@@ -1,4 +1,5 @@
 <div class="contextual">
+<% if @issue.approved? %>
 <%= link_to l(:button_edit), edit_issue_path(@issue),
             :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
             :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
@@ -7,7 +8,18 @@
 <%= watcher_link(@issue, User.current) %>
 <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
             :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
+<% end %>
 <%= actions_dropdown do %>
+  <% project_managers = @project.members.joins(:roles).where(roles: { name: "Project Manager" }).pluck(:user_id)  %>
+  <% current_user_id = User.current.id %>
+  <% if project_managers.include?(current_user_id) %>
+    <% if @issue.approved? %>
+      <%= link_to "Decline", decline_issue_path(@issue), data: { confirm: l(:text_issue_decline_confirmation, @issue.to_s)}, method: :post, class: "icon icon-lock" %>
+    <% else %>
+      <%= link_to "Approve", approve_issue_path(@issue), data: { confirm: l(:text_issue_approve_confirmation, @issue.to_s)}, method: :post, class: "icon icon-unlock" %>
+    <% end %>
+  <% end %>
+
   <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
   <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
               :data => {:confirm => issues_destroy_confirmation_message(@issue)},
