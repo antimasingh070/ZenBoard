@@ -22,11 +22,11 @@ class IssuesController < ApplicationController
   before_action :set_issue_status
   before_action :find_issue, :only => [:show, :edit, :update, :issue_tab]
   before_action :find_issues, :only => [:bulk_edit, :bulk_update, :destroy]
-  before_action :authorize, :except => [:index, :new, :create]
+  before_action :authorize, :except => [:index, :new, :create, :approve, :decline]
   before_action :find_optional_project, :only => [:index, :new, :create]
   before_action :build_new_issue_from_params, :only => [:new, :create]
   accept_atom_auth :index, :show
-  accept_api_auth :index, :show, :create, :update, :destroy
+  accept_api_auth :index, :show, :create, :update, :destroy, :approve, :decline
 
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
   rescue_from Query::QueryError, :with => :query_error
@@ -41,6 +41,32 @@ class IssuesController < ApplicationController
   include QueriesHelper
   helper :repositories
   helper :timelog
+
+  def approve
+    @issue = Issue.find(params[:id])
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
+    custom_value.update(value: "1")
+    if @issue.approved?
+      flash[:notice] = "Issue approved successfully."
+    else
+      flash[:alert] = "Failed to approve issue."
+    end
+    redirect_to issue_path(@issue)
+  end
+
+  def decline
+    @issue = Issue.find(params[:id])
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
+    custom_value.update(value: "0")
+    if @issue.declined?
+      flash[:notice] = "Issue declined successfully."
+    else
+      flash[:alert] = "Failed to decline issue."
+    end
+    redirect_to issue_path(@issue)
+  end
 
   def index
     use_session = !request.format.csv?

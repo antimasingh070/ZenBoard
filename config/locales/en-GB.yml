@@ -172,6 +172,7 @@ en-GB:
   notice_locking_conflict: Data has been updated by another user.
   notice_not_authorized: You are not authorised to access this page.
   notice_not_authorized_archived_project: The project you're trying to access has been archived.
+  notice_not_authorized_hold_project: The project you're trying to access has been hold.
   notice_email_sent: "An email was sent to %{value}"
   notice_email_error: "An error occurred while sending mail (%{value})"
   notice_feeds_access_key_reseted: Your Atom access key was reset.
@@ -198,6 +199,7 @@ en-GB:
   error_can_not_remove_role: "This role is in use and cannot be deleted."
   error_can_not_reopen_issue_on_closed_version: 'An project task assigned to a closed version cannot be reopened'
   error_can_not_archive_project: This project cannot be archived
+  error_can_not_hold_project: This project cannot be hold
   error_issue_done_ratios_not_updated: "Project task done ratios not updated."
   error_workflow_copy_source: 'Please select a source tracker or role'
   error_workflow_copy_target: 'Please select target tracker(s) and role(s)'
@@ -1008,11 +1010,14 @@ en-GB:
   setting_session_timeout: Session inactivity timeout
   label_session_expiration: Session expiration
   permission_close_project: Close / reopen the project
+  permission_hold_project: Close / hold the project
   button_close: Close
   button_reopen: Reopen
+  button_hold: Hold
   project_status_active: active
   project_status_closed: closed
   project_status_archived: archived
+  project_status_hold: hold
   text_project_closed: This project is closed and read-only.
   notice_user_successful_create: User %{id} created.
   field_core_fields: Standard fields
@@ -1428,6 +1433,8 @@ en-GB:
   text_all_migrations_have_been_run: All database migrations have been run
   button_save_object: Save %{object_name}
   button_edit_object: Edit %{object_name}
+  button_decline: Decline
+  button_approve: Approve
   button_delete_object: Delete %{object_name}
   text_setting_config_change: You can configure the behaviour in config/configuration.yml.
     Please restart the application after editing it.
@@ -1444,7 +1451,10 @@ en-GB:
   label_auto_watch_on_issue_contributed_to: Project tasks I contributed to
   text_project_close_confirmation: Are you sure you want to close the '%{value}' project
     to make it read-only?
+  text_issue_approve_confirmation: Are you sure you want to approve the '%{value}' issue?
+  text_issue_decline_confirmation: Are you sure you want to decline the '%{value}' issue?
   text_project_reopen_confirmation: Are you sure you want to reopen the '%{value}' project?
+  text_project_hold_confirmation: Are you sure you want to hold the '%{value}' project?
   text_project_archive_confirmation: Are you sure you want to archive the '%{value}'
     project?
   mail_destroy_project_failed: Project %{value} could not be deleted.

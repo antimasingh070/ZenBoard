@@ -14,7 +14,7 @@ label {
 
 select, input[type="number"], input[type="submit"], button {
   padding: 5px 10px;
-  font-size: 13px;
+  font-size: 14px;
   border: none;
   border-radius: 3px;
   margin-top: 5px;
@@ -38,15 +38,15 @@ button:hover {
 
   select {
     padding: 5px;
-    font-size: 13px;
+    font-size: 14px;
   }
 
 
-  # h1 {
-  #   font-size: 24px;
-  #   font-weight: bold;
-  #   margin-bottom: 20px;
-  # } 
+  h1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+  } 
 
   table {
     border-collapse: collapse;
@@ -201,9 +201,7 @@ button:hover {
   <div class="flex-container">
   <div class="dashboard">
     <div class="filters">
-  <div class="container">
-  <div class="row">
-      <div class="filter-group col-sm-3">
+      <div class="filter-group">
         <label for="name_filter">Project Name:</label>
         <select name="name_filter" id="name_filter">
           <option value="">All</option>
@@ -212,9 +210,7 @@ button:hover {
           <% end %>
         </select>
       </div>
-      <div class= "col-sm-2">
-      </div>
-      <div class="filter-group col-sm-3">
+      <div class="filter-group">
         <label for="category_filter">Portfolio Category:</label>
         <select name="category_filter" id="category_filter">
           <option value="">All</option>
@@ -223,11 +219,7 @@ button:hover {
           <% end %>
         </select>
       </div>
-      </div>
-      </div>
-      <div class="container">
-      <div class="row">
-      <div class="filter-group col-sm-3">
+      <div class="filter-group">
         <label for="function_filter">Function Name:</label>
         <select name="function_filter" id="function_filter">
           <option value="">All</option>
@@ -236,9 +228,7 @@ button:hover {
           <% end %>
         </select>
       </div>
-      <div class= "col-sm-2">
-      </div>
-      <div class="filter-group col-sm-3">
+      <div class="filter-group">
         <label for="manager_filter">Project Manager:</label>
         <select name="manager_filter" id="manager_filter">
           <option value="">All</option>
@@ -247,11 +237,7 @@ button:hover {
           <% end %>
         </select>
       </div>
-      </div>
-      </div>
-      <div class="container">
-      <div class="row">
-      <div class="filter-group col-sm-3">
+      <div class="filter-group">
       <label for="status_filter">Status:</label>
       <select name="status_filter" id="status_filter">
         <option value="">All</option>
@@ -260,18 +246,15 @@ button:hover {
           <option value="<%= status_id(status) %>" <%= selected %>><%= status %></option>
         <% end %>
       </select>
-      </div> 
-      <div class= "col-sm-2">
-      </div>   
-      <div class="filter-group col-sm-3">
+      </div>    
+      <div class="filter-group">
         <label for="days_input">Project Variance:</label>
         <input type="number" name="days" id="days_input" value="<%= (params[:days].present? ? params[:days].to_i : 30) %>">
-        </div>
-        </div>
+        
         <input type="submit" value="Filter">
         <button type="submit" onclick="clearFilters()" class="hover-red">Clear</button>
         <button onclick="exportToCsv()">Export as CSV</button>
-        <button onclick="exportToPdf()">Export as PDf</button>
+        <button onclick="exportToPdf()">Export as PDF</button>
       </div>
     </div>
   </div>
@@ -279,7 +262,7 @@ button:hover {
 
 
   <div class="container-2">
-  <h5>RAG  Status</h5>
+  <h3>RAG  Status</h3>
     <div class="item">
       <div class="text">Sch. end date  < today or no revised date</div>
       <div class="color-box" style="background-color: red;"></div>
@@ -298,7 +281,7 @@ button:hover {
     </div>
   </div>
   </div>
-<div style="overflow-y: auto; height: 100%; width: 100%; text-align: center;">
+<div style="overflow-y: auto; height: 400px; width: 100%; text-align: center;">
 <table  style="table-layout: fixed; width: 100%;" >
   <thead>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -350,17 +333,18 @@ button:hover {
         <td><%= member_name(project, "Project Manager") %></td>
         <td><%= member_name(project, "Project Lead") %></td>
         <td><%= custom_field_value(project, "Project Activity") %></td>
-        <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
-        <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
-        <% id = project.identifier %>
         <td><%= custom_field_value(project, "Portfolio Category") %></td>
         <td><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
         <td><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
         <td><%= formatted_date(date_value(project, "Go Live date")) %></td>
         <td><%= formatted_date(date_value(project, "Revised End Date")) %></td>        
         <td><%= custom_field_value(project, "User function") %></td>
+        <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
+        <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
+        <% id = project.identifier %>
         <td><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}&status_id=[1,3,4]" %></td>
-        <td><%= tracker_count(project, "Bug") %></td>
+        <% tracker_id = Tracker.find_by(name: "Bug")&.id %>
+        <td><%= link_to tracker_count(project, "Bug"), "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
         <td><%= tracker_count(project, "Bug") %></td>
         <td><%= tracker_count(project, "Bug") %></td>
         <td><%= percentage_done(project) %></td>
@@ -393,36 +377,24 @@ button:hover {
     const rows = [];
     const table = document.querySelector('table');
     table.querySelectorAll('tr').forEach(row => {
-      const rowData = [];
-      row.querySelectorAll('th, td').forEach(cell => {
-        if (cell.classList.contains('multiple-values')) {
-          const values = [];
-          cell.querySelectorAll('.value').forEach(value => {
-            values.push(value.innerText);
-          });
-          rowData.push(values.join(', ')); // Concatenate multiple values into a single string
-        } else {
-          rowData.push(cell.innerText);
-        }
-      });
-      rows.push(rowData.join(','));
+        const rowData = [];
+        row.querySelectorAll('th, td').forEach(cell => {
+            if (cell.classList.contains('multiple-values')) {
+                const values = [];
+                cell.querySelectorAll('.value').forEach(value => {
+                    values.push(value.innerText);
+                });
+                rowData.push(values.join(', ')); // Concatenate multiple values into a single string
+            } else {
+                rowData.push(cell.innerText);
+            }
+        });
+        rows.push('"' + rowData.join('","') + '"');
     });
     const csv = rows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     saveAs(blob, 'project_dashboard.csv');
-
-    $.ajax({
-    url: '/send_weekly_report',
-    type: 'POST',
-    data: { reportType: 'csv' },
-    success: function(response) {
-      console.log('Email sent successfully');
-    },
-    error: function(xhr, status, error) {
-      console.error('Error sending email:', error);
-    }
-  });
-  }
+}
 
   function clearFilters() {
     document.getElementById('category_filter').value = '';
