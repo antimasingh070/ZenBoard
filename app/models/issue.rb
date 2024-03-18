@@ -129,6 +129,23 @@ class Issue < ActiveRecord::Base
   after_commit :create_parent_issue_journal
 
   # Returns a SQL conditions string used to find all issues visible by the specified user
+  def approved?
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+    custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
+    custom_value&.value == "1"
+  rescue NoMethodError, ActiveRecord::RecordNotFound
+    false
+  end
+  
+  def declined?
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+    custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
+    custom_value&.value == "0"
+  rescue NoMethodError, ActiveRecord::RecordNotFound
+    false
+  end
+  
+
   def self.visible_condition(user, options={})
     Project.allowed_to_condition(user, :view_issues, options) do |role, user|
       sql =
