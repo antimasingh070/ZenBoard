@@ -89,8 +89,9 @@ module WelcomeHelper
 
   def tracker_count(project, field_name)
     tracker_id = Tracker.find_by(name: field_name)&.id
-    open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count 
-    total_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id).count 
+    project_ids = Project.where(parent_id: project.id).ids
+    open_issue_count = Issue.where(project_id: [project.id] + project_ids, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count
+    total_issue_count = Issue.where(project_id: [project.id] + project_ids, tracker_id: tracker_id).count 
     return "#{open_issue_count} / #{total_issue_count}"
   end
 

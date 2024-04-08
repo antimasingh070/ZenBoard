@@ -58,7 +58,9 @@ module ProjectsQueriesHelper
   def get_project_status_label
     {
       Project::STATUS_ACTIVE => l(:project_status_active),
-      Project::STATUS_CLOSED => l(:project_status_closed)
+      Project::STATUS_CLOSED => l(:project_status_closed),
+      Project::STATUS_HOLD => l(:project_status_hold),
+      Project::STATUS_DELAYED => l(:project_status_delayed)
     }
   end
 end

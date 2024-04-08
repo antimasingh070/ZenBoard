@@ -61,11 +61,10 @@ class WelcomeController < ApplicationController
                          .select { |project| project.status == params[:status_filter].to_i && project.members.exists?(user_id: current_user_id) }
     elsif params[:name_filter].present?
       @projects = Project.where(parent_id: nil)
-                         .select { |project| project.name == params[:name_filter].to_s && project.members.exists?(user_id: current_user_id) }
+                         .select { |project| project.name == params[:name_filter].to_s && project.members.exists?(user_id: current_user_id) }                
     elsif params[:manager_filter].present?
       manager_filter = params[:manager_filter].strip
-      @projects = Project.where(parent_id: nil)
-                         .select do |project|
+      @projects = Project.where(parent_id: nil).select do |project|
                            member_names = member_name(project, "Project Manager")
                            member_names.any? { |name| name.include?(manager_filter) } && project.members.exists?(user_id: current_user_id)
                          end

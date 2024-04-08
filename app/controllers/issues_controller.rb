@@ -19,7 +19,6 @@
 
 class IssuesController < ApplicationController
   default_search_scope :issues
-  before_action :set_issue_status
   before_action :find_issue, :only => [:show, :edit, :update, :issue_tab]
   before_action :find_issues, :only => [:bulk_edit, :bulk_update, :destroy]
   before_action :authorize, :except => [:index, :new, :create, :approve, :decline]
@@ -48,6 +47,8 @@ class IssuesController < ApplicationController
     custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
     custom_value.update(value: "1")
     if @issue.approved?
+      @members = @issue.project.members
+      Mailer.deliver_issue_approved(User.current, @issue,  @members)
       flash[:notice] = "Issue approved successfully."
     else
       flash[:alert] = "Failed to approve issue."
@@ -61,6 +62,8 @@ class IssuesController < ApplicationController
     custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
     custom_value.update(value: "0")
     if @issue.declined?
+      @members = @issue.project.members
+      Mailer.deliver_issue_declined(User.current, @issue, @members)
       flash[:notice] = "Issue declined successfully."
     else
       flash[:alert] = "Failed to decline issue."
@@ -744,26 +747,6 @@ class IssuesController < ApplicationController
     end
   end
 
-  def set_issue_status
-    @issues = Issue.all
-    current_date = Date.current
-    @issues.each do |issue|
-      actual_end_date_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")
-      # next unless actual_end_date_custom_field
-      custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: actual_end_date_custom_field&.id, customized_id: issue&.id)
-      # next unless custom_value
-  
-      # custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
-      actual_end_date = custom_value&.value
 
-        if actual_end_date.present? && Date.parse(actual_end_date) < current_date
-          issue.update(status_id: 3, done_ratio: 100)
-        # elsif issue.done_ratio == 100
-        #   actual_end_date_custom_field.is_required = true
-        # elsif issue.status_id == 3
-        #   actual_end_date_custom_field.is_required = true
-        end
-    end
-  end
 
 end

@@ -26,6 +26,8 @@ class Project < ActiveRecord::Base
   STATUS_CLOSED     = 5
   STATUS_ARCHIVED   = 9
   STATUS_SCHEDULED_FOR_DELETION = 10
+  STATUS_HOLD = 11
+  STATUS_DELAYED = 12
 
   STATUS_OPTIONS = {
     STATUS_ACTIVE => 'Active',
@@ -120,6 +122,19 @@ class Project < ActiveRecord::Base
   scope :having_trackers, (lambda do
     where("#{Project.table_name}.id IN (SELECT DISTINCT project_id FROM #{table_name_prefix}projects_trackers#{table_name_suffix})")
   end)
+
+  def copy_tracker_issues_to_project_activity_list(tracker_id)
+    selected_tracker_id = self.tracker_id
+    selected_tracker_name = "Project Activity List"
+    issues_to_copy = Issue.where(tracker_id: selected_tracker_id)
+
+    issues_to_copy.each do |issue|
+      new_issue = issue.dup
+      new_issue.tracker_id = self.trackers.find_by(name: selected_tracker_name).id
+      new_issue.project_id = self.id
+      new_issue.save
+    end
+  end
 
   def initialize(attributes=nil, *args)
     super
@@ -394,6 +409,18 @@ class Project < ActiveRecord::Base
     end
   end
 
+  def hold?
+    self.status == STATUS_HOLD
+  end
+  
+  def delayed?
+    self.status == STATUS_DELAYED
+  end
+  
+  def cancelled?
+    self.status == STATUS_CANCELLED
+  end
+
   def active?
     self.status == STATUS_ACTIVE
   end
@@ -442,8 +469,20 @@ class Project < ActiveRecord::Base
     self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_CLOSED
   end
 
+  def hold
+    self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_HOLD
+  end
+
+  def delayed
+    self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_DELAYED
+  end
+
+  def cancelled
+    self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_CANCELLED
+  end 
+
   def reopen
-    self_and_descendants.status(STATUS_CLOSED).update_all :status => STATUS_ACTIVE
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_DELAYED, Project::STATUS_CANCELLED, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_ACTIVE)
   end
 
   # Returns an array of projects the project can be moved to

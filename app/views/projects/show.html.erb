@@ -7,7 +7,9 @@
   <% end %>
   <% if User.current.allowed_to?(:close_project, @project) %>
     <% if @project.active? %>
-      <%= link_to l(:button_close), close_project_path(@project), :data => {:confirm => l(:text_project_close_confirmation, @project.to_s)}, :method => :post, :class => 'icon icon-lock' %>
+      <%= link_to l(:button_close), close_project_path(@project), :data => {:confirm => l(:text_project_close_confirmation, @project.to_s)}, :method => :post, :class => 'icon fas fa-lock' %>
+      <%= link_to l(:button_hold), hold_project_path(@project), :data => {:confirm => l(:text_project_hold_confirmation, @project.to_s)}, :method => :post, :class => 'icon fas fa-pause-circle' %>
+      <%= link_to l(:button_delayed), delayed_project_path(@project), :data => {:confirm => l(:text_project_delayed_confirmation, @project.to_s)}, :method => :post, :class => 'icon fas fa-clock' %>
     <% else %>
       <%= link_to l(:button_reopen), reopen_project_path(@project), :data => {:confirm => l(:text_project_reopen_confirmation, @project.to_s)}, :method => :post, :class => 'icon icon-unlock' %>
     <% end %>
@@ -23,8 +25,12 @@
 
 <h2><%=l(:label_overview)%></h2>
 
-<% unless @project.active? %>
-  <p class="warning"><span class="icon icon-lock"><%= l(:text_project_closed) %></span></p>
+<% if @project.closed? %>
+  <p class="warning"><span class="icon"><i class="fas fa-lock"></i></span><%= l(:text_project_closed) %></p>
+<% elsif @project.hold? %>
+  <p class="warning"><span class="icon"><i class="fas fa-pause-circle"></i></span><%= l(:text_project_hold) %></p>
+<% elsif @project.delayed? %>
+  <p class="warning"><span class="icon"><i class="fas fa-clock"></i></span><%= l(:text_project_delayed) %></p>
 <% end %>
 
 <div class="splitcontent">
@@ -155,3 +161,4 @@
 <% end %>
 
 <% html_title(l(:label_overview)) -%>
+<%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" %>

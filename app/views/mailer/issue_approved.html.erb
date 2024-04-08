@@ -1,0 +1,24 @@
+<h1>Issue has been approved.</h1>
+<p>Issue: <%= @issue.subject %></p>
+<p>Status: <%= @issue.status.name %></p>
+<p>Tracker: <%= @issue.tracker.name %></p>
+<p>Priority: <%= @issue.priority_id %></p>
+<p>Category: <%= @issue.category_id || 'Not assigned' %></p>
+<p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+<p>Created At: <%= @issue.created_on.strftime("%Y-%m-%d") %></p>
+<p>Project: <%= @issue.project.name %></p>
+<p>Done Ratio: <%= @issue.done_ratio %></p>
+
+<p>Project Members:</p>
+<ul>
+  <% @members = @issue.project.members %>
+  <% @members.each do |member| %>
+    <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
+    <% role = Role.find_by(id: role_id) %>
+    <li><%= "#{member.user.name} (Role: #{role&.name || 'Not assigned'})" %></li>
+  <% end %>
+</ul>
+
+<p>Please log in to ProjectHUB to view and manage the issue details.</p>
+<p><a href="<%= projecthub_url %>" class="link">ProjectHUB</a></p>
+<p>Best Regards</p>
