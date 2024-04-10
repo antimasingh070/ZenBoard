@@ -43,25 +43,36 @@ class WelcomeController < ApplicationController
       Project::STATUS_ARCHIVED => 'Archived',
       Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion'
     }
+  
+    current_user_id = User.current.id
+  
+    # Filter projects based on various conditions
     if params[:function_filter].present? && params[:category_filter].present?
-      @projects = Project.where(parent_id: nil).select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && custom_field_value(project, "User Function") == params[:function_filter] }
+      @projects = Project.where(parent_id: nil)
+                         .select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && custom_field_value(project, "User Function") == params[:function_filter] && project.members.exists?(user_id: current_user_id) }
     elsif params[:function_filter].present?
-      @projects = Project.where(parent_id: nil).select { |project| custom_field_value(project, "User Function") == params[:function_filter] }
+      @projects = Project.where(parent_id: nil)
+                         .select { |project| custom_field_value(project, "User Function") == params[:function_filter] && project.members.exists?(user_id: current_user_id) }
     elsif params[:category_filter].present?
-      @projects = Project.where(parent_id: nil).select { |project| custom_field_value(project, "Project Category") == params[:category_filter] }
+      @projects = Project.where(parent_id: nil)
+                         .select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && project.members.exists?(user_id: current_user_id) }
     elsif params[:status_filter].present?
-      @projects = Project.where(parent_id: nil).select { |project| project.status == params[:status_filter].to_i }
+      @projects = Project.where(parent_id: nil)
+                         .select { |project| project.status == params[:status_filter].to_i && project.members.exists?(user_id: current_user_id) }
     elsif params[:name_filter].present?
-      @projects = Project.where(parent_id: nil).select { |project| project.name == params[:name_filter].to_s }
+      @projects = Project.where(parent_id: nil)
+                         .select { |project| project.name == params[:name_filter].to_s && project.members.exists?(user_id: current_user_id) }                
     elsif params[:manager_filter].present?
       manager_filter = params[:manager_filter].strip
       @projects = Project.where(parent_id: nil).select do |project|
-        member_names = member_name(project, "Project Manager")
-        member_names.any? { |name| name.include?(manager_filter) }
-      end
+                           member_names = member_name(project, "Project Manager")
+                           member_names.any? { |name| name.include?(manager_filter) } && project.members.exists?(user_id: current_user_id)
+                         end
     else
+      # Default case: show projects where the current user is a member
       @projects = Project.where(parent_id: nil)
-    end
+                         .select { |project| project.members.exists?(user_id: current_user_id) }
+    end  
 
     @categories = @projects.map { |project| custom_field_value(project, "Portfolio Category") }.uniq.compact
     @functions = @projects.map { |project| custom_field_value(project, "User Function") }.uniq.compact

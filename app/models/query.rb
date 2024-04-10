@@ -687,7 +687,9 @@ class Query < ActiveRecord::Base
   def project_statuses_values
     [
       [l(:project_status_active), "#{Project::STATUS_ACTIVE}"],
-      [l(:project_status_closed), "#{Project::STATUS_CLOSED}"]
+      [l(:project_status_closed), "#{Project::STATUS_CLOSED}"],
+      [l(:project_status_hold), "#{Project::STATUS_HOLD}"],
+      [l(:project_status_delayed), "#{Project::STATUS_DELAYED}"]
     ]
   end
 

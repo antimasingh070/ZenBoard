@@ -109,16 +109,18 @@ module Redmine
         menu_name = controller.current_menu(project)
         menu_name.present? && Redmine::MenuManager.items(menu_name).children.present?
       end
-
+      
       def render_menu(menu, project=nil)
         links = []
         menu_items_for(menu, project) do |node|
           links << render_menu_node(node, project)
+          if menu == :top_menu
+            if node.name == :projects
+              links << content_tag('li', link_to('Project Dashboard', project_dashboard_path)) if User.current.logged?
+            end
+          end
         end
-        
-        if menu == :top_menu
-          links << content_tag('li', link_to('Project Dashboard', project_dashboard_path)) if User.current.logged?
-        end
+   
         links.empty? ? nil : content_tag('ul', links.join.html_safe)
       end
       

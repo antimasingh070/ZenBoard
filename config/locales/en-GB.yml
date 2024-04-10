@@ -1016,9 +1016,15 @@ en-GB:
   button_hold: Hold
   project_status_active: active
   project_status_closed: closed
+  project_status_hold: hold
+  project_status_delayed: delayed
+  project_status_cancelled: cancelled
   project_status_archived: archived
   project_status_hold: hold
   text_project_closed: This project is closed and read-only.
+  text_project_hold: This project is on hold and read-only.
+  text_project_delayed: This project is delayed and read-only.
+  text_project_cancelled: This project is cancelled and read-only.
   notice_user_successful_create: User %{id} created.
   field_core_fields: Standard fields
   field_timeout: Timeout (in seconds)
@@ -1435,6 +1441,9 @@ en-GB:
   button_edit_object: Edit %{object_name}
   button_decline: Decline
   button_approve: Approve
+  button_hold: Hold
+  button_delayed: Delayed
+  button_cancelled: Cancelled
   button_delete_object: Delete %{object_name}
   text_setting_config_change: You can configure the behaviour in config/configuration.yml.
     Please restart the application after editing it.
@@ -1453,6 +1462,9 @@ en-GB:
     to make it read-only?
   text_issue_approve_confirmation: Are you sure you want to approve the '%{value}' issue?
   text_issue_decline_confirmation: Are you sure you want to decline the '%{value}' issue?
+  text_project_hold_confirmation: Are you sure you want to hold the '%{value}' project?
+  text_project_delayed_confirmation: Are you sure you want to delayed the '%{value}' project?
+  text_project_cancelled_confirmation: Are you sure you want to cancelled the '%{value}' project?
   text_project_reopen_confirmation: Are you sure you want to reopen the '%{value}' project?
   text_project_hold_confirmation: Are you sure you want to hold the '%{value}' project?
   text_project_archive_confirmation: Are you sure you want to archive the '%{value}'
