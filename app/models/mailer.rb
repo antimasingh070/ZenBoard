@@ -69,6 +69,65 @@ class Mailer < ActionMailer::Base
     options
   end
 
+  def issue_send_back(user, issue, auther)
+    @user = user
+    @issue = issue
+    @auther = auther
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => [@auther.mail, @user.mail],
+      :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue send_back: #{@issue.subject}"
+  end
+
+  def self.deliver_issue_send_back(user, issue, auther)
+    @auther = auther
+    @project = issue.project
+    @issue = issue
+    @user = user
+    issue_send_back(user, issue, auther).deliver_now
+  end
+  
+  def issue_approved(user, issue, member_mails)
+    @user = user
+    @issue = issue
+    @member_mails = member_mails
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => @member_mails.join(", "),
+      :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue Approved: #{@issue.subject}"
+  end
+
+  def self.deliver_issue_approved(user, issue, members)
+    @members = members
+    if  @members.any?
+      member_mails = @members.map { |member| member.user.mail }
+      @project = issue.project
+      @issue = issue
+      @user = user
+      @project = issue.project
+      issue_approved(user, issue, member_mails).deliver_now
+    end
+  end
+
+  def issue_declined(user, issue, member_mails)
+    @user = user
+    @issue = issue
+    @member_mails = member_mails
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => @member_mails.join(", "),
+      :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue Declined: #{@issue.subject}"
+  end
+
+  def self.deliver_issue_declined(user, issue, members)
+    @members = members
+    if  @members.any?
+      member_mails = @members.map { |member| member.user.mail }
+      @project = issue.project
+      @issue = issue
+      @user = user
+      @project = issue.project
+      issue_declined(user, issue, member_mails).deliver_now
+    end
+  end
+
   # Builds a mail for notifying user about a new issue
   def issue_add(user, issue)
     redmine_headers 'Project' => issue.project.identifier,
@@ -86,7 +145,8 @@ class Mailer < ActionMailer::Base
     subject = "[#{issue.project.name} - #{issue.tracker.name} ##{issue.id}]"
     subject += " (#{issue.status.name})" if Setting.show_status_changes_in_mail_subject?
     subject += " #{issue.subject}"
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => subject
   end
 
@@ -122,7 +182,8 @@ class Mailer < ActionMailer::Base
     @journal_details = journal.visible_details
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue, :anchor => "change-#{journal.id}")
 
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => s
   end
 
@@ -147,7 +208,8 @@ class Mailer < ActionMailer::Base
     @document = document
     @user = user
     @document_url = url_for(:controller => 'documents', :action => 'show', :id => document)
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => "[#{document.project.name}] #{l(:label_document_new)}: #{document.title}"
   end
 
@@ -184,7 +246,8 @@ class Mailer < ActionMailer::Base
     @user = user
     @added_to = added_to
     @added_to_url = added_to_url
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => "[#{container.project.name}] #{l(:label_attachment_new)}"
   end
 
@@ -215,7 +278,8 @@ class Mailer < ActionMailer::Base
     @news = news
     @user = user
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => "[ProjectHUB] Project NEWS: #{news.project.name}  #{news.project.identifier}"
   end
   
@@ -241,7 +305,8 @@ class Mailer < ActionMailer::Base
     @comment = comment
     @user = user
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
      :subject => "Re: [ProjectHUB] Project NEWS: #{news.project.name} #{news.project.identifier}"
   end
 
@@ -267,7 +332,8 @@ class Mailer < ActionMailer::Base
     @message = message
     @user = user
     @message_url = url_for(message.event_url)
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => "[#{message.board.project.name} - #{message.board.name} - msg#{message.root.id}] #{message.subject}"
   end
 
@@ -357,7 +423,8 @@ class Mailer < ActionMailer::Base
     @user = user
     @password = password
     @login_url = url_for(:controller => 'account', :action => 'login')
-    mail :to => user.mail,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user.mail,
       :subject => l(:mail_subject_register, Setting.app_title)
   end
 
@@ -372,7 +439,8 @@ class Mailer < ActionMailer::Base
     @url = url_for(:controller => 'users', :action => 'index',
                          :status => User::STATUS_REGISTERED,
                          :sort_key => 'created_on', :sort_order => 'desc')
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+                         # mail :to => user,
       :subject => l(:mail_subject_account_activation_request, Setting.app_title)
   end
 
@@ -393,7 +461,8 @@ class Mailer < ActionMailer::Base
   def account_activated(user)
     @user = user
     @login_url = url_for(:controller => 'account', :action => 'login')
-    mail :to => user.mail,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user.mail,
       :subject => l(:mail_subject_register, Setting.app_title)
   end
 
@@ -410,7 +479,8 @@ class Mailer < ActionMailer::Base
     recipient ||= user.mail
     @token = token
     @url = url_for(:controller => 'account', :action => 'lost_password', :token => token.value)
-    mail :to => recipient,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => recipient,
       :subject => l(:mail_subject_lost_password, Setting.app_title)
   end
 
@@ -447,7 +517,8 @@ class Mailer < ActionMailer::Base
   def register(user, token)
     @token = token
     @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
-    mail :to => user.mail,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user.mail,
       :subject => l(:mail_subject_register, Setting.app_title)
   end
 
@@ -480,7 +551,8 @@ class Mailer < ActionMailer::Base
     @remote_ip = options[:remote_ip] || @sender.remote_ip
     @url = options[:url] && (options[:url].is_a?(Hash) ? url_for(options[:url]) : options[:url])
     redmine_headers 'Url' => @url
-    mail :to => [user, *options[:recipients]].uniq,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => [user, *options[:recipients]].uniq,
       :subject => "[#{Setting.app_title}] #{l(:mail_subject_security_notification)}"
   end
 
@@ -517,7 +589,8 @@ class Mailer < ActionMailer::Base
     @changes = changes
     @remote_ip = options[:remote_ip] || @sender.remote_ip
     @url = url_for(controller: 'settings', action: 'index')
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => "[#{Setting.app_title}] #{l(:mail_subject_security_notification)}"
   end
 
@@ -545,7 +618,8 @@ class Mailer < ActionMailer::Base
   # Build a test email to user.
   def test_email(user)
     @url = url_for(:controller => 'welcome')
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => 'Redmine test'
   end
 
@@ -579,7 +653,8 @@ class Mailer < ActionMailer::Base
     query = IssueQuery.new(:name => '_')
     query.add_filter('assigned_to_id', '=', ['me'])
     @open_issues_count = query.issue_count
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => l(:mail_subject_reminder, :count => issues.size, :days => days)
   end
 
@@ -751,15 +826,28 @@ class Mailer < ActionMailer::Base
     mails
   end
 
-  def project_created(user, project)
+  def project_created(user, member_role, role, project)
     @project = project
+    @user = user
+    @member_role = member_role
+    @role = role
     # @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
-    mail :to => user.mail,
-      :subject => "New Project Created"
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user.mail,
+      :subject => "Project Created"
   end
 
   def self.deliver_project_created(user, project)
-    project_created(user, project).deliver_now
+    @members = Member.where(project_id: project.id)
+    if  @members.any?
+      @members.each do |member|
+        @member_role = MemberRole.find_by(member_id: member.id)
+        @role = Role.find_by(id: @member_role.role_id)
+        @user = User.find(member.user.id) if member.user.present?
+        @project = project
+      end
+      project_created(@user, @member_role, @role, @project).deliver_now
+    end
   end
 
   def project_updated(user, member_role, role, project)
@@ -768,7 +856,8 @@ class Mailer < ActionMailer::Base
     @member_role = member_role
     @role = role
     # @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
-    mail :to => user.mail,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user.mail,
       :subject => "Project Updated"
   end
 
@@ -778,10 +867,10 @@ class Mailer < ActionMailer::Base
       @members.each do |member|
         @member_role = MemberRole.find_by(member_id: member.id)
         @role = Role.find_by(id: @member_role.role_id)
-        @user = User.find(member.user_id)
+        @user = User.find(member.user.id) if member.user.present?
         @project = project
-        project_updated(@user, @member_role, @role, @project).deliver_now
       end
+      project_updated(@user, @member_role, @role, @project).deliver_now
     end
   end
 
@@ -789,7 +878,8 @@ class Mailer < ActionMailer::Base
     @user = user
     @role = role
     @project = project
-    mail :to => user.mail,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user.mail,
       :subject => "[ProjectHUB] New Project Created: #{@project.name}  #{@project.identifier} "
   end
 
@@ -801,7 +891,8 @@ class Mailer < ActionMailer::Base
     @user = user
     @role = role
     @project = project
-    mail :to => user.mail,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user.mail,
       :subject => "[ProjectHUB] New Project Created: #{@project.name}  #{@project.identifier} "
   end
 

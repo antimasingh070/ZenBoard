@@ -219,6 +219,7 @@ Rails.application.routes.draw do
     member do
       post :approve
       post :decline
+      post :send_back
       # Used when updating the form of an existing issue
       patch 'edit', :to => 'issues#edit'
       get 'tab/:name', :action => 'issue_tab', :as => 'tab'

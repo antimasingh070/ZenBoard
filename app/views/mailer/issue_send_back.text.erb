@@ -1,0 +1,25 @@
+Issue has been send back to the Issue Auther.
+Issue: <%= @issue.subject %>
+Status: <%= @issue.status.name %>
+Tracker: <%= @issue.tracker.name %>
+Priority: <%= @issue.priority_id %>
+Category: <%= @issue.category_id || 'Not assigned' %>
+Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %>
+Created At: <%= @issue.created_on.strftime("%Y-%m-%d") %>
+Project: <%= @issue.project.name %>
+Done Ratio: <%= @issue.done_ratio %>
+Remarks: <%= custom_field = CustomField.find_by(type: "IssueCustomField", name: "Remarks")
+custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
+custom_value&.value %>
+Project Members:
+<% @members = @issue.project.members %>
+<% @members.each do |member| %>
+  <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
+  <% role = Role.find_by(id: role_id) %>
+  <%= "#{member.user.name} (Role: #{role&.name || 'Not assigned'})" %>
+<% end %>
+
+Please log in to ProjectHUB to view and manage the issue details.
+ProjectHUB:
+
+Best Regards

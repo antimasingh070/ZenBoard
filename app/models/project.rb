@@ -99,7 +99,7 @@ class Project < ActiveRecord::Base
   after_update :update_versions_from_hierarchy_change,
                :if => proc {|project| project.saved_change_to_parent_id?}
   before_destroy :delete_all_members
-
+  after_commit :auto_create_records
   scope :has_module, (lambda do |mod|
     where("#{Project.table_name}.id IN (SELECT em.project_id FROM #{EnabledModule.table_name} em WHERE em.name=?)", mod.to_s)
   end)
@@ -122,6 +122,27 @@ class Project < ActiveRecord::Base
   scope :having_trackers, (lambda do
     where("#{Project.table_name}.id IN (SELECT DISTINCT project_id FROM #{table_name_prefix}projects_trackers#{table_name_suffix})")
   end)
+
+def auto_create_records
+  custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Portfolio Category")
+  custom_value = CustomValue.find_by(customized_type: "Project", customized_id: self.id, custom_field_id: custom_field&.id)
+  return unless custom_value
+
+  custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value.to_i)&.name
+  return unless custom_field_enumeration
+
+  tracker_id = Tracker.find_by(name: custom_field_enumeration)&.id
+  return unless tracker_id
+
+  issues = Issue.where(tracker_id: tracker_id, project_id: 51)
+  plan_id = Tracker.find_by(name: "Project Plan- Activity List")&.id
+  return unless plan_id
+
+  issues.each do |issue|
+    Issue.find_or_create_by(tracker_id: plan_id, project_id: self.id, subject: issue.subject, author: User.current)
+  end
+end
+
 
   def copy_tracker_issues_to_project_activity_list(tracker_id)
     selected_tracker_id = self.tracker_id
