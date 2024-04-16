@@ -1,17 +1,3 @@
-
-<% def custom_function(field_name)
-    custom_field = CustomField.find_by(name: field_name)
-    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
-    custom_field_enumeration&.name
-end %>
-
-<% def custom_function_date(field_name)
-    custom_field = CustomField.find_by(name: field_name)
-    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_value.value
-end %>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,6 +32,7 @@ end %>
 </head>
 <body>
     <div class="container">
+<<<<<<< Updated upstream
         <div class="header">A new project has been created in ProjectHUB:</div>
         <p>Project Name: <%= @project.name %></p>
         <p>Start Date: <%= custom_function_date('Start Date') %></p>
@@ -55,9 +42,41 @@ end %>
         <p>Portfolio Category: <%= custom_function('Portfolio Category') %></p>
         <p>Priority Level: <%= custom_function('Priority Level') %></p>
         <p>Member list with role: <%= @user %> (<%= @role %>)</p>
+        <% previous_members = @project.members.where.not(id: nil) %>
+        <% existing_members = @project.members %>
+        <% existing_members.each do |member| %>
+        <% if member.user.name != @user || member.roles.first.name != @role %>
+        <% role_id = MemberRole.find_by(member_id: member.id)&.role_id # Corrected typo here
+            role = Role.find_by(id: role_id) %>
+        <p>Previous Member: <%= "#{member.user.name} (#{role.name})" %></p>
+        <% end %>
+        <% end %>
+        <% if @user && @role %>
+        <p>New Member:  <%= "#{@user} (#{@role.name})" %></p>
+        <% end %>
         <p>You have been added as a member of this project. Please log in to ProjectHUB to view and manage the project details.</p>
         <p><a href="" class="link">ProjectHUB</a></p>
         <p>Best Regards</p>
+=======
+        <div class="header"> Members modified in ProjectHUB::</div>
+        <p>Member list with role</p>
+        <% existing_members = @project.members[1..-1] %>
+        <%# Display existing members and their roles %>
+        <% existing_members.each do |member| %>
+        <% if member.user.name != @user || member.roles.first.name != @role %>
+        <% role_id = MemberRole.find_by(member_id: member.id)&.role_id 
+            role = Role.find_by(id: role_id) %>
+        <%= "Previous Members: #{member.user.name} (#{role.name})" %>
+        <% end %>
+        <% end %>
+
+        <%# Display newly added member and their role %>
+        <% if @user && @role %>
+        <%= "New Member: #{@user} (#{@role.name})" %>
+        <% end %>
+
+        <p>Please log in to ProjectHUB to view and manage the project details. </p>
+>>>>>>> Stashed changes
     </div>
 </body>
 </html>

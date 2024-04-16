@@ -28,7 +28,13 @@ module WelcomeHelper
       return "" unless custom_value
 
       custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
-      custom_field_enumeration&.name || ''
+      completed_date = ""
+      last_issue = project.issues.where(status: 5).order(updated_on: :desc).last
+      if last_issue
+        custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: last_issue.id, custom_field_id: custom_field.id)
+        completed_date = last_issue.closed_on.strftime("%d %b %y") if last_issue.closed_on
+      end
+      "#{custom_field_enumeration&.name} (#{completed_date})" || ''
     else
       custom_field = CustomField.find_by(name: field_name)
       return "" unless custom_field
@@ -38,6 +44,33 @@ module WelcomeHelper
     
       custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
       custom_field_enumeration&.name || ''
+    end
+  end
+
+  def custom_field_value_week(project, field_name)
+    if field_name == "Project Activity"
+      custom_field = CustomField.find_by(name: field_name)
+      return "" unless custom_field
+
+      start_date = Date.current
+      due_date = Date.current + 7
+
+      issues_within_week = project.issues
+                              .where(start_date: start_date..due_date)
+                              .where.not(status: 5)
+                              .order(updated_on: :desc)
+
+      return "" unless issues_within_week.any?
+
+      custom_values = issues_within_week.map do |issue|
+        custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue.id, custom_field_id: custom_field.id)
+        formatted_due_date = issue.due_date.strftime("%d %b %y") if issue.due_date
+        "#{custom_value ? CustomFieldEnumeration.find_by(id: custom_value.value.to_i)&.name : nil} (#{formatted_due_date})"
+      end
+
+      custom_values.join(", ")
+    else
+      ""
     end
   end
 
@@ -89,8 +122,9 @@ module WelcomeHelper
 
   def tracker_count(project, field_name)
     tracker_id = Tracker.find_by(name: field_name)&.id
-    open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count 
-    total_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id).count 
+    project_ids = Project.where(parent_id: project.id).ids
+    open_issue_count = Issue.where(project_id: [project.id] + project_ids, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count
+    total_issue_count = Issue.where(project_id: [project.id] + project_ids, tracker_id: tracker_id).count 
     return "#{open_issue_count} / #{total_issue_count}"
   end
 

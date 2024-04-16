@@ -22,18 +22,12 @@ class WelcomeController < ApplicationController
 
   skip_before_action :check_if_login_required, only: [:robots]
 
-  def send_weekly_report
-    report_type = params[:reportType]
 
-    # Logic to generate the CSV or PDF file
-    file_path = generate_report_file(report_type)
-
-    # Logic to send email with the file attached
-    UserMailer.send_weekly_report(file_path).deliver_now
-
-    head :ok
-  end
-
+  def date_value(project, field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
+    date_string = custom_value&.value
+end
 
 
   def project_dashboard
@@ -61,14 +55,45 @@ class WelcomeController < ApplicationController
                          .select { |project| project.status == params[:status_filter].to_i && project.members.exists?(user_id: current_user_id) }
     elsif params[:name_filter].present?
       @projects = Project.where(parent_id: nil)
-                         .select { |project| project.name == params[:name_filter].to_s && project.members.exists?(user_id: current_user_id) }
+                         .select { |project| project.name == params[:name_filter].to_s && project.members.exists?(user_id: current_user_id) }                
     elsif params[:manager_filter].present?
       manager_filter = params[:manager_filter].strip
-      @projects = Project.where(parent_id: nil)
-                         .select do |project|
+      @projects = Project.where(parent_id: nil).select do |project|
                            member_names = member_name(project, "Project Manager")
                            member_names.any? { |name| name.include?(manager_filter) } && project.members.exists?(user_id: current_user_id)
                          end
+    elsif params[:start_date_from].present? && params[:start_date_to].present?
+      if params[:start_date_from].present? && params[:start_date_to].present?
+        start_date_from = Date.parse(params[:start_date_from])
+        start_date_to = Date.parse(params[:start_date_to])
+        @projects = Project.where(parent_id: nil)
+                           .select { |project| 
+                             scheduled_start_date = date_value(project, "Scheduled Start Date")
+                             scheduled_start_date.present? && 
+                             Date.parse(scheduled_start_date) >= start_date_from && 
+                             Date.parse(scheduled_start_date) <= start_date_to && 
+                             project.members.exists?(user_id: current_user_id) 
+                           }
+      else
+        @projects = Project.where(parent_id: nil)
+                         .select { |project| project.members.exists?(user_id: current_user_id) }
+      end
+    elsif params[:end_date_from].present? && params[:end_date_to].present?
+      if params[:end_date_from].present? && params[:end_date_to].present?
+        end_date_from = Date.parse(params[:end_date_from])
+        end_date_to = Date.parse(params[:end_date_to])
+        @projects = Project.where(parent_id: nil)
+                           .select { |project| 
+                             scheduled_end_date = date_value(project, "Scheduled End Date")
+                             scheduled_end_date.present? && 
+                             Date.parse(scheduled_end_date) >= end_date_from && 
+                             Date.parse(scheduled_end_date) <= end_date_to && 
+                             project.members.exists?(user_id: current_user_id) 
+                           }
+      else
+        @projects = Project.where(parent_id: nil)
+                         .select { |project| project.members.exists?(user_id: current_user_id) }
+      end
     else
       # Default case: show projects where the current user is a member
       @projects = Project.where(parent_id: nil)
@@ -114,15 +139,49 @@ class WelcomeController < ApplicationController
     render :layout => false, :content_type => 'text/plain'
   end
 
+  def send_weekly_status_report(format)
+    # Generate the weekly status report based on the specified format (csv or pdf)
+    report_data = generate_report_data
+
+    case format
+    when 'csv'
+      generate_csv_report(report_data)
+    when 'pdf'
+      generate_pdf_report(report_data)
+    else
+      raise ArgumentError, "Invalid report format: #{format}. Supported formats are 'csv' and 'pdf'."
+    end
+
+    # Print a message indicating the report was generated
+    puts "Weekly status report generated in #{format} format."
+  end
+
   private
 
-  def generate_report_file(report_type)
-    # Logic to generate the CSV or PDF file
-    # ...
-
-    file_path = "/path/to/generated/file.#{report_type}"
-    # ...
-
-    file_path
+  def generate_report_data
+    # Logic to fetch data for the weekly status report
+    # This could involve querying the database or any other data source
+    # For demonstration purposes, let's return dummy data
+    Issue.where(status_id: [1, 2, 3])  # Example: Fetch issues with open, in progress, or re-opened statuses
   end
+
+  def generate_csv_report(report_data)
+    # Logic to generate the CSV report
+    # For simplicity, let's print the report data
+    puts "CSV Report:"
+    report_data.each do |issue|
+      puts "#{issue.id}, #{issue.subject}, #{issue.status.name}, #{issue.assigned_to&.name}"
+    end
+  end
+
+  def generate_pdf_report(report_data)
+    # Logic to generate the PDF report
+    # For simplicity, let's print the report data
+    puts "PDF Report:"
+    report_data.each do |issue|
+      puts "#{issue.id} | #{issue.subject} | #{issue.status.name} | #{issue.assigned_to&.name}"
+    end
+  end
+
 end
+

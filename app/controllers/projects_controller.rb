@@ -27,11 +27,11 @@ class ProjectsController < ApplicationController
   before_action :authorize,
                 :except => [:index, :autocomplete, :list, :new, :create, :copy,
                             :archive, :unarchive,
-                            :destroy, :bulk_destroy]
+                            :destroy, :bulk_destroy, :hold, :delayed]
   before_action :authorize_global, :only => [:new, :create]
   before_action :require_admin, :only => [:copy, :archive, :unarchive, :bulk_destroy]
   accept_atom_auth :index
-  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen
+  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :delayed
   require_sudo_mode :destroy, :bulk_destroy
 
   helper :custom_fields
@@ -231,19 +231,19 @@ class ProjectsController < ApplicationController
 
     parent_id = @project.parent_id
     project_id = @project.id
-    if project_id.nil? && !parent_id.nil? && (parent_project = Project.find_by(id: parent_id))
-      new_identifier = "#{parent_project.identifier}_#{Project.where(parent_id: parent_id).count + 1}"
-    elsif project_id.nil? && !parent_id.nil?
-      new_identifier = "hdbfs_#{parent_id}_#{Project.where(parent_id: parent_id).count + 1}"
-    elsif !project_id.nil? && !parent_id.nil?
-      count = Project.where(parent_id: parent_id).where('id <= ?', project_id).count
-      new_identifier = "#{Project.find_by(id: parent_id).identifier}_#{count}"
-    elsif !project_id.nil?
-      new_identifier = "hdbfs_#{project_id}"
-    else
-      new_identifier = "hdbfs_#{Project.where(parent_id: parent_id).last.id + 1}"
-    end
-    @project.update_columns(identifier: "#{new_identifier}")
+    # if project_id.nil? && !parent_id.nil? && (parent_project = Project.find_by(id: parent_id))
+    #   new_identifier = "#{parent_project.identifier}_#{Project.where(parent_id: parent_id).count + 1}"
+    # elsif project_id.nil? && !parent_id.nil?
+    #   new_identifier = "hdbfs_#{parent_id}_#{Project.where(parent_id: parent_id).count + 1}"
+    # elsif !project_id.nil? && !parent_id.nil?
+    #   count = Project.where(parent_id: parent_id).where('id <= ?', project_id).count
+    #   new_identifier = "#{Project.find_by(id: parent_id).identifier}_#{count}"
+    # elsif !project_id.nil?
+    #   new_identifier = "hdbfs_#{project_id}"
+    # else
+    #   new_identifier = "hdbfs_#{Project.where(parent_id: parent_id).last.id + 1}"
+    # end
+    # @project.update_columns(identifier: "#{new_identifier}")
     if @project.save
       Mailer.deliver_project_updated(User.current, @project)  
       respond_to do |format|
@@ -321,6 +321,23 @@ class ProjectsController < ApplicationController
       format.api { render_api_ok }
     end
   end
+
+  def hold
+    @project.hold
+    respond_to do |format|
+      format.html { redirect_to project_path(@project) }
+      format.api { render_api_hold }
+    end
+  end
+
+  def delayed
+    @project.delayed
+    respond_to do |format|
+      format.html { redirect_to project_path(@project) }
+      format.api { render_api_delayed }
+    end
+  end
+
 
   # Delete @project
   def destroy

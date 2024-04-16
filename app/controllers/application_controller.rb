@@ -769,6 +769,14 @@ class ApplicationController < ActionController::Base
     render_api_head :no_content
   end
 
+  def render_api_hold
+    render_api_head :no_content
+  end
+
+  def render_api_delayed
+    render_api_head :no_content
+  end
+
   # Renders a head API response
   def render_api_head(status)
     head status
