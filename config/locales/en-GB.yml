@@ -1461,6 +1461,7 @@ en-GB:
   text_project_close_confirmation: Are you sure you want to close the '%{value}' project
     to make it read-only?
   text_issue_approve_confirmation: Are you sure you want to approve the '%{value}' issue?
+  text_issue_send_back_confirmation: Are you sure you want to send back the '%{value}' issue?
   text_issue_decline_confirmation: Are you sure you want to decline the '%{value}' issue?
   text_project_hold_confirmation: Are you sure you want to hold the '%{value}' project?
   text_project_delayed_confirmation: Are you sure you want to delayed the '%{value}' project?

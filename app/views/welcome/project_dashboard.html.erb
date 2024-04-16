@@ -248,10 +248,21 @@ button:hover {
       </select>
       </div>    
       <div class="filter-group">
-        <label for="start_date_filter">Scheduled Start Date:</label>
-        <input type="date" name="start_date_filter" id="start_date_filter" value="<%= params[:start_date_filter] %>">
-        <label for="end_date_filter">Scheduled End Date:</label>
-        <input type="date" name="end_date_filter" id="end_date_filter" value="<%= params[:end_date_filter] %>">
+        <label for="start_date">Scheduled Start Date:</label>
+        <div class="date-range">
+          <input type="date" name="start_date_from" id="start_date_from" value="<%= params[:start_date_from] %>">
+          <span>to</span>
+          <input type="date" name="start_date_to" id="start_date_to" value="<%= params[:start_date_to] %>">
+        </div>
+      </div>
+    
+      <div class="filter-group">
+        <label for="end_date">Scheduled End Date:</label>
+        <div class="date-range">
+          <input type="date" name="end_date_from" id="end_date_from" value="<%= params[:end_date_from] %>">
+          <span>to</span>
+          <input type="date" name="end_date_to" id="end_date_to" value="<%= params[:end_date_to] %>">
+        </div>
       </div>
       <div class="filter-group">
         <label for="days_input">Project Variance:</label>
@@ -406,7 +417,10 @@ button:hover {
     document.getElementById('manager_filter').value = '';
     document.getElementById('name_filter').value = '';
     document.getElementById('days_input').value = '30';
-
+    document.getElementById('start_date_from').value = '';
+    document.getElementById('end_date_from').value = '';
+    document.getElementById('start_date_to').value = '';
+    document.getElementById('end_date_to').value = '';
     document.getElementById('filter_form').submit();
   }
   

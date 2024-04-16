@@ -16,6 +16,16 @@ pre, code {font-family: Consolas, Menlo, "Liberation Mono", Courier, monospace;}
 .wiki h6 {font-size: 1em; color: #8e8e8e;}
 
 /***** Layout *****/
+.button-icon-link {
+  display: inline-flex; /* Align icon and text horizontally */
+  align-items: center; /* Align icon and text vertically */
+}
+
+.button-icon {
+  width: 20px; /* Set the width of the icon */
+  height: 20px; /* Set the height of the icon */
+  margin-right: 5px; /* Add some space between the icon and text */
+}
 #wrapper {
   min-height: inherit;
   background: white;

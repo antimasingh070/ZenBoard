@@ -129,18 +129,27 @@ class Issue < ActiveRecord::Base
   after_commit :create_parent_issue_journal
 
   # Returns a SQL conditions string used to find all issues visible by the specified user
-  def approved?
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+  def send_back?
+    self.assigned_to_id == self.author_id
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
-    custom_value&.value == "1"
+    custom_value&.value == "36"
+  rescue NoMethodError, ActiveRecord::RecordNotFound
+    false
+  end
+
+  def approved?
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
+    custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
+    custom_value&.value == "34"
   rescue NoMethodError, ActiveRecord::RecordNotFound
     false
   end
   
   def declined?
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
-    custom_value&.value == "0"
+    custom_value&.value == "35"
   rescue NoMethodError, ActiveRecord::RecordNotFound
     false
   end
