@@ -60,7 +60,7 @@ module ProjectsQueriesHelper
       Project::STATUS_ACTIVE => l(:project_status_active),
       Project::STATUS_CLOSED => l(:project_status_closed),
       Project::STATUS_HOLD => l(:project_status_hold),
-      Project::STATUS_DELAYED => l(:project_status_delayed)
+      Project::STATUS_CANCELLED => l(:project_status_cancelled)
     }
   end
 end

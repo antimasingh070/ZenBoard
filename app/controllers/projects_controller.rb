@@ -27,11 +27,11 @@ class ProjectsController < ApplicationController
   before_action :authorize,
                 :except => [:index, :autocomplete, :list, :new, :create, :copy,
                             :archive, :unarchive,
-                            :destroy, :bulk_destroy, :hold, :delayed]
+                            :destroy, :bulk_destroy, :hold, :cancelled]
   before_action :authorize_global, :only => [:new, :create]
   before_action :require_admin, :only => [:copy, :archive, :unarchive, :bulk_destroy]
   accept_atom_auth :index
-  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :delayed
+  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :cancelled
   require_sudo_mode :destroy, :bulk_destroy
 
   helper :custom_fields
@@ -330,11 +330,11 @@ class ProjectsController < ApplicationController
     end
   end
 
-  def delayed
-    @project.delayed
+  def cancelled
+    @project.cancelled
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
-      format.api { render_api_delayed }
+      format.api { render_api_cancelled }
     end
   end
 

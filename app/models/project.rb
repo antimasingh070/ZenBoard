@@ -27,7 +27,7 @@ class Project < ActiveRecord::Base
   STATUS_ARCHIVED   = 9
   STATUS_SCHEDULED_FOR_DELETION = 10
   STATUS_HOLD = 11
-  STATUS_DELAYED = 12
+  STATUS_CANCELLED = 12
 
   STATUS_OPTIONS = {
     STATUS_ACTIVE => 'Active',
@@ -434,10 +434,6 @@ end
     self.status == STATUS_HOLD
   end
   
-  def delayed?
-    self.status == STATUS_DELAYED
-  end
-  
   def cancelled?
     self.status == STATUS_CANCELLED
   end
@@ -494,16 +490,13 @@ end
     self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_HOLD
   end
 
-  def delayed
-    self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_DELAYED
-  end
 
   def cancelled
     self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_CANCELLED
   end 
 
   def reopen
-    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_DELAYED, Project::STATUS_CANCELLED, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_ACTIVE)
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_CANCELLED, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_ACTIVE)
   end
 
   # Returns an array of projects the project can be moved to

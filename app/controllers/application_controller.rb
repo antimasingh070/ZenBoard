@@ -773,7 +773,7 @@ class ApplicationController < ActionController::Base
     render_api_head :no_content
   end
 
-  def render_api_delayed
+  def render_api_cancelled
     render_api_head :no_content
   end
 
