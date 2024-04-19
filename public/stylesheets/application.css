@@ -22,10 +22,11 @@ pre, code {font-family: Consolas, Menlo, "Liberation Mono", Courier, monospace;}
 }
 
 .button-icon {
-  width: 20px; /* Set the width of the icon */
-  height: 20px; /* Set the height of the icon */
+  width: 8px !important;
+  height: 8px !important;
   margin-right: 5px; /* Add some space between the icon and text */
 }
+
 #wrapper {
   min-height: inherit;
   background: white;

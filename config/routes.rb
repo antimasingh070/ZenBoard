@@ -138,7 +138,7 @@ Rails.application.routes.draw do
     member do
       get 'settings(/:tab)', :action => 'settings', :as => 'settings'
       post :hold
-      post :delayed
+      post :cancelled
       match 'archive', :via => [:post, :put]
       match 'unarchive', :via => [:post, :put]
       match 'close', :via => [:post, :put]

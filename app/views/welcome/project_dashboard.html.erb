@@ -4,14 +4,40 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Project Dashboard</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 <style>
+
 label {
   font-weight: bold;
   margin-right: 10px;
 }
+@media print {
+  
+  .no-print, .no-print * {
+    display: none !important;
+  }
+ 
+}
+@media screen {
+    .print-only-image {
+      display: none;
+    }
+  }
 
+  @media print {
+    .print-only-image {
+      display: block; 
+      position: absolute;
+      right: 10px;
+      top: 0;
+      margin: 5px 0 0 auto;
+      width: 200px; 
+      height: 50px;
+    }
+  }
 select, input[type="number"], input[type="submit"], button {
   padding: 5px 10px;
   font-size: 14px;
@@ -197,10 +223,10 @@ button:hover {
 <body>
 
 <h1 style="font-weight: bold; font-size: 18px; text-align: center;">Project Dashboard</h1>
-  <form action="" method="get">
+<form action="" method="get">
   <div class="flex-container">
   <div class="dashboard">
-    <div class="filters">
+    <div class="filters no-print">
       <div class="filter-group">
         <label for="name_filter">Project Name:</label>
         <select name="name_filter" id="name_filter">
@@ -232,11 +258,30 @@ button:hover {
         <label for="manager_filter">Project Manager:</label>
         <select name="manager_filter" id="manager_filter">
           <option value="">All</option>
-          <% @manageres.each do |manager| %>
+          <% @managers.each do |manager| %>
             <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
           <% end %>
         </select>
       </div>
+
+      <div class="filter-group">
+        <label for="start_date">Scheduled Start Date:</label>
+        <div class="date-range">
+          <input type="date" name="start_date_from" id="start_date_from" value="<%= params[:start_date_from] %>">
+          <span>to</span>
+          <input type="date" name="start_date_to" id="start_date_to" value="<%= params[:start_date_to] %>">
+        </div>
+      </div>
+      
+      <div class="filter-group">
+        <label for="end_date">Scheduled End Date:</label>
+        <div class="date-range">
+          <input type="date" name="end_date_from" id="end_date_from" value="<%= params[:end_date_from] %>">
+          <span>to</span>
+          <input type="date" name="end_date_to" id="end_date_to" value="<%= params[:end_date_to] %>">
+        </div>
+      </div>
+      
       <div class="filter-group">
       <label for="status_filter">Status:</label>
       <select name="status_filter" id="status_filter">
@@ -248,38 +293,21 @@ button:hover {
       </select>
       </div>    
       <div class="filter-group">
-        <label for="start_date">Scheduled Start Date:</label>
-        <div class="date-range">
-          <input type="date" name="start_date_from" id="start_date_from" value="<%= params[:start_date_from] %>">
-          <span>to</span>
-          <input type="date" name="start_date_to" id="start_date_to" value="<%= params[:start_date_to] %>">
-        </div>
-      </div>
-    
-      <div class="filter-group">
-        <label for="end_date">Scheduled End Date:</label>
-        <div class="date-range">
-          <input type="date" name="end_date_from" id="end_date_from" value="<%= params[:end_date_from] %>">
-          <span>to</span>
-          <input type="date" name="end_date_to" id="end_date_to" value="<%= params[:end_date_to] %>">
-        </div>
-      </div>
-      <div class="filter-group">
         <label for="days_input">Project Variance:</label>
         <input type="number" name="days" id="days_input" value="<%= (params[:days].present? ? params[:days].to_i : 30) %>">
         
-        <input type="submit" value="Filter">
+        <input type="submit" value="Filter" id= "form-group">
         <button type="submit" onclick="clearFilters()" class="hover-red">Clear</button>
         <button onclick="exportToCsv()">Export as CSV</button>
         <button onclick="exportToPdf()">Export as PDF</button>
       </div>
     </div>
   </div>
-  </form>
+</form>
 
 
   <div class="container-2">
-  <h3>RAG  Status</h3>
+  <h3>RAG Status</h3>
     <div class="item">
       <div class="text">Sch. end date  < today or no revised date</div>
       <div class="color-box" style="background-color: red;"></div>
@@ -298,79 +326,121 @@ button:hover {
     </div>
   </div>
   </div>
-<div style="overflow-y: auto; height: 400px; width: 100%; text-align: center;">
-<table  style="table-layout: fixed; width: 100%;" >
+
+  <img class="print-only-image" src="/images/../images/hdbfs.png" width="200" height="50">
+
+<table>
   <thead>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <tr>
-      <th rowspan="2" style="width: 10%; white-space: normal;">Project Name</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Status</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Project Manager</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Project Lead</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Last Activity Completed</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Portfolio Category</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Scheduled Start Date</th>
-      <th rowspan="2" style="width: 10%;  white-space: normal;">Scheduled End Date</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Go Live date</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Revised End Date</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">Function Name</th>
-      <th colspan="3" style="width: 30%; white-space: normal; text-align: center;">Open / Total</th>
-      <th rowspan="2" style="width: 10%;  white-space: normal;">Open Risk</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;">% Done</th>
+      <th rowspan="2" style="width: 50%; white-space: normal; cursor: pointer;" class="sortable">Project Name <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Status <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Project Manager <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Project Lead <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Next Week Planned Activity <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Last Activity Completed <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Portfolio Category <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Scheduled Start Date <span class="sort-icon"></span></th>
+      <th rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Scheduled End Date <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Go Live date <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Revised End Date <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Function Name <span class="sort-icon"></span></th>
+      <th colspan="3" style="width: 30%; white-space: normal; text-align: center;" class="sortable">Open / Total <span class="sort-icon"></span></th>
+      <th rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Open Risk <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">% Done <span class="sort-icon"></span></th>
     </tr>
     <tr>
-      <th style="width: 10%; white-space: normal; text-align: center;">UAT</th>
-      <th style="width: 10%; white-space: normal; text-align: center;">Project Task View</th>
-      <th style="width: 10%; white-space: normal; text-align: center;">CR</th>
+      <th style="width: 10%; white-space: normal; text-align: center;" class="sortable">UAT <span class="sort-icon"></span></th>
+      <th style="width: 10%; white-space: normal; text-align: center;" class="sortable">Project Task View <span class="sort-icon"></span></th>
+      <th style="width: 10%; white-space: normal; text-align: center;" class="sortable">CR <span class="sort-icon"></span></th>
     </tr>
   </thead>
   <tbody>
     <% portfolio_category_counts = Hash.new(0) %>
-    <% @projects.each do |project| %>
+    <% @projects.reject { |entry| entry.name == "Master Project" }.each do |project| %>
       <% category = custom_field_value(project, "Portfolio Category") %>
       <% portfolio_category_counts[category] += 1 %>
       <tr>
-        <td><%= link_to project.name, project_path(project) %></td>
+        <td style="font-size: 10px; width: 500px; height: 20px;" ><%= link_to project.name, project_path(project) %></td>
         <% scheduled_end_date = Date.parse(date_value(project, "Scheduled End Date")) rescue nil %>
         <% revised_due_date = Date.parse(date_value(project, "Revised Due Date")) rescue nil %>
-        <% if (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
+        <% if project.closed? || project.hold? || project.cancelled? %>
+          <td style="background-color: white; readonly size="5" ><%= @project_status_text[project.status] %></td>
+        <% elsif (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
           <td style="background-color: green; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date >= Date.today) || revised_due_date.present? %>
           <td style="background-color: #FFBF00; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date > Date.today) || revised_due_date < Date.today %>
             <td style="background-color: red; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% end %>
-        <td><%= member_name(project, "Project Manager") %></td>
-        <td><%= member_name(project, "Project Lead") %></td>
-        <td><%= custom_field_value(project, "Project Activity") %></td>
-        <td><%= custom_field_value(project, "Portfolio Category") %></td>
-        <td><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
-        <td><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
-        <td><%= formatted_date(date_value(project, "Go Live date")) %></td>
-        <td><%= formatted_date(date_value(project, "Revised End Date")) %></td>        
-        <td><%= custom_field_value(project, "User function") %></td>
+        <td  style="font-size: 10px;" ><%= member_name(project, "Project Manager") %></td>
+        <td style="font-size: 10px;" ><%= member_name(project, "Project Lead") %></td>
+        <td style="font-size: 10px;" ><%= custom_field_value_week(project, "Project Activity") %></td>
+        <td style="font-size: 10px;" ><%= custom_field_value(project, "Project Activity") %></td>
+        <td style="font-size: 10px;" ><%= custom_field_value(project, "Portfolio Category") %></td>
+        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
+        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
+        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Go Live date")) %></td>
+        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Revised End Date")) %></td>        
+        <td style="font-size: 10px;" ><%= custom_field_value(project, "User function") %></td>
         <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
         <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
         <% id = project.identifier %>
         
-        <td><%= tracker_count(project, "UAT Issues") %></td>
+        <td style="font-size: 10px;" ><%= tracker_count(project, "UAT Issues") %></td>
         <% tracker_id = Tracker.find_by(name: "Project Plan- Activity List")&.id %>
-        <td><%= link_to tracker_count(project, "Project Plan- Activity List"), "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
-        <td><%= tracker_count(project, "Change Request") %></td>
-        <td><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}&status_id=[1,3,4]" %></td>
-        <td><%= percentage_done(project) %></td>
+        <td style="font-size: 10px;" ><%= link_to tracker_count(project, "Project Plan- Activity List"), "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
+        <td style="font-size: 10px;" ><%= tracker_count(project, "Change Request") %></td>
+        <td style="font-size: 10px;" ><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}&status_id=[1,3,4]" %></td>
+        <td style="font-size: 10px;" ><%= percentage_done(project) %></td>
       </tr>
     <% end %>
   </tbody>
 </table>
-</div>
 </body>
 </html>
 
 <script>
+function sortTable(table, column, asc = true) {
+    const dirModifier = asc ? 1 : -1;
+    const tbody = table.tBodies[0];
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+
+    // Sort each row
+    const sortedRows = rows.sort((a, b) => {
+        const aColText = a.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
+        const bColText = b.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
+
+        return aColText > bColText ? (1 * dirModifier) : (-1 * dirModifier);
+    });
+
+    // Remove all existing TRs from the table
+    while (tbody.firstChild) {
+        tbody.removeChild(tbody.firstChild);
+    }
+
+    // Re-add the newly sorted rows
+    tbody.append(...sortedRows);
+
+    // Remember how the column is currently sorted
+    table.querySelectorAll("th").forEach(th => th.classList.remove("th-sort-asc", "th-sort-desc"));
+    table.querySelector(`th:nth-child(${column + 1})`).classList.toggle("th-sort-asc", asc);
+    table.querySelector(`th:nth-child(${column + 1})`).classList.toggle("th-sort-desc", !asc);
+}
+
+document.querySelectorAll(".sortable").forEach(header => {
+    header.addEventListener("click", () => {
+        const tableElement = header.parentElement.parentElement.parentElement;
+        const headerIndex = Array.prototype.indexOf.call(header.parentElement.children, header);
+        const currentIsAscending = header.classList.contains("th-sort-asc");
+        sortTable(tableElement, headerIndex, !currentIsAscending);
+    });
+});
+
+
   function exportToPdf() {
     window.print();
 
@@ -418,10 +488,32 @@ button:hover {
     document.getElementById('name_filter').value = '';
     document.getElementById('days_input').value = '30';
     document.getElementById('start_date_from').value = '';
-    document.getElementById('end_date_from').value = '';
     document.getElementById('start_date_to').value = '';
+    document.getElementById('end_date_from').value = '';
     document.getElementById('end_date_to').value = '';
-    document.getElementById('filter_form').submit();
+    document.getElementById('form-group').click();
   }
   
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent;
+    const comparer = (idx, asc) => (a, b) => ((v1, v2) => 
+        v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2)
+    )(getCellValue(asc ? a : b, idx), getCellValue(asc ? b : a, idx));
+
+    document.querySelectorAll('th').forEach(th => th.addEventListener('click', (() => {
+        const table = th.closest('table');
+        const tbody = table.querySelector('tbody');
+        const icon = th.querySelector('.sort-icon');
+        Array.from(th.parentNode.children)
+            .forEach(el => el.querySelector('.sort-icon') && el.querySelector('.sort-icon').classList.remove('asc', 'desc'));
+        icon.classList.toggle('asc', this.asc = !this.asc);
+        icon.classList.toggle('desc', !this.asc);
+        Array.from(tbody.querySelectorAll('tr'))
+            .sort(comparer(Array.from(th.parentNode.children).indexOf(th), this.asc))
+            .forEach(tr => tbody.appendChild(tr));
+    })));
+});
 </script>
