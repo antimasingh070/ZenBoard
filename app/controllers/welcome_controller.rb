@@ -22,18 +22,12 @@ class WelcomeController < ApplicationController
 
   skip_before_action :check_if_login_required, only: [:robots]
 
-  def send_weekly_report
-    report_type = params[:reportType]
 
-    # Logic to generate the CSV or PDF file
-    file_path = generate_report_file(report_type)
-
-    # Logic to send email with the file attached
-    UserMailer.send_weekly_report(file_path).deliver_now
-
-    head :ok
+  def date_value(project, field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
+    date_string = custom_value&.value
   end
-
 
 
   def project_dashboard
@@ -43,46 +37,39 @@ class WelcomeController < ApplicationController
       Project::STATUS_ARCHIVED => 'Archived',
       Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion'
     }
-  
-    current_user_id = User.current.id
-  
-    # Filter projects based on various conditions
-    if params[:function_filter].present? && params[:category_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && custom_field_value(project, "User Function") == params[:function_filter] && project.members.exists?(user_id: current_user_id) }
-    elsif params[:function_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| custom_field_value(project, "User Function") == params[:function_filter] && project.members.exists?(user_id: current_user_id) }
-    elsif params[:category_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && project.members.exists?(user_id: current_user_id) }
-    elsif params[:status_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| project.status == params[:status_filter].to_i && project.members.exists?(user_id: current_user_id) }
-    elsif params[:name_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| project.name == params[:name_filter].to_s && project.members.exists?(user_id: current_user_id) }                
-    elsif params[:manager_filter].present?
-      manager_filter = params[:manager_filter].strip
-      @projects = Project.where(parent_id: nil).select do |project|
-                           member_names = member_name(project, "Project Manager")
-                           member_names.any? { |name| name.include?(manager_filter) } && project.members.exists?(user_id: current_user_id)
-                         end
-    else
-      # Default case: show projects where the current user is a member
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| project.members.exists?(user_id: current_user_id) }
-    end  
 
-    @categories = @projects.map { |project| custom_field_value(project, "Portfolio Category") }.uniq.compact
-    @functions = @projects.map { |project| custom_field_value(project, "User Function") }.uniq.compact
-    @statuses = @projects.map { |project| @project_status_text[project.status]}.uniq.compact
-    @manageres = @projects.map { |project| member_name(project, "Project Manager") }.flatten.compact.map { |name| name.split(',').map(&:strip) }.flatten.uniq
-    @names = @projects.map { |project| project.name  }.uniq.compact
-    
+    current_user_id = User.current.id
+
+    @projects = Project.where(parent_id: nil)
+
+    @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
+    @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
+    @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
+    @projects = @projects.where("project.name = ?", params[:name_filter]) if params[:name_filter].present?
+    @projects = @projects.select { |project| member_names(project, 'Project Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
+
+    if params[:start_date_from].present? && params[:start_date_to].present?
+      start_date_range = Date.parse(params[:start_date_from])..Date.parse(params[:start_date_to])
+      @projects = @projects.select { |project| start_date_range.cover?(Date.parse(date_value(project, 'Scheduled Start Date'))) }
+    end
+
+    if params[:end_date_from].present? && params[:end_date_to].present?
+      end_date_range = Date.parse(params[:end_date_from])..Date.parse(params[:end_date_to])
+      @projects = @projects.select { |project| end_date_range.cover?(Date.parse(date_value(project, 'Scheduled End Date'))) }
+    end
+
+    @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }
+
+    @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
+    @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq
+    @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq
+    @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq
+
+    @names = @projects.map(&:name).compact.uniq
   end
+
   
-  def member_name(project, field_name)
+  def member_names(project, field_name)
     project_lead_role = Role.find_by(name: field_name)
   
     member_ids_with_lead_role = MemberRole.where(role_id: project_lead_role.id).pluck(:member_id)
@@ -113,15 +100,48 @@ class WelcomeController < ApplicationController
     render :layout => false, :content_type => 'text/plain'
   end
 
+  def send_weekly_status_report(format)
+    # Generate the weekly status report based on the specified format (csv or pdf)
+    report_data = generate_report_data
+
+    case format
+    when 'csv'
+      generate_csv_report(report_data)
+    when 'pdf'
+      generate_pdf_report(report_data)
+    else
+      raise ArgumentError, "Invalid report format: #{format}. Supported formats are 'csv' and 'pdf'."
+    end
+
+    # Print a message indicating the report was generated
+    puts "Weekly status report generated in #{format} format."
+  end
+
   private
 
-  def generate_report_file(report_type)
-    # Logic to generate the CSV or PDF file
-    # ...
-
-    file_path = "/path/to/generated/file.#{report_type}"
-    # ...
-
-    file_path
+  def generate_report_data
+    # Logic to fetch data for the weekly status report
+    # This could involve querying the database or any other data source
+    # For demonstration purposes, let's return dummy data
+    Issue.where(status_id: [1, 2, 3])  # Example: Fetch issues with open, in progress, or re-opened statuses
   end
+
+  def generate_csv_report(report_data)
+    # Logic to generate the CSV report
+    # For simplicity, let's print the report data
+    puts "CSV Report:"
+    report_data.each do |issue|
+      puts "#{issue.id}, #{issue.subject}, #{issue.status.name}, #{issue.assigned_to&.name}"
+    end
+  end
+
+  def generate_pdf_report(report_data)
+    # Logic to generate the PDF report
+    # For simplicity, let's print the report data
+    puts "PDF Report:"
+    report_data.each do |issue|
+      puts "#{issue.id} | #{issue.subject} | #{issue.status.name} | #{issue.assigned_to&.name}"
+    end
+  end
+
 end

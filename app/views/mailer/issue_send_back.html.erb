@@ -2,7 +2,7 @@
 <p>Issue: <%= @issue.subject %></p>
 <p>Status: <%= @issue.status.name %></p>
 <p>Tracker: <%= @issue.tracker.name %></p>
-<p>Priority: <%= @issue.priority_id %></p>
+<p>Priority Level: <%= custom_function('Priority Level') %></p>
 <p>Category: <%= @issue.category_id || 'Not assigned' %></p>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>Created At: <%= @issue.created_on.strftime("%Y-%m-%d") %></p>

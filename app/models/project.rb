@@ -123,26 +123,29 @@ class Project < ActiveRecord::Base
     where("#{Project.table_name}.id IN (SELECT DISTINCT project_id FROM #{table_name_prefix}projects_trackers#{table_name_suffix})")
   end)
 
-def auto_create_records
-  custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Portfolio Category")
-  custom_value = CustomValue.find_by(customized_type: "Project", customized_id: self.id, custom_field_id: custom_field&.id)
-  return unless custom_value
+  def auto_create_records
+    custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Portfolio Category")
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: self.id, custom_field_id: custom_field&.id)
+    return unless custom_value
 
-  custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value.to_i)&.name
-  return unless custom_field_enumeration
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value.to_i)&.name
+    return unless custom_field_enumeration
 
-  tracker_id = Tracker.find_by(name: custom_field_enumeration)&.id
-  return unless tracker_id
+    tracker_id = Tracker.find_by(name: custom_field_enumeration)&.id
+    return unless tracker_id
 
-  issues = Issue.where(tracker_id: tracker_id, project_id: 51)
-  plan_id = Tracker.find_by(name: "Project Plan- Activity List")&.id
-  return unless plan_id
+    issues = Issue.where(tracker_id: tracker_id, project_id: 51)
+    plan_id = Tracker.find_by(name: "Project Plan- Activity List")&.id
+    return unless plan_id
 
-  issues.each do |issue|
-    Issue.find_or_create_by(tracker_id: plan_id, project_id: self.id, subject: issue.subject, author: User.current)
+    issues.each do |issue|
+      custom_field = CustomField.find_by(type: "IssueCustomField", name: "Project Activity")
+      custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: custom_field&.id).value
+      issue = Issue.find_or_initialize_by(tracker_id: plan_id, project_id: self.id, subject: issue.subject, author: User.current)
+      issue.custom_field_values = { custom_field.id => custom_value }
+      issue.save
+    end
   end
-end
-
 
   def copy_tracker_issues_to_project_activity_list(tracker_id)
     selected_tracker_id = self.tracker_id
