@@ -21,7 +21,7 @@
 <% closed_issues_previous_week = @project.issues.where(closed_on: start_date_previous_week..end_date_previous_week) %>
 <% "Closed issues from #{start_date_previous_week} to #{end_date_previous_week}:" %>
 <% start_date = Date.today %>
-<% end_date = Date.today + 7.days %>
+<% end_date = Date.today + 7.days %> 
 <% upcoming_due_date_issues = @project.issues.where(due_date: start_date..end_date) %>
 <% "Issues with due dates from #{start_date} to #{end_date}:" %>
 <% def member_name(project, field_name) %>
@@ -126,13 +126,16 @@ text-align: center;
 <th class= "side_status" style= "background-color: #ba0b11; color: white">Team/Owner Name</th>
 <th class= "side_status">FIX</th>
 </tr>
+<% @count =1 %>
+
 <% @risks.each do |risk| %>
 <tr>
-<td>ewr</td>
-<td>ewr</td>
-<td>ewr</td>
-<td>ewr</td>
+<td><%= @count %></td>
+<td><%= risk.subject %></td>
+<td><%= User.find(risk.author_id).login %></td>
+<td>FIX</td>
 </tr>
+<% @count=@count+1 %>
 <% end %>
 </table>
 <h1 style="padding-top: 40px">ACTIVITY COMPLETED THIS WEEK</h1>
@@ -208,7 +211,7 @@ Actual End Date
 <tr>
 <td><%= opened_issues.subject %></td>
 <td><%= opened_issues.description %></td>
-<td>Team/Owner Name</td>
+<td><%= User.find(open_issues.author_id).login %></td>
 <td><%= IssueStatus.find(opened_issues.status_id).name %></td>
 <td><%= opened_issues.start_date %></td>
 <td><%= custom_field_value(opened_issues, "Actual Start Date") %></td>

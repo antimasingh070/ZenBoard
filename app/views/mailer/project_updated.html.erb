@@ -9,7 +9,7 @@ end %>
 <% def custom_function_date(field_name)
     custom_field = CustomField.find_by(name: field_name)
     custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_value.value
+    custom_value
 end %>
 
 <!DOCTYPE html>
@@ -17,7 +17,7 @@ end %>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Project Created</title>
+    <title>Project Updated</title>
     <style>
         body {
             font-family: Arial, sans-serif;

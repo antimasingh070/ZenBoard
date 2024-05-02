@@ -6,7 +6,7 @@ module Redmine
     def to_s
       name
     end
-
+ 
     # TODO: Plugin API for adding a new notification?
     def self.all
       notifications = []
@@ -24,6 +24,7 @@ module Redmine
       notifications << Notifiable.new('message_posted')
       notifications << Notifiable.new('wiki_content_added')
       notifications << Notifiable.new('wiki_content_updated')
+      notifications << Notifiable.new('send_wsr_email')
       notifications
     end
   end

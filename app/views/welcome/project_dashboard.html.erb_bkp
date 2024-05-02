@@ -5,28 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Project Dashboard</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>Table to PDF</title>  
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 <style>
+
 .sort-icon {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  margin-left: 5px;
-  vertical-align: middle;
-  border: 4px solid transparent;
-  border-top-color: black;
-  transition: transform 0.2s;
+    display: inline-block;
+    margin-left: 5px;
+}
+.sort-icon::before {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+}
+.sort-icon.asc::before {
+    content: "\f078"; /* Icon for ascending order (caret-up) */
+}
+.sort-icon.desc::before {
+    content: "\f077"; /* Icon for descending order (caret-down) */
 }
 
-.sort-icon.asc {
-  transform: rotate(180deg);
-}
-
-.sort-icon.desc {
-  transform: rotate(0deg);
-}
 label {
   font-weight: bold;
   margin-right: 10px;
@@ -240,7 +240,7 @@ button:hover {
 <body>
 
 <h1 style="font-weight: bold; font-size: 18px; text-align: center;">Project Dashboard</h1>
-<form action="" method="get">
+  <form action="" method="get">
   <div class="flex-container">
   <div class="dashboard">
     <div class="filters no-print">
@@ -275,21 +275,21 @@ button:hover {
         <label for="manager_filter">Project Manager:</label>
         <select name="manager_filter" id="manager_filter">
           <option value="">All</option>
-          <% @managers.each do |manager| %>
+          <% @manageres.each do |manager| %>
             <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
           <% end %>
         </select>
       </div>
 
       <div class="filter-group">
-        <label for="start_date">Scheduled Start Date:</label>
-        <div class="date-range">
-          <input type="date" name="start_date_from" id="start_date_from" value="<%= params[:start_date_from] %>">
-          <span>to</span>
-          <input type="date" name="start_date_to" id="start_date_to" value="<%= params[:start_date_to] %>">
-        </div>
+      <label for="start_date">Scheduled Start Date:</label>
+      <div class="date-range">
+        <input type="date" name="start_date_from" id="start_date_from" value="<%= params[:start_date_from] %>">
+        <span>to</span>
+        <input type="date" name="start_date_to" id="start_date_to" value="<%= params[:start_date_to] %>">
       </div>
-      
+    </div>
+    
       <div class="filter-group">
         <label for="end_date">Scheduled End Date:</label>
         <div class="date-range">
@@ -308,11 +308,8 @@ button:hover {
           <option value="<%= status_id(status) %>" <%= selected %>><%= status %></option>
         <% end %>
       </select>
-      </div>    
+      </div> 
       <div class="filter-group">
-        <label for="days_input">Project Variance:</label>
-        <input type="number" name="days" id="days_input" value="<%= (params[:days].present? ? params[:days].to_i : 30) %>">
-        
         <input type="submit" value="Filter" id= "form-group">
         <button type="submit" onclick="clearFilters()" class="hover-red">Clear</button>
         <button onclick="exportToCsv()">Export as CSV</button>
@@ -320,7 +317,7 @@ button:hover {
       </div>
     </div>
   </div>
-</form>
+  </form>
 
 
   <div class="container-2">
@@ -345,89 +342,110 @@ button:hover {
   </div>
 
   <img class="print-only-image" src="/images/../images/hdbfs.png" width="200" height="50">
-
-<table>
+  <div style="overflow-y: auto; height: 400px; width: 100%; text-align: center;" class= "dashboard-container" id = "table-container">
+<table  style="table-layout: fixed; width: 100%;" id= "project-table" >
   <thead>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <tr>
-      <th rowspan="2" style="width: 50%; white-space: normal; cursor: pointer;" class="order">Project Name</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Status</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Manager</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Lead</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Next Week Planned Activity</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Last Activity Completed</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Portfolio Category</th>
-      <th style="width: 10%; white-space: normal;" class="order">Scheduled Start Date </th>
-      <th style="width: 10%; white-space: normal;" class="order">Scheduled End Date </th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="order">Go Live date </th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="order">Revised End Date </th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
+      <th rowspan="2" style="width: 100px; white-space: normal; cursor: pointer;" class="order" >Project Name <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" >Status <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" >Project Manager <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" >Project Lead <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" >Next Week Planned Activity <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" >Last Activity Completed <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" >Portfolio Category <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" class="order">Scheduled Start Date <span class="sort-icon"></span></th>
+      <th rowspan="2" style="width: 100px;  white-space: normal;" class="order">Scheduled End Date <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" class="order">Go Live date <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" class="order">Revised End Date <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" >Function Name <span class="sort-icon"></span></th>
+      <th colspan="3" style="width: 100px; white-space: normal; text-align: center;">Open / Total <span class="sort-icon"></span></th>
+      <th rowspan="2" style="width: 100px;  white-space: normal;" class="sort>Open Risk <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 100px;  white-space: normal;" class="sortable">% Done <span class="sort-icon"></span></th>
+    </tr>
+    <tr>
+      <th style="width: 100px; white-space: normal; text-align: center;" class="sortable">UAT <span class="sort-icon"></span></th>
+      <th style="width: 100px; white-space: normal; text-align: center;" class="sortable">Project Task View <span class="sort-icon"></span></th>
+      <th style="width: 100px; white-space: normal; text-align: center;" class="sortable">CR <span class="sort-icon"></span></th>
     </tr>
   </thead>
   <tbody>
     <% portfolio_category_counts = Hash.new(0) %>
-    <% @projects.reject { |entry| entry.name == "Master Project" }.each do |project| %>
+    <% @projects.each do |project| %>
       <% category = custom_field_value(project, "Portfolio Category") %>
       <% portfolio_category_counts[category] += 1 %>
       <tr>
-        <td style="font-size: 10px; width: 500px; height: 20px;" ><%= link_to project.name, project_path(project) %></td>
+        <td><%= link_to project.name, project_path(project) %></td>
         <% scheduled_end_date = Date.parse(date_value(project, "Scheduled End Date")) rescue nil %>
         <% revised_due_date = Date.parse(date_value(project, "Revised Due Date")) rescue nil %>
-        <% if project.closed? || project.hold?  %>
-          <td style="background-color: white; readonly size="5" ><%= @project_status_text[project.status] %></td>
-        <% elsif (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
+        <% if (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
           <td style="background-color: green; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date >= Date.today) || revised_due_date.present? %>
           <td style="background-color: #FFBF00; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date > Date.today) || revised_due_date < Date.today %>
             <td style="background-color: red; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% end %>
-        <% def date_has_passed?(date)
-        if date.present?
-          date.to_date < Date.today
-        end
-        end %>
-        <td  style="font-size: 10px;" ><%= member_name(project, "Project Manager") %></td>
-        <td style="font-size: 10px;" ><%= member_name(project, "Project Lead") %></td>
-        <td style="font-size: 10px;" ><%= custom_field_value_week(project, "Project Activity") %></td>
-        <td style="font-size: 10px;" ><%= custom_field_value(project, "Project Activity") %></td>
-        <td style="font-size: 10px;" ><%= custom_field_value(project, "Portfolio Category") %></td>
-        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
-        <td style="font-size: 10px; color: <%= date_has_passed?(date_value(project, "Scheduled End Date")) ? 'red' : 'black' %>;">
-  <%= formatted_date(date_value(project, "Scheduled End Date")) %>
-</td>
-        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Go Live date")) %></td>
-        <td style="font-size: 10px; color: <%= date_has_passed?(date_value(project, "Revised End Date")) ? 'red' : 'black' %>;">
-  <%= formatted_date(date_value(project, "Revised End Date")) %>
-</td>
-       
-        <td style="font-size: 10px;" ><%= custom_field_value(project, "User function") %></td>
+        <td><%= member_name(project, "Project Manager") %></td>
+        <td><%= member_name(project, "Project Lead") %></td>
+        <td><%= custom_field_value_week(project, "Project Activity") %></td>
+        <td><%= custom_field_value(project, "Project Activity") %></td>
+        <td><%= custom_field_value(project, "Portfolio Category") %></td>
+        <td><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
+        <td><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
+        <td><%= formatted_date(date_value(project, "Go Live date")) %></td>
+        <td><%= formatted_date(date_value(project, "Revised End Date")) %></td>        
+        <td><%= custom_field_value(project, "User function") %></td>
         <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
         <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
         <% id = project.identifier %>
         
-        <td style="font-size: 10px;" ><%= tracker_count(project, "UAT Issues") %></td>
+        <td><%= tracker_count(project, "UAT Issues") %></td>
         <% tracker_id = Tracker.find_by(name: "Project Plan- Activity List")&.id %>
-        <td style="font-size: 10px;" ><%= link_to tracker_count(project, "Project Plan- Activity List"), "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
-        <td style="font-size: 10px;" ><%= tracker_count(project, "Change Request") %></td>
-        <td style="font-size: 10px;" ><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}&status_id=[1,3,4]" %></td>
-        <td style="font-size: 10px;" ><%= percentage_done(project) %></td>
+        <td><%= link_to tracker_count(project, "Project Plan- Activity List"), "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}" %></td>
+        <td><%= tracker_count(project, "Change Request") %></td>
+        <td><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}&status_id=[1,3,4]" %></td>
+        <td><%= percentage_done(project) %></td>
       </tr>
     <% end %>
   </tbody>
 </table>
+
+<script>
+    function generatePDF() {
+        const doc = new jsPDF();
+        doc.autoTable({
+            html: '#project-table',
+            styles: {
+                lineColor: [192, 192, 192], // Light grey color for border
+                lineWidth: 0.5, // Border width
+                headStyles: {
+                    fillColor: [192, 192, 192] // Grey color for table head
+                }
+            }
+        });
+        doc.save('table.pdf');
+    }
+</script>
+
+<button onclick="generatePDF()">Download PDF</button>
+<script src="https://unpkg.com/jspdf@latest"></script>
+<script src="https://unpkg.com/jspdf-autotable@latest"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha512-qZvrmS2ekKPF2mSznTQsxqPgnpkI4DNTlrdUmTzrDgektczlKNRRhy5X5AAOnx5S09ydFYWWNSfcEqDTTHgtNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.es.js" integrity="sha512-VTufZOUx+Gc0N4JkluA0ZkVs2x4wfDI3p60gRWpHT761kMQ+hiNlYI+8MGXbLO48ymPKAeRa1wsEm3BIaxSEvw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.js" integrity="sha512-Bw9Zj8x4giJb3OmlMiMaGbNrFr0ERD2f9jL3en5FmcTXLhkI+fKyXVeyGyxKMIl1RfgcCBDprJJt4JvlglEb3A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.3.2/jspdf.debug.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.15/jspdf.plugin.autotable.min.js"></script>
+<script>
+
+
+
+
+
+</div>
 </body>
 </html>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script>
 function table_sort() {
     const styleSheet = document.createElement('style')
@@ -468,13 +486,9 @@ function table_sort() {
             }
             const arr = Array.from(th_elem.closest("table").querySelectorAll('tbody tr'))
             arr.sort((a, b) => {
-                const a_val = getValue(a.children[index].innerText)
-                const b_val = getValue(b.children[index].innerText)
-                if (typeof a_val === 'string' && typeof b_val === 'string') {
-                    return (asc) ? a_val.localeCompare(b_val) : b_val.localeCompare(a_val)
-                } else {
-                    return (asc) ? a_val - b_val : b_val - a_val
-                }
+                const a_val = parseDate(a.children[index].innerText)
+                const b_val = parseDate(b.children[index].innerText)
+                return (asc) ? a_val - b_val : b_val - a_val
             })
             arr.forEach(elem => {
                 th_elem.closest("table").querySelector("tbody").appendChild(elem)
@@ -482,14 +496,6 @@ function table_sort() {
             asc = !asc
         })
     })
-}
-
-function getValue(valueString) {
-    if (/^\d+\s[A-Za-z]{3}\s\d+$/.test(valueString)) { // Date format check
-        return parseDate(valueString)
-    } else {
-        return valueString
-    }
 }
 
 function parseDate(dateString) {
@@ -506,23 +512,33 @@ function parseMonth(monthString) {
 }
 
 table_sort()
+
+
 </script>
 <script>
-  function exportToPdf() {
-    window.print();
 
-    $.ajax({
-    url: '/send_weekly_report',
-    type: 'POST',
-    data: { reportType: 'pdf' },
-    success: function(response) {
-      console.log('Email sent successfully');
-    },
-    error: function(xhr, status, error) {
-      console.error('Error sending email:', error);
+
+function downloadPDF() {
+    const element = document.getElementById('project-table');  // Make sure the ID matches your table's ID
+    if (!element) {
+        console.error('Element not found!');
+        return;
     }
-  });
-  }
+
+    html2canvas(element).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'px',
+            format: [canvas.width, canvas.height]
+        });
+        pdf.addImage(imgData, 'PNG', 0, 0);
+        pdf.save('download.pdf');
+    }).catch(error => console.error('html2canvas error:', error));
+}
+</script>
+
+<script>
 
  function exportToCsv() {
     const rows = [];
@@ -553,7 +569,6 @@ table_sort()
     document.getElementById('status_filter').value = '';
     document.getElementById('manager_filter').value = '';
     document.getElementById('name_filter').value = '';
-    document.getElementById('days_input').value = '30';
     document.getElementById('start_date_from').value = '';
     document.getElementById('start_date_to').value = '';
     document.getElementById('end_date_from').value = '';
@@ -562,3 +577,4 @@ table_sort()
   }
   
 </script>
+

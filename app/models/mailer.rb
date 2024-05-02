@@ -827,33 +827,7 @@ class Mailer < ActionMailer::Base
   def self.deliver_send_dashboard_email(user, projects)
     send_dashboard_email(user, projects).deliver_now
   end
-
-  # def send_wsr_email(project)
-  #   @project = project
-  #   @members = Member.where(project_id: project.id)
-    
-  #   if @members.any?
-  #     @members.each do |member|
-  #       @member_role = MemberRole.find_by(member_id: member.id)
-  #       @role = Role.find_by(id: @member_role.role_id)
-  #       @user = User.find(member.user_id)
-  #       # Ensure @project is not overwritten unless intended
-  #       # @project = project 
-  #     end
-  #   end
-    
-  #   # Adjust the recipient of the email based on project or member data
-  #   recipient_email = @members.pluck(:email).join(",") # Example: Pluck emails of project members
-    
-  #   mail(to: "ankitguptalu9@gmail.com", subject: 'New Dashboard Data')
-  # end
-
-  # def deliver_send_wsr_email(projects)
-  #   # project = project.first
-  #   projects.each do |project|
-  #     send_wsr_email(project)
-  #   end
-  # end
+ 
   def send_wsr_email(user,project)
     @project = project
     @members = Member.where(project_id: @project.id)
@@ -873,8 +847,34 @@ class Mailer < ActionMailer::Base
   end
 
   def self.deliver_send_wsr_email(user,projects)
-    send_wsr_email(user,projects).deliver_now
+    if Setting.notified_events.include?('send_wsr_email')
+      send_wsr_email(user,projects).deliver_now
+    end
   end 
+
+  def send_issue_list(user, project, issues)
+    @project = project
+    @members = Member.where(project_id: @project.id)
+    @issues = issues
+    if @members.any?
+      @members.each do |member|
+        @member_role = MemberRole.find_by(member_id: member.id)
+        @role = Role.find_by(id: @member_role.role_id)
+        @user = User.find(member.user_id)
+      end
+    end
+
+    # Adjust the recipient of the email based on project or member data
+    @recipient_email = @members.pluck(:user_id).map { |user_id| User.find(user_id).mail }.join(",") # Pluck emails of all project members
+    
+    mail(to: "ankitguptalu9@gmail.com", subject: 'Issue List')
+  end
+
+  def self.deliver_send_issue_list(user, project,overdue_issues)
+    if overdue_issues.any?
+      send_issue_list(user, project, overdue_issues).deliver_now
+    end
+  end
   
   private
 

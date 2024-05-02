@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 
 ruby '>= 2.7.0', '< 3.3.0'
-
+gem 'omniauth'
 gem 'rails', '6.1.7.6'
 gem 'rouge', '~> 4.2.0'
 gem 'request_store', '~> 1.5.0'

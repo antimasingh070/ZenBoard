@@ -66,7 +66,7 @@ end
       if params[:start_date_from].present? && params[:start_date_to].present?
         start_date_from = Date.parse(params[:start_date_from])
         start_date_to = Date.parse(params[:start_date_to])
-        @projects = Project.where(parent_id: nil)
+        @projects = Project.where(parent_id: nilv)
                            .select { |project| 
                              scheduled_start_date = date_value(project, "Scheduled Start Date")
                              scheduled_start_date.present? && 
@@ -103,7 +103,7 @@ end
     @categories = @projects.map { |project| custom_field_value(project, "Portfolio Category") }.uniq.compact
     @functions = @projects.map { |project| custom_field_value(project, "User Function") }.uniq.compact
     @statuses = @projects.map { |project| @project_status_text[project.status]}.uniq.compact
-    @manageres = @projects.map { |project| member_name(project, "Project Manager") }.flatten.compact.map { |name| name.split(',').map(&:strip) }.flatten.uniq
+    @managers = @projects.map { |project| member_name(project, "Project Manager") }.flatten.compact.map { |name| name.split(',').map(&:strip) }.flatten.uniq
     @names = @projects.map { |project| project.name  }.uniq.compact
     
   end

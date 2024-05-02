@@ -80,6 +80,10 @@ class ProjectsController < ApplicationController
         @entries = scope.to_a
         send_data(query_to_csv(@entries, @query, params), :type => 'text/csv; header=present', :filename => 'projects.csv')
       end
+      format.json do
+        @projects = scope.offset(@offset).limit(@limit).to_a
+      end
+
     end
   end
 
