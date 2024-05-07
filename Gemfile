@@ -28,7 +28,7 @@ gem 'byebug'
 # Windows does not include zoneinfo files, so bundle the tzinfo-data gem
 gem 'tzinfo-data', platforms: [:mingw, :x64_mingw, :mswin]
 gem 'whenever', require: false
-gem 'rmagick'
+gem 'rmagick', "~> 6.0.0"
 # TOTP-based 2-factor authentication
 gem 'rotp', '>= 5.0.0'
 gem 'rqrcode'
