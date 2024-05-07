@@ -28,6 +28,22 @@ class Mailer < ActionMailer::Base
   include Redmine::I18n
   include Roadie::Rails::Automatic
 
+  STATUS_ACTIVE     = 1
+  STATUS_CLOSED     = 5
+  STATUS_ARCHIVED   = 9
+  STATUS_SCHEDULED_FOR_DELETION = 10
+  STATUS_HOLD = 11
+  STATUS_CANCELLED = 12
+
+  STATUS_MAP = {
+    STATUS_ACTIVE => "Active",
+    STATUS_CLOSED => "Closed",
+    STATUS_ARCHIVED => "Archived",
+    STATUS_SCHEDULED_FOR_DELETION => "Scheduled for Deletion",
+    STATUS_HOLD => "Hold",
+    STATUS_CANCELLED => "Cancelled"
+  }
+
   # Overrides ActionMailer::Base#process in order to set the recipient as the current user
   # and his language as the default locale.
   # The first argument of all actions of this Mailer must be a User (the recipient),
@@ -69,6 +85,82 @@ class Mailer < ActionMailer::Base
     options
   end
 
+  def issue_send_back(user, issue, auther)
+    @user = user
+    @issue = issue
+    @auther = auther
+    @project = @issue.project
+    mail_data = user_mails(@project)
+    assigned_to_id = @issue.assigned_to_id 
+    assignee = User.find_by(id: assigned_to_id) 
+    mail_to = []
+    mail_to += [@author&.mail, assignee&.mail]
+    mail_cc = mail_data[:mail_cc].uniq
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue send_back: #{@issue.subject}"
+  end
+
+  def self.deliver_issue_send_back(user, issue, auther)
+    @auther = auther
+    @project = issue.project
+    @issue = issue
+    @user = user
+    issue_send_back(user, issue, auther).deliver_later
+  end
+  
+  def issue_approved(user, issue, member_mails)
+    @user = user
+    @issue = issue
+    @author = issue.author
+    @member_mails = member_mails
+    @project = @issue.project
+    mail_data = user_mails(@project)
+    assigned_to_id = @issue.assigned_to_id 
+    assignee = User.find_by(id: assigned_to_id) 
+    mail_to = []
+    mail_to += [@author.mail, assignee.mail]
+    mail_cc = mail_data[:mail_cc].uniq
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue Approved: #{@issue.subject}"
+  end
+
+  def self.deliver_issue_approved(user, issue, members)
+    @members = members
+    if  @members.any?
+      member_mails = @members.map { |member| member.user.mail }
+      @project = issue.project
+      @issue = issue
+      @user = user
+      @project = issue.project
+      issue_approved(user, issue, member_mails).deliver_later
+    end
+  end
+
+  def issue_declined(user, issue, member_mails)
+    @user = user
+    @issue = issue
+    @author = issue.author
+    @member_mails = member_mails
+    @project = @issue.project
+    mail_data = user_mails(@project)
+    assigned_to_id = @issue.assigned_to_id 
+    assignee = User.find_by(id: assigned_to_id) 
+    mail_to = []
+    mail_to += [@author.mail, assignee.mail]
+    mail_cc = mail_data[:mail_cc].uniq
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue Declined: #{@issue.subject}"
+  end
+
+  def self.deliver_issue_declined(user, issue, members)
+    @members = members
+    if  @members.any?
+      member_mails = @members.map { |member| member.user.mail }
+      @project = issue.project
+      @issue = issue
+      @user = user
+      @project = issue.project
+      issue_declined(user, issue, member_mails).deliver_later
+    end
+  end
+
   # Builds a mail for notifying user about a new issue
   def issue_add(user, issue)
     redmine_headers 'Project' => issue.project.identifier,
@@ -82,12 +174,27 @@ class Mailer < ActionMailer::Base
     @author = issue.author
     @issue = issue
     @user = user
+    @project = @issue.project
+    mail_data = user_mails(@project)
+    assigned_to_id = @issue.assigned_to_id 
+    assignee = User.find_by(id: assigned_to_id) 
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Role")
+    custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: custom_field.id, customized_id: issue.id)&.value
+    # next unlescustom_value 
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.to_i, custom_field_id: custom_field.id)&.name 
+    matched_role_ids = issue.project.members.joins(:roles).where(roles: { name: custom_field_enumeration }).pluck(:user_id) 
+    role_users = User.where(id: matched_role_ids)
+    mail_to = []
+    if !role_users.blank?
+      mail_to += role_users.map(&:mail).uniq
+    end
+    mail_to += [@author.mail, assignee.mail]
+    mail_cc = mail_data[:mail_cc].uniq
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue)
     subject = "[#{issue.project.name} - #{issue.tracker.name} ##{issue.id}]"
     subject += " (#{issue.status.name})" if Setting.show_status_changes_in_mail_subject?
     subject += " #{issue.subject}"
-    mail :to => user,
-      :subject => subject
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :subject => subject
   end
 
   # Notifies users about a new issue.
@@ -95,10 +202,8 @@ class Mailer < ActionMailer::Base
   # Example:
   #   Mailer.deliver_issue_add(issue)
   def self.deliver_issue_add(issue)
-    users = issue.notified_users | issue.notified_watchers | issue.notified_mentions
-    users.each do |user|
-      issue_add(user, issue).deliver_later
-    end
+    user = User.current
+    issue_add(user, issue).deliver_later
   end
 
   # Builds a mail for notifying user about an issue update
@@ -113,6 +218,23 @@ class Mailer < ActionMailer::Base
     message_id journal
     references issue
     @author = journal.user
+    @issue = issue
+    @project = @issue.project
+    mail_data = user_mails(@project)
+    assigned_to_id = @issue.assigned_to_id 
+    assignee = User.find_by(id: assigned_to_id) 
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Role")
+    custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: custom_field.id, customized_id: issue.id)&.value
+    # next unlescustom_value 
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.to_i, custom_field_id: custom_field.id)&.name 
+    matched_role_ids = issue.project.members.joins(:roles).where(roles: { name: custom_field_enumeration }).pluck(:user_id) 
+    role_users = User.where(id: matched_role_ids)
+    mail_to = []
+    if !role_users.blank?
+      mail_to += role_users.map(&:mail).uniq
+    end
+    mail_to += [@author.mail, assignee.mail]
+    mail_cc = mail_data[:mail_cc].uniq
     s = "[#{issue.project.name} - #{issue.tracker.name} ##{issue.id}] "
     s += "(#{issue.status.name}) " if journal.new_value_for('status_id') && Setting.show_status_changes_in_mail_subject?
     s += issue.subject
@@ -121,8 +243,7 @@ class Mailer < ActionMailer::Base
     @journal = journal
     @journal_details = journal.visible_details
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue, :anchor => "change-#{journal.id}")
-
-    mail :to => user,
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq,
       :subject => s
   end
 
@@ -136,8 +257,10 @@ class Mailer < ActionMailer::Base
       journal.notes? || journal.visible_details(user).any?
     end
     users.each do |user|
-      issue_edit(user, journal).deliver_later
+      # issue_edit(user, journal).deliver_later
     end
+    user = User.current
+    issue_edit(user, journal).deliver_later
   end
 
   # Builds a mail to user about a new document.
@@ -147,7 +270,8 @@ class Mailer < ActionMailer::Base
     @document = document
     @user = user
     @document_url = url_for(:controller => 'documents', :action => 'show', :id => document)
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => "[#{document.project.name}] #{l(:label_document_new)}: #{document.title}"
   end
 
@@ -184,7 +308,8 @@ class Mailer < ActionMailer::Base
     @user = user
     @added_to = added_to
     @added_to_url = added_to_url
-    mail :to => user,
+    mail :to => "singhantima720@gmail.com",
+    # mail :to => user,
       :subject => "[#{container.project.name}] #{l(:label_attachment_new)}"
   end
 
@@ -210,13 +335,17 @@ class Mailer < ActionMailer::Base
   def news_added(user, news)
     redmine_headers 'Project' => news.project.identifier
     @author = news.author
+    @project = news.project
     message_id news
     references news
     @news = news
     @user = user
+    @project_status =   STATUS_MAP[@project.status] || "Unknown"
+    mail_data = user_mails(@project)
+    mail_to = mail_data[:mail_to].uniq
+    mail_cc = mail_data[:mail_cc].uniq
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
-    mail :to => user,
-      :subject => "[ProjectHUB] Project NEWS: #{news.project.name}  #{news.project.identifier}"
+    mail :to => mail_to,  cc: mail_cc, :subject => "[ProjectHUB] Project NEWS: #{news.project.name}  #{news.project.identifier}"
   end
   
   # Notifies users about new news
@@ -224,10 +353,12 @@ class Mailer < ActionMailer::Base
   # Example:
   #   Mailer.deliver_news_added(news)
   def self.deliver_news_added(news)
-    users = news.notified_users | news.notified_watchers_for_added_news
-    users.each do |user|
-      news_added(user, news).deliver_later
-    end
+    # users = news.notified_users | news.notified_watchers_for_added_news
+    # users.each do |user|
+    #   news_added(user, news).deliver_later
+    # end
+    user = User.current
+    news_added(user, news).deliver_later
   end
 
   # Builds a mail to user about a new news comment.
@@ -253,8 +384,9 @@ class Mailer < ActionMailer::Base
     news = comment.commented
     users = news.notified_users | news.notified_watchers
     users.each do |user|
-      news_comment_added(user, comment).deliver_later
+      # news_comment_added(user, comment).deliver_later
     end
+    news_comment_added(users, comment).deliver_later
   end
 
   # Builds a mail to user about a new message.
@@ -281,8 +413,9 @@ class Mailer < ActionMailer::Base
     users |= message.board.notified_watchers
 
     users.each do |user|
-      message_posted(user, message).deliver_later
+      # message_posted(user, message).deliver_later
     end
+    message_posted(users, message).deliver_later
   end
 
   # Builds a mail to user about a new wiki content.
@@ -310,8 +443,9 @@ class Mailer < ActionMailer::Base
   def self.deliver_wiki_content_added(wiki_content)
     users = wiki_content.notified_users | wiki_content.page.wiki.notified_watchers | wiki_content.notified_mentions
     users.each do |user|
-      wiki_content_added(user, wiki_content).deliver_later
+      # wiki_content_added(user, wiki_content).deliver_later
     end
+    wiki_content_added(users, wiki_content).deliver_later
   end
 
   # Builds a mail to user about an update of the specified wiki content.
@@ -372,7 +506,7 @@ class Mailer < ActionMailer::Base
     @url = url_for(:controller => 'users', :action => 'index',
                          :status => User::STATUS_REGISTERED,
                          :sort_key => 'created_on', :sort_order => 'desc')
-    mail :to => user,
+                         mail :to => user,
       :subject => l(:mail_subject_account_activation_request, Setting.app_title)
   end
 
@@ -470,6 +604,7 @@ class Mailer < ActionMailer::Base
   #     value: address
   #   ) => Mail::Message object
   def security_notification(user, sender, options={})
+    @user = user
     @sender = sender
     redmine_headers 'Sender' => sender.login
     @message =
@@ -557,8 +692,8 @@ class Mailer < ActionMailer::Base
     raise_delivery_errors_was = self.raise_delivery_errors
     self.raise_delivery_errors = true
     # Email must be delivered synchronously so we can catch errors
-    # test_email(user).deliver_now
-    project_created(User.first, Project.first).deliver_now
+    # test_email(user).deliver_later
+    project_created(User.first, Project.first).deliver_later
   ensure
     self.raise_delivery_errors = raise_delivery_errors_was
   end
@@ -751,62 +886,107 @@ class Mailer < ActionMailer::Base
     mails
   end
 
-  def project_created(user, project)
-    @project = project
-    # @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
-    mail :to => user.mail,
-      :subject => "New Project Created"
-  end
-
-  def self.deliver_project_created(user, project)
-    project_created(user, project).deliver_now
-  end
-
-  def project_updated(user, member_role, role, project)
+  def project_created(user, member_role, role, project)
     @project = project
     @user = user
     @member_role = member_role
     @role = role
     # @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
     mail :to => user.mail,
-      :subject => "Project Updated"
+      :subject => "Project Created"
   end
-
-  def self.deliver_project_updated(user, project)
+  
+  def self.deliver_project_created(user, project)
     @members = Member.where(project_id: project.id)
     if  @members.any?
       @members.each do |member|
         @member_role = MemberRole.find_by(member_id: member.id)
         @role = Role.find_by(id: @member_role.role_id)
-        @user = User.find(member.user_id)
+        @user = User.find(member.user.id) if member.user.present?
         @project = project
-        project_updated(@user, @member_role, @role, @project).deliver_now
       end
+      project_created(@user, @member_role, @role, @project).deliver_later
     end
   end
 
-  def membership_added_email(user, role, project)
-    @user = user
-    @role = role
+  def project_updated(user, member_role, role, project, updated_fields)
     @project = project
-    mail :to => user.mail,
-      :subject =>   "[ProjectHUB] Project update: #{@project.name}  #{@project.identifier}"
+    @user = user
+    @member_role = member_role
+    @role = role
+    @updated_fields = updated_fields
+    mail_data = user_mails(@project)
+    mail_to = mail_data[:mail_to].uniq
+    mail_cc = mail_data[:mail_cc].uniq
+    mail :to => mail_to, :cc => mail_cc, 
+      :subject => "Project Updated"
   end
 
-  def self.deliver_membership_added_email(user, role, project)
-    membership_added_email(user, role, project).deliver_now
+  def self.deliver_project_updated(user, project, updated_fields)
+    @members = Member.where(project_id: project.id)
+    if  @members.any?
+      @members.each do |member|
+        @member_role = MemberRole.find_by(member_id: member.id)
+        @role = Role.find_by(id: @member_role.role_id)
+        @user = User.find(member.user.id) if member.user.present?
+        @project = project
+      end
+      project_updated(@user, @member_role, @role, @project, updated_fields).deliver_later
+    end
+  end
+
+  def project_status(user, old_status, project)
+    @user = user
+    @project = project
+    @old_status = old_status
+    @new_status = @project.status
+    @old_status_text = STATUS_MAP[old_status] || "Unknown"
+    @new_status_text = STATUS_MAP[@project.status] || "Unknown"
+  
+    mail_data = user_mails(@project)
+    mail_to = mail_data[:mail_to].uniq
+    mail_cc = mail_data[:mail_cc].uniq
+    mail_subject = "[ProjectHUB] #{project.name} has been updated from \"#{@old_status_text}\" to \"#{@new_status_text}\" on #{Time.now.strftime("%B %d, %Y")}"
+  
+    mail(to: mail_to, cc: mail_cc, subject: mail_subject)
+  end
+  
+
+  def self.deliver_project_status(user, old_status, project)
+    project_status(user, old_status, project).deliver_later
+  end
+
+  def membership_added_email(user, project)
+    @user = user
+    @project = project
+    mail_data = user_mails(@project)
+    mail_to = mail_data[:mail_to].uniq
+    mail_cc = mail_data[:mail_cc].uniq
+    mail(to: mail_to, cc: mail_cc, subject: "[ProjectHUB] New Project Created: #{project.name} #{project.identifier}")    
+  end
+
+  def self.deliver_membership_added_email(user, project)
+    membership_added_email(user, project).deliver_later
   end
 
   def membership_deleted_email(user, role, project)
     @user = user
     @role = role
     @project = project
+<<<<<<< HEAD
     mail :to => user.mail,
       :subject => "[ProjectHUB] Project update: #{@project.name}  #{@project.identifier}"
+=======
+    mail_data = user_mails(@project)
+    mail_to = mail_data[:mail_to].uniq
+    mail_cc = mail_data[:mail_cc].uniq
+    mail(to: mail_to, cc: mail_cc, 
+      :subject => "[ProjectHUB] New Project Created: #{@project.name}  #{@project.identifier} ")
+>>>>>>> a0c06d16bf8774c0c0e052fffb00ec9749ed7cb3
   end
 
   def self.deliver_membership_deleted_email(user, role, project)
-    membership_deleted_email(user, role, project).deliver_now
+    membership_deleted_email(user, role, project).deliver_later
   end
 
   def send_issue_pdf(user, file_path)
@@ -877,6 +1057,51 @@ class Mailer < ActionMailer::Base
   end
   
   private
+
+  def user_mails(project)
+    @project = project
+    existing_members = @project.members.pluck(:id)
+    project_managers = fetch_project_manager(existing_members)
+    program_managers = fetch_program_managers(existing_members)
+    pmo = fetch_pmo(existing_members)
+    all_user_ids = fetch_all_project_members(project_managers.pluck(:id), program_managers.pluck(:id), pmo.pluck(:id), existing_members, project)
+    recipient_ids = project_managers.pluck(:id) + program_managers.pluck(:id) + pmo.pluck(:id)
+    mail_to = []
+    mail_cc = []
+    @user = User.current
+    if !all_user_ids.include?(@user.id) || !recipient_ids.include?(@user.id)
+      mail_to << @user.mail
+    end
+    mail_to += User.where(id: all_user_ids).pluck(:id).map { |id| User.find(id).mail }
+    recipient_users = User.where(id: recipient_ids)
+    mail_cc = recipient_users.map(&:mail).uniq
+    { mail_to: mail_to, mail_cc: mail_cc }
+  end
+
+  def fetch_all_project_members(project_managers, program_managers, pmo, existing_members, project)
+    existing_member_ids = existing_members
+    existing_user_ids = existing_member_ids.map { |member_id| Member.find(member_id).user.id }
+    all_recipients = [project_managers, program_managers, pmo].flatten.uniq
+    new_user_ids = existing_user_ids.reject { |id| all_recipients.include?(id) }
+  end
+
+  def fetch_members_by_role(existing_members, role_name)
+    role = Role.find_by(name: role_name)
+    members_with_role = existing_members.select { |member_id| MemberRole.find_by(member_id: member_id, role_id: role.id) }
+    members_with_role.map { |member_id| Member.find(member_id).user }
+  end
+
+  def fetch_project_manager(existing_members)
+    fetch_members_by_role(existing_members, "Project Manager")
+  end
+  
+  def fetch_program_managers(existing_members)
+    fetch_members_by_role(existing_members, "Program Manager")
+  end
+  
+  def fetch_pmo(existing_members)
+    fetch_members_by_role(existing_members, "pmo")
+  end
 
   # Appends a Redmine header field (name is prepended with 'X-Redmine-')
   def redmine_headers(h)

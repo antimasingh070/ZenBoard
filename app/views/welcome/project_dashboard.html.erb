@@ -353,17 +353,17 @@ button:hover {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <tr>
-      <th rowspan="2" style="width: 50%; white-space: normal; cursor: pointer;" class="order">Project Name</th>
+      <th rowspan="2" style="width: 50%; white-space: normal; cursor: pointer;" class="sortable">Project Name</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Status</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Manager</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Lead</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Next Week Planned Activity</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Last Activity Completed</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Portfolio Category</th>
-      <th style="width: 10%; white-space: normal;" class="order">Scheduled Start Date </th>
-      <th style="width: 10%; white-space: normal;" class="order">Scheduled End Date </th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="order">Go Live date </th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="order">Revised End Date </th>
+      <th style="width: 10%; white-space: normal;">Scheduled Start Date <span class="sort-icon" ></span></th>
+      <th style="width: 10%; white-space: normal;">Scheduled End Date <span  class="sort-icon" ></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Go Live date <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Revised End Date <span class="sort-icon"></span></th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
@@ -381,7 +381,7 @@ button:hover {
         <td style="font-size: 10px; width: 500px; height: 20px;" ><%= link_to project.name, project_path(project) %></td>
         <% scheduled_end_date = Date.parse(date_value(project, "Scheduled End Date")) rescue nil %>
         <% revised_due_date = Date.parse(date_value(project, "Revised Due Date")) rescue nil %>
-        <% if project.closed? || project.hold?  %>
+        <% if project.closed? || project.hold? || project.cancelled? %>
           <td style="background-color: white; readonly size="5" ><%= @project_status_text[project.status] %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
           <td style="background-color: green; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
@@ -390,25 +390,15 @@ button:hover {
         <% elsif (scheduled_end_date.present? && scheduled_end_date > Date.today) || revised_due_date < Date.today %>
             <td style="background-color: red; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% end %>
-        <% def date_has_passed?(date)
-        if date.present?
-          date.to_date < Date.today
-        end
-        end %>
         <td  style="font-size: 10px;" ><%= member_name(project, "Project Manager") %></td>
         <td style="font-size: 10px;" ><%= member_name(project, "Project Lead") %></td>
         <td style="font-size: 10px;" ><%= custom_field_value_week(project, "Project Activity") %></td>
         <td style="font-size: 10px;" ><%= custom_field_value(project, "Project Activity") %></td>
         <td style="font-size: 10px;" ><%= custom_field_value(project, "Portfolio Category") %></td>
         <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
-        <td style="font-size: 10px; color: <%= date_has_passed?(date_value(project, "Scheduled End Date")) ? 'red' : 'black' %>;">
-  <%= formatted_date(date_value(project, "Scheduled End Date")) %>
-</td>
+        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
         <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Go Live date")) %></td>
-        <td style="font-size: 10px; color: <%= date_has_passed?(date_value(project, "Revised End Date")) ? 'red' : 'black' %>;">
-  <%= formatted_date(date_value(project, "Revised End Date")) %>
-</td>
-       
+        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Revised End Date")) %></td>        
         <td style="font-size: 10px;" ><%= custom_field_value(project, "User function") %></td>
         <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
         <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
@@ -429,85 +419,31 @@ button:hover {
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-function table_sort() {
-    const styleSheet = document.createElement('style')
-    styleSheet.innerHTML = `
-        .order-inactive span {
-            visibility:hidden;
-        }
-        .order-inactive:hover span {
-            visibility:visible;
-        }
-        .order-active span {
-            visibility: visible;
-        }
-    `
-    document.head.appendChild(styleSheet)
-
-    document.querySelectorAll('th.order').forEach(th_elem => {
-        let asc = true
-        const span_elem = document.createElement('span')
-        span_elem.style = "font-size:0.8rem; margin-left:0.5rem"
-        span_elem.innerHTML = "▼"
-        th_elem.appendChild(span_elem)
-        th_elem.classList.add('order-inactive')
-
-        const index = Array.from(th_elem.parentNode.children).indexOf(th_elem)
-        th_elem.addEventListener('click', (e) => {
-            document.querySelectorAll('th.order').forEach(elem => {
-                elem.classList.remove('order-active')
-                elem.classList.add('order-inactive')
-            })
-            th_elem.classList.remove('order-inactive')
-            th_elem.classList.add('order-active')
-
-            if (!asc) {
-                th_elem.querySelector('span').innerHTML = '▲'
-            } else {
-                th_elem.querySelector('span').innerHTML = '▼'
-            }
-            const arr = Array.from(th_elem.closest("table").querySelectorAll('tbody tr'))
-            arr.sort((a, b) => {
-                const a_val = getValue(a.children[index].innerText)
-                const b_val = getValue(b.children[index].innerText)
-                if (typeof a_val === 'string' && typeof b_val === 'string') {
-                    return (asc) ? a_val.localeCompare(b_val) : b_val.localeCompare(a_val)
-                } else {
-                    return (asc) ? a_val - b_val : b_val - a_val
-                }
-            })
-            arr.forEach(elem => {
-                th_elem.closest("table").querySelector("tbody").appendChild(elem)
-            })
-            asc = !asc
-        })
-    })
+function extractDateValues('."sort-icon"') {
+  const cells = document.querySelectorAll(`td:nth-child(${column})`);
+  return Array.from(cells).map(cell => new Date(cell.textContent));
 }
 
-function getValue(valueString) {
-    if (/^\d+\s[A-Za-z]{3}\s\d+$/.test(valueString)) { // Date format check
-        return parseDate(valueString)
-    } else {
-        return valueString
-    }
-}
+function sort(column) {
+  const sortOrder = column === 'start' ? 'asc' : 'desc';
+  const icon = document.getElementById(`${column}-sort-icon`);
+  icon.classList.toggle('asc', sortOrder === 'asc');
+  icon.classList.toggle('desc', sortOrder === 'desc');
 
-function parseDate(dateString) {
-    const parts = dateString.split(' ')
-    const day = parseInt(parts[0])
-    const month = parseMonth(parts[1])
-    const year = parseInt(parts[2])
-    return new Date(year, month, day)
-}
+  const dates = extractDateValues(column === 'start' ? 1 : 2);
+  dates.sort((a, b) => a.getTime() - b.getTime());
 
-function parseMonth(monthString) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    return months.indexOf(monthString)
+  const rows = document.querySelectorAll('tr');
+  for (let i = 1; i < rows.length; i++) {
+    rows[i].querySelector(`td:nth-child(${column === 'start' ? 1 : 2})`).textContent = dates[i - 1].toLocaleDateString();
+  }
 }
-
-table_sort()
 </script>
+
 <script>
+
+
+
   function exportToPdf() {
     window.print();
 

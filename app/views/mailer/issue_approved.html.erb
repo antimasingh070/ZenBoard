@@ -1,13 +1,24 @@
-<h1>Issue has been approved.</h1>
-<p>Issue: <%= @issue.subject %></p>
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @issue.project&.id, custom_field_id: custom_field.id)
+    return unless custom_value # Exit if custom value not found
+    
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
+    custom_field_enumeration&.name
+end %>
+<% assigned_to_id = @issue.assigned_to_id 
+assignee = User.find_by(id: assigned_to_id) %>
+<h1>Project task has been approved by <%= User.current.name %> </h1>
+<p>Project task subject: <%= @issue.subject %></p>
+<p>Project Name: <%= @issue.project.name %></p>
 <p>Status: <%= @issue.status.name %></p>
-<p>Tracker: <%= @issue.tracker.name %></p>
-<p>Priority: <%= @issue.priority_id %></p>
-<p>Category: <%= @issue.category_id || 'Not assigned' %></p>
+<p>Task: <%= @issue.tracker.name %></p>
+<p>Assignee: <%= assignee.name %></p>
+<p>Priority Level: <%= custom_function('Priority Level') %></p>
+<p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
-<p>Created At: <%= @issue.created_on.strftime("%Y-%m-%d") %></p>
-<p>Project: <%= @issue.project.name %></p>
-<p>Done Ratio: <%= @issue.done_ratio %></p>
 
 <p>Project Members:</p>
 <ul>
@@ -15,10 +26,18 @@
   <% @members.each do |member| %>
     <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
     <% role = Role.find_by(id: role_id) %>
+<<<<<<< HEAD
     <li><%= "#{member.user.name} (Role: #{role&.name || 'Not assigned'})" %></li>
+=======
+    <li><%= "#{member.user.name} (#{role&.name || 'Not assigned'})" %></li>
+>>>>>>> a0c06d16bf8774c0c0e052fffb00ec9749ed7cb3
   <% end %>
 </ul>
 
 <p>Please log in to ProjectHUB to view and manage the issue details.</p>
+<<<<<<< HEAD
 <p><a href="<%= projecthub_url %>" class="link">ProjectHUB</a></p>
+=======
+<p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
+>>>>>>> a0c06d16bf8774c0c0e052fffb00ec9749ed7cb3
 <p>Best Regards</p>

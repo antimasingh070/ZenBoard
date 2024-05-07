@@ -11,6 +11,8 @@ module Redmine
     def self.all
       notifications = []
       notifications << Notifiable.new('issue_added')
+      notifications << Notifiable.new('project_created')
+      notifications << Notifiable.new('project_updated')
       notifications << Notifiable.new('issue_updated')
       notifications << Notifiable.new('issue_note_added', 'issue_updated')
       notifications << Notifiable.new('issue_status_updated', 'issue_updated')

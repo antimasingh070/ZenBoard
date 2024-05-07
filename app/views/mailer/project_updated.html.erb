@@ -9,6 +9,41 @@ end %>
 <% def custom_function_date(field_name)
     custom_field = CustomField.find_by(name: field_name)
     custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+    custom_value.value
+end %>
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Project Update</title>
+</head>
+<body>
+  <h2>The following updates have been made to the project "<%= @project.name %>" in ProjectHUB:</h2>
+  <ul>
+    <% @updated_fields.each do |field, values| %>
+      <li><strong><%= field %>:</strong> from <%= values[:before] %> to <%= values[:after] %></li>
+    <% end %>
+  </ul>
+  <p><strong>Project Name:</strong> <%= @project.name %></p>
+  <p><strong>Description:</strong> <%= @project.description %></p>
+  <p><strong>Business Need:</strong> <%= custom_function('Business Need') %></p>
+  <p><strong>Start Date:</strong> <%= custom_function_date('Start at') %></p>
+  <p><strong>End Date:</strong> <%= custom_function_date('Due Date') %></p>
+  <p><strong>Planned Project Go Live Date:</strong> <%= custom_function_date('Planned Project Go Live Date') %></p>
+  <p><strong>Function Name:</strong> <%= custom_function('User Function') %></p>
+  <p><strong>Portfolio Category:</strong> <%= custom_function('Portfolio Category') %></p>
+  <p><strong>Priority Level:</strong> <%= custom_function('Priority Level') %></p>
+
+  <p>Please log in to ProjectHUB to view and manage the project details.</p>
+  <p>ProjectHUB Link: "https://projecthub.hdbfs.com/#{@issue.id}"</p>
+
+  <p><strong>Best Regards</strong></p>
+</body>
+</html>
+
+<% def custom_function_date(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
     custom_value
 end %>
 

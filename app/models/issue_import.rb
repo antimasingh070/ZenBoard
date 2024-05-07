@@ -111,7 +111,10 @@ class IssueImport < Import
   private
 
   def build_object(row, item)
-    issue = Issue.new
+    settings = self.settings
+    project_id = settings["mapping"]["project_id"].to_i
+    tracker_id = settings["mapping"]["tracker"].to_i
+    issue = Issue.find_or_initialize_by(tracker_id: tracker_id, project_id: project_id, subject: row[7])
     issue.author = user
     issue.notify = !!ActiveRecord::Type::Boolean.new.cast(settings['notifications'])
 

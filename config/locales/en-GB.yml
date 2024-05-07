@@ -1017,13 +1017,11 @@ en-GB:
   project_status_active: active
   project_status_closed: closed
   project_status_hold: hold
-  project_status_delayed: delayed
   project_status_cancelled: cancelled
   project_status_archived: archived
   project_status_hold: hold
   text_project_closed: This project is closed and read-only.
   text_project_hold: This project is on hold and read-only.
-  text_project_delayed: This project is delayed and read-only.
   text_project_cancelled: This project is cancelled and read-only.
   notice_user_successful_create: User %{id} created.
   field_core_fields: Standard fields
@@ -1442,7 +1440,6 @@ en-GB:
   button_decline: Decline
   button_approve: Approve
   button_hold: Hold
-  button_delayed: Delayed
   button_cancelled: Cancelled
   button_delete_object: Delete %{object_name}
   text_setting_config_change: You can configure the behaviour in config/configuration.yml.
@@ -1460,10 +1457,11 @@ en-GB:
   label_auto_watch_on_issue_contributed_to: Project tasks I contributed to
   text_project_close_confirmation: Are you sure you want to close the '%{value}' project
     to make it read-only?
+  text_project_check_member_confirmation: Before proceeding, please confirm that you have added members for the Program Manager, Project Manager, and PMO roles.
   text_issue_approve_confirmation: Are you sure you want to approve the '%{value}' issue?
+  text_issue_send_back_confirmation: Are you sure you want to send back the '%{value}' issue?
   text_issue_decline_confirmation: Are you sure you want to decline the '%{value}' issue?
   text_project_hold_confirmation: Are you sure you want to hold the '%{value}' project?
-  text_project_delayed_confirmation: Are you sure you want to delayed the '%{value}' project?
   text_project_cancelled_confirmation: Are you sure you want to cancelled the '%{value}' project?
   text_project_reopen_confirmation: Are you sure you want to reopen the '%{value}' project?
   text_project_hold_confirmation: Are you sure you want to hold the '%{value}' project?

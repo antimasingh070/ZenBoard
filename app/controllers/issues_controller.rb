@@ -21,11 +21,11 @@ class IssuesController < ApplicationController
   default_search_scope :issues
   before_action :find_issue, :only => [:show, :edit, :update, :issue_tab]
   before_action :find_issues, :only => [:bulk_edit, :bulk_update, :destroy]
-  before_action :authorize, :except => [:index, :new, :create, :approve, :decline]
+  before_action :authorize, :except => [:index, :new, :create, :approve, :decline, :send_back]
   before_action :find_optional_project, :only => [:index, :new, :create]
   before_action :build_new_issue_from_params, :only => [:new, :create]
   accept_atom_auth :index, :show
-  accept_api_auth :index, :show, :create, :update, :destroy, :approve, :decline
+  accept_api_auth :index, :show, :create, :update, :destroy, :approve, :decline, :send_back
 
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
   rescue_from Query::QueryError, :with => :query_error
@@ -41,11 +41,28 @@ class IssuesController < ApplicationController
   helper :repositories
   helper :timelog
 
+  def send_back
+    @issue = Issue.find(params[:id])
+    @issue.update(assigned_to_id: @issue.author_id)
+    
+    update_custom_field("Remarks", params[:remarks])
+    update_custom_field("Action", "36")
+    
+    if @issue.send_back?
+      @auther = User.find_by(id: @issue.author_id)
+      Mailer.deliver_issue_send_back(User.current, @issue, @auther)
+      flash[:notice] = "Issue sent back to the Author successfully."
+    else
+      flash[:alert] = "Failed to send back issue."
+    end
+    redirect_to issue_path(@issue)
+  end
+
   def approve
     @issue = Issue.find(params[:id])
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
     custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
-    custom_value.update(value: "1")
+    custom_value.update(value: "34")
     if @issue.approved?
       @members = @issue.project.members
       Mailer.deliver_issue_approved(User.current, @issue,  @members)
@@ -58,9 +75,9 @@ class IssuesController < ApplicationController
 
   def decline
     @issue = Issue.find(params[:id])
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approved")
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
     custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
-    custom_value.update(value: "0")
+    custom_value.update(value: "35")
     if @issue.declined?
       @members = @issue.project.members
       Mailer.deliver_issue_declined(User.current, @issue, @members)
@@ -514,6 +531,12 @@ class IssuesController < ApplicationController
   end
 
   private
+
+  def update_custom_field(field_name, value)
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
+    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
+    custom_value.update(value: value)
+  end
 
   def query_error(exception)
     session.delete(:issue_query)

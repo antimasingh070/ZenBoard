@@ -137,11 +137,13 @@ Rails.application.routes.draw do
 
     member do
       get 'settings(/:tab)', :action => 'settings', :as => 'settings'
-      post :hold
-      post :delayed
+      # post :hold
+      post :cancelled
       match 'archive', :via => [:post, :put]
       match 'unarchive', :via => [:post, :put]
+      match 'check_member', :via => [:post, :put]
       match 'close', :via => [:post, :put]
+      match 'hold', :via => [:post, :put]
       match 'reopen', :via => [:post, :put]
       match 'copy', :via => [:get, :post]
       match 'bookmark', :via => [:delete, :post]
@@ -219,6 +221,7 @@ Rails.application.routes.draw do
     member do
       post :approve
       post :decline
+      post :send_back
       # Used when updating the form of an existing issue
       patch 'edit', :to => 'issues#edit'
       get 'tab/:name', :action => 'issue_tab', :as => 'tab'

@@ -1,8 +1,36 @@
-<%= @news.title %>
-<%= @news_url %>
-<%= @news.author.name %>
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id)
+    return unless custom_value # Exit if custom value not found
+    
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
+    custom_field_enumeration&.name
+end %>
 
-<%= @news.description %>
+<% def custom_function_date(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id)
+    custom_value&.value # No need for further processing, return the value directly
+end %>
+News Title: <%= @news.title %>
+News Url: <%= @news_url %>
+News Author: <%= @news.author.name %>
+News Description: <%= @news.description %>
+
+Project Details:
+- Name: <%= @project.name %>
+- Description: <%= @project.description %>
+- Status: <%= @new_status_text %>
+- Priority Level: <%= custom_function('Priority Level') %>
+- Planned Project Go Live Date: <%= custom_function_date('Planned Project Go Live Date') %>
+- Start Date: <%= custom_function_date('Start at') %>
+- End Date: <%= custom_function_date('Due Date') %> 
+
+ProjectHUB link: https://projecthub.hdbfs.com
 
 <% if @news.attachments.any? -%>
 ---<%= l(:label_attachment_plural).ljust(37, '-') %>

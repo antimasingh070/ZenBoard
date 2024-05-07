@@ -29,7 +29,6 @@ class WelcomeController < ApplicationController
     date_string = custom_value&.value
 end
 
-
   def project_dashboard
     @project_status_text = {
       Project::STATUS_ACTIVE => 'Active',
@@ -37,78 +36,39 @@ end
       Project::STATUS_ARCHIVED => 'Archived',
       Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion'
     }
-  
-    current_user_id = User.current.id
-  
-    # Filter projects based on various conditions
-    if params[:function_filter].present? && params[:category_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && custom_field_value(project, "User Function") == params[:function_filter] && project.members.exists?(user_id: current_user_id) }
-    elsif params[:function_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| custom_field_value(project, "User Function") == params[:function_filter] && project.members.exists?(user_id: current_user_id) }
-    elsif params[:category_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| custom_field_value(project, "Project Category") == params[:category_filter] && project.members.exists?(user_id: current_user_id) }
-    elsif params[:status_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| project.status == params[:status_filter].to_i && project.members.exists?(user_id: current_user_id) }
-    elsif params[:name_filter].present?
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| project.name == params[:name_filter].to_s && project.members.exists?(user_id: current_user_id) }                
-    elsif params[:manager_filter].present?
-      manager_filter = params[:manager_filter].strip
-      @projects = Project.where(parent_id: nil).select do |project|
-                           member_names = member_name(project, "Project Manager")
-                           member_names.any? { |name| name.include?(manager_filter) } && project.members.exists?(user_id: current_user_id)
-                         end
-    elsif params[:start_date_from].present? && params[:start_date_to].present?
-      if params[:start_date_from].present? && params[:start_date_to].present?
-        start_date_from = Date.parse(params[:start_date_from])
-        start_date_to = Date.parse(params[:start_date_to])
-        @projects = Project.where(parent_id: nilv)
-                           .select { |project| 
-                             scheduled_start_date = date_value(project, "Scheduled Start Date")
-                             scheduled_start_date.present? && 
-                             Date.parse(scheduled_start_date) >= start_date_from && 
-                             Date.parse(scheduled_start_date) <= start_date_to && 
-                             project.members.exists?(user_id: current_user_id) 
-                           }
-      else
-        @projects = Project.where(parent_id: nil)
-                         .select { |project| project.members.exists?(user_id: current_user_id) }
-      end
-    elsif params[:end_date_from].present? && params[:end_date_to].present?
-      if params[:end_date_from].present? && params[:end_date_to].present?
-        end_date_from = Date.parse(params[:end_date_from])
-        end_date_to = Date.parse(params[:end_date_to])
-        @projects = Project.where(parent_id: nil)
-                           .select { |project| 
-                             scheduled_end_date = date_value(project, "Scheduled End Date")
-                             scheduled_end_date.present? && 
-                             Date.parse(scheduled_end_date) >= end_date_from && 
-                             Date.parse(scheduled_end_date) <= end_date_to && 
-                             project.members.exists?(user_id: current_user_id) 
-                           }
-      else
-        @projects = Project.where(parent_id: nil)
-                         .select { |project| project.members.exists?(user_id: current_user_id) }
-      end
-    else
-      # Default case: show projects where the current user is a member
-      @projects = Project.where(parent_id: nil)
-                         .select { |project| project.members.exists?(user_id: current_user_id) }
-    end  
 
-    @categories = @projects.map { |project| custom_field_value(project, "Portfolio Category") }.uniq.compact
-    @functions = @projects.map { |project| custom_field_value(project, "User Function") }.uniq.compact
-    @statuses = @projects.map { |project| @project_status_text[project.status]}.uniq.compact
-    @managers = @projects.map { |project| member_name(project, "Project Manager") }.flatten.compact.map { |name| name.split(',').map(&:strip) }.flatten.uniq
-    @names = @projects.map { |project| project.name  }.uniq.compact
-    
+    current_user_id = User.current.id
+
+    @projects = Project.where(parent_id: nil)
+
+    @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
+    @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
+    @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
+    @projects = @projects.where("project.name = ?", params[:name_filter]) if params[:name_filter].present?
+    @projects = @projects.select { |project| member_names(project, 'Project Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
+
+    if params[:start_date_from].present? && params[:start_date_to].present?
+      start_date_range = Date.parse(params[:start_date_from])..Date.parse(params[:start_date_to])
+      @projects = @projects.select { |project| start_date_range.cover?(Date.parse(date_value(project, 'Scheduled Start Date'))) }
+    end
+
+    if params[:end_date_from].present? && params[:end_date_to].present?
+      end_date_range = Date.parse(params[:end_date_from])..Date.parse(params[:end_date_to])
+      @projects = @projects.select { |project| end_date_range.cover?(Date.parse(date_value(project, 'Scheduled End Date'))) }
+    end
+
+    @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }
+
+    @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
+    @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq
+    @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq
+    @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq
+
+    @names = @projects.map(&:name).compact.uniq
   end
+
   
-  def member_name(project, field_name)
+  def member_names(project, field_name)
     project_lead_role = Role.find_by(name: field_name)
   
     member_ids_with_lead_role = MemberRole.where(role_id: project_lead_role.id).pluck(:member_id)
