@@ -127,7 +127,7 @@ class Issue < ActiveRecord::Base
   after_create_commit :send_notification
   after_create_commit :add_auto_watcher
   after_commit :create_parent_issue_journal
-
+  before_save :update_estimated_time
   # Returns a SQL conditions string used to find all issues visible by the specified user
   def send_back?
     self.assigned_to_id == self.author_id
@@ -1703,6 +1703,12 @@ class Issue < ActiveRecord::Base
   end
 
   private
+
+  def update_estimated_time
+    return unless due_date && start_date
+    estimated_hours = ((due_date - start_date) * 24).to_i
+    self.estimated_hours = estimated_hours
+  end
 
   def user_tracker_permission?(user, permission)
     if project && !project.active?

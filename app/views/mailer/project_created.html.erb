@@ -48,6 +48,8 @@ end %>
     <div class="container">
         <div class="header">A new project has been created in ProjectHUB:</div>
         <p>Project Name: <%= @project.name %></p>
+        <p>Description: <%= @project.description %></p>
+        <p>Business Need: <%= custom_function('Business Need') %></p>
         <p>Start Date: <%= custom_function_date('Start Date') %></p>
         <p>End Date: <%= custom_function_date('End Date') %></p>
         <p>Planned Go Live Date: <%= custom_function_date('Planned Go Live Date') %></p>
@@ -56,7 +58,7 @@ end %>
         <p>Priority Level: <%= custom_function('Priority Level') %></p>
 
         <p>You have been added as a member of this project. Please log in to ProjectHUB to view and manage the project details.</p>
-        <p><a href="" class="link">ProjectHUB</a></p>
+        <p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
         <p>Best Regards</p>
     </div>    </div>
 

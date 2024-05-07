@@ -99,7 +99,7 @@ class Project < ActiveRecord::Base
   after_update :update_versions_from_hierarchy_change,
                :if => proc {|project| project.saved_change_to_parent_id?}
   before_destroy :delete_all_members
-  after_commit :auto_create_records
+  after_save :auto_create_records
   scope :has_module, (lambda do |mod|
     where("#{Project.table_name}.id IN (SELECT em.project_id FROM #{EnabledModule.table_name} em WHERE em.name=?)", mod.to_s)
   end)
@@ -124,26 +124,45 @@ class Project < ActiveRecord::Base
   end)
 
   def auto_create_records
-    custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Portfolio Category")
-    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: self.id, custom_field_id: custom_field&.id)
-    return unless custom_value
-
-    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value.to_i)&.name
+    template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
+    return unless template_field
+  
+    template_value = CustomValue.find_by(customized_type: "Project", customized_id: self.id, custom_field_id: template_field.id)
+    return unless template_value
+  
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: template_value.value.to_i)&.name
     return unless custom_field_enumeration
+  
+    tracker = Tracker.find_by(name: custom_field_enumeration)
+    return unless tracker
+  
+    master_project = Project.find_by(name: "Master Project")
+    return unless master_project
+  
+    issues = Issue.where(tracker_id: tracker.id, project_id: master_project.id)
+  
+    plan_tracker = Tracker.find_by(name: "Project Plan- Activity List")
+    return unless plan_tracker
+  
+    # Get all unique field names from CustomFields for Issues
+    field_names = CustomField.where(type: "IssueCustomField").pluck(:name).uniq
+    create_issues_for_field_names(field_names, issues, plan_tracker)
+  end
 
-    tracker_id = Tracker.find_by(name: custom_field_enumeration)&.id
-    return unless tracker_id
-
-    issues = Issue.where(tracker_id: tracker_id, project_id: 51)
-    plan_id = Tracker.find_by(name: "Project Plan- Activity List")&.id
-    return unless plan_id
-
+  def create_issues_for_field_names(field_names, issues, plan_tracker)
     issues.each do |issue|
-      custom_field = CustomField.find_by(type: "IssueCustomField", name: "Project Activity")
-      custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: custom_field&.id).value
-      issue = Issue.find_or_initialize_by(tracker_id: plan_id, project_id: self.id, subject: issue.subject, author: User.current)
-      issue.custom_field_values = { custom_field.id => custom_value }
-      issue.save
+      @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: issue.subject, author: User.current, start_date: Date.today, due_date: (Date.today +10))
+      skip_loop = false
+      field_names.each do |field_name|
+        custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
+        next unless custom_field
+        custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue.id, custom_field_id: custom_field.id)&.value
+        next unless custom_value
+  
+        @new_issue.custom_field_values = { custom_field.id => custom_value }
+        
+      end
+      @new_issue.save
     end
   end
 
@@ -486,16 +505,16 @@ class Project < ActiveRecord::Base
   end
 
   def close
-    self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_CLOSED
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_CANCELLED, Project::STATUS_ACTIVE]).update_all(status: Project::STATUS_CLOSED)
   end
 
   def hold
-    self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_HOLD
+    self_and_descendants.where(status: [Project::STATUS_CANCELLED, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_HOLD)
   end
 
 
   def cancelled
-    self_and_descendants.status(STATUS_ACTIVE).update_all :status => STATUS_CANCELLED
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_CANCELLED)
   end 
 
   def reopen

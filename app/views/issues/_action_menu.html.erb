@@ -8,7 +8,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.4.3/dist/js/bootstrap.min.js"></script>
 </head>
 <div class="contextual">
-<% if @issue.approved? %>
+
+<% if @issue.approved?%>
 <%= link_to l(:button_edit), edit_issue_path(@issue),
             :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
             :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
@@ -17,51 +18,63 @@
 <%= watcher_link(@issue, User.current) %>
 <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
             :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
+<%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
+:data => {:confirm => issues_destroy_confirmation_message(@issue)},
+:method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
 <% end %>
 <%= actions_dropdown do %>
-  <% project_managers = @project.members.joins(:roles).where(roles: { name: "Project Manager"}).pluck(:user_id)  %>
-  <% current_user_id = User.current.id %>
-  <% if project_managers.include?(current_user_id) || User.current.admin? %>
-    <% if @issue.approved? %>
-      <%= link_to "Decline", decline_issue_path(@issue), data: { confirm: l(:text_issue_decline_confirmation, @issue.to_s)}, method: :post, class: "icon icon-lock" %>
-    <% else %>
-      <%= link_to "Approve", approve_issue_path(@issue), data: { confirm: l(:text_issue_approve_confirmation, @issue.to_s)}, method: :post, class: "icon icon-unlock" %>   
-      <%= link_to "#", id: "sendBackLink", class: "button-icon-link" do %>
-      <%= image_tag("../images/go_back.png", alt: "Send Back", class: "button-icon") %>
-      Send Back
-    <% end %>  
+  <% custom_field = CustomField.find_by(type: "IssueCustomField", name: "Role")
+  next unless custom_field
+  custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: custom_field.id, customized_id: @issue.id)&.value %>                                               
+  <% unless custom_value.blank?  %>
+    <% custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.to_i, custom_field_id: custom_field.id)&.name %>
 
+    <% matched_roles = @project.members.joins(:roles).where(roles: { name: custom_field_enumeration }).pluck(:user_id)  %>
+    <% current_user_id = User.current.id 
+    tracker = Tracker.find_by(name: "Project Plan- Activity List") %>
+    <% if (matched_roles.include?(current_user_id)   || User.current.admin?  || (@issue.author == User.current)   )&& @issue.tracker.name == tracker.name
+    %>
+      <% if @issue.approved? %>
+        <%= link_to "Decline", decline_issue_path(@issue), data: { confirm: l(:text_issue_decline_confirmation, @issue.to_s)}, method: :post, class: "icon icon-lock" %>
+      <% else %>
+        <%= link_to "Approve", approve_issue_path(@issue), data: { confirm: l(:text_issue_approve_confirmation, @issue.to_s)}, method: :post, class: "icon icon-unlock" %>   
+        <%= link_to "#", id: "sendBackLink", class: "button-icon-link" do %>
+        <%= image_tag("../images/go_back.png", alt: "Send Back", class: "button-icon") %>
+        Send Back
+        <% end %>  
+        <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
+        :data => {:confirm => issues_destroy_confirmation_message(@issue)},
+        :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
       <% end %>
-  <% end %>
-
+    <% end %>
+  <% end %> 
   <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
-  <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
-              :data => {:confirm => issues_destroy_confirmation_message(@issue)},
-              :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
 <% end %>
 </div>
 <script>
-  document.addEventListener("DOMContentLoaded", function() {
-    var sendBackLink = document.getElementById("sendBackLink");
+document.addEventListener("DOMContentLoaded", function() {
+  var sendBackLink = document.getElementById("sendBackLink");
+console.log(sendBackLink)
+  sendBackLink.addEventListener("click", function(event) {
+    event.preventDefault(); // Prevent the default action
+    var remarks = window.prompt("Please provide your remarks:");
+    if (remarks !== null) {
+      // Send back the issue with remarks
+      Rails.ajax({
+        url: "<%= send_back_issue_path(@issue) %>",
+        type: "post",
+        data: "remarks=" + encodeURIComponent(remarks),
+        success: function(response) {
+          // Handle success response
+        },
+        error: function(response) {
+          // Handle error response
+        }
+      });
+    }
+  }, { once: true }); // Add the { once: true } option here
+});
 
-    sendBackLink.addEventListener("click", function() {
-      var remarks = window.prompt("Please provide your remarks:");
-      if (remarks !== null) {
-        // Send back the issue with remarks
-        Rails.ajax({
-          url: "<%= send_back_issue_path(@issue) %>",
-          type: "post",
-          data: "remarks=" + encodeURIComponent(remarks),
-          success: function(response) {
-            // Handle success response
-          },
-          error: function(response) {
-            // Handle error response
-          }
-        });
-      }
-    });
-  });
 </script>
 
 

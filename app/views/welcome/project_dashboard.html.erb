@@ -9,7 +9,24 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 <style>
+.sort-icon {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-left: 5px;
+  vertical-align: middle;
+  border: 4px solid transparent;
+  border-top-color: black;
+  transition: transform 0.2s;
+}
 
+.sort-icon.asc {
+  transform: rotate(180deg);
+}
+
+.sort-icon.desc {
+  transform: rotate(0deg);
+}
 label {
   font-weight: bold;
   margin-right: 10px;
@@ -336,26 +353,23 @@ button:hover {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <tr>
-      <th rowspan="2" style="width: 50%; white-space: normal; cursor: pointer;" class="sortable">Project Name <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Status <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Project Manager <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Project Lead <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Next Week Planned Activity <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Last Activity Completed <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Portfolio Category <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Scheduled Start Date <span class="sort-icon"></span></th>
-      <th rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Scheduled End Date <span class="sort-icon"></span></th>
+      <th rowspan="2" style="width: 50%; white-space: normal; cursor: pointer;" class="sortable">Project Name</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Status</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Manager</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Lead</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Next Week Planned Activity</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Last Activity Completed</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Portfolio Category</th>
+      <th style="width: 10%; white-space: normal;">Scheduled Start Date <span class="sort-icon" ></span></th>
+      <th style="width: 10%; white-space: normal;">Scheduled End Date <span  class="sort-icon" ></span></th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Go Live date <span class="sort-icon"></span></th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Revised End Date <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Function Name <span class="sort-icon"></span></th>
-      <th colspan="3" style="width: 30%; white-space: normal; text-align: center;" class="sortable">Open / Total <span class="sort-icon"></span></th>
-      <th rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Open Risk <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">% Done <span class="sort-icon"></span></th>
-    </tr>
-    <tr>
-      <th style="width: 10%; white-space: normal; text-align: center;" class="sortable">UAT <span class="sort-icon"></span></th>
-      <th style="width: 10%; white-space: normal; text-align: center;" class="sortable">Project Task View <span class="sort-icon"></span></th>
-      <th style="width: 10%; white-space: normal; text-align: center;" class="sortable">CR <span class="sort-icon"></span></th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
     </tr>
   </thead>
   <tbody>
@@ -402,43 +416,32 @@ button:hover {
 </table>
 </body>
 </html>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
-function sortTable(table, column, asc = true) {
-    const dirModifier = asc ? 1 : -1;
-    const tbody = table.tBodies[0];
-    const rows = Array.from(tbody.querySelectorAll("tr"));
-
-    // Sort each row
-    const sortedRows = rows.sort((a, b) => {
-        const aColText = a.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
-        const bColText = b.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
-
-        return aColText > bColText ? (1 * dirModifier) : (-1 * dirModifier);
-    });
-
-    // Remove all existing TRs from the table
-    while (tbody.firstChild) {
-        tbody.removeChild(tbody.firstChild);
-    }
-
-    // Re-add the newly sorted rows
-    tbody.append(...sortedRows);
-
-    // Remember how the column is currently sorted
-    table.querySelectorAll("th").forEach(th => th.classList.remove("th-sort-asc", "th-sort-desc"));
-    table.querySelector(`th:nth-child(${column + 1})`).classList.toggle("th-sort-asc", asc);
-    table.querySelector(`th:nth-child(${column + 1})`).classList.toggle("th-sort-desc", !asc);
+function extractDateValues('."sort-icon"') {
+  const cells = document.querySelectorAll(`td:nth-child(${column})`);
+  return Array.from(cells).map(cell => new Date(cell.textContent));
 }
 
-document.querySelectorAll(".sortable").forEach(header => {
-    header.addEventListener("click", () => {
-        const tableElement = header.parentElement.parentElement.parentElement;
-        const headerIndex = Array.prototype.indexOf.call(header.parentElement.children, header);
-        const currentIsAscending = header.classList.contains("th-sort-asc");
-        sortTable(tableElement, headerIndex, !currentIsAscending);
-    });
-});
+function sort(column) {
+  const sortOrder = column === 'start' ? 'asc' : 'desc';
+  const icon = document.getElementById(`${column}-sort-icon`);
+  icon.classList.toggle('asc', sortOrder === 'asc');
+  icon.classList.toggle('desc', sortOrder === 'desc');
+
+  const dates = extractDateValues(column === 'start' ? 1 : 2);
+  dates.sort((a, b) => a.getTime() - b.getTime());
+
+  const rows = document.querySelectorAll('tr');
+  for (let i = 1; i < rows.length; i++) {
+    rows[i].querySelector(`td:nth-child(${column === 'start' ? 1 : 2})`).textContent = dates[i - 1].toLocaleDateString();
+  }
+}
+</script>
+
+<script>
+
 
 
   function exportToPdf() {
@@ -494,26 +497,4 @@ document.querySelectorAll(".sortable").forEach(header => {
     document.getElementById('form-group').click();
   }
   
-</script>
-
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    const getCellValue = (tr, idx) => tr.children[idx].innerText || tr.children[idx].textContent;
-    const comparer = (idx, asc) => (a, b) => ((v1, v2) => 
-        v1 !== '' && v2 !== '' && !isNaN(v1) && !isNaN(v2) ? v1 - v2 : v1.toString().localeCompare(v2)
-    )(getCellValue(asc ? a : b, idx), getCellValue(asc ? b : a, idx));
-
-    document.querySelectorAll('th').forEach(th => th.addEventListener('click', (() => {
-        const table = th.closest('table');
-        const tbody = table.querySelector('tbody');
-        const icon = th.querySelector('.sort-icon');
-        Array.from(th.parentNode.children)
-            .forEach(el => el.querySelector('.sort-icon') && el.querySelector('.sort-icon').classList.remove('asc', 'desc'));
-        icon.classList.toggle('asc', this.asc = !this.asc);
-        icon.classList.toggle('desc', !this.asc);
-        Array.from(tbody.querySelectorAll('tr'))
-            .sort(comparer(Array.from(th.parentNode.children).indexOf(th), this.asc))
-            .forEach(tr => tbody.appendChild(tr));
-    })));
-});
 </script>
