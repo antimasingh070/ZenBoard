@@ -973,16 +973,11 @@ class Mailer < ActionMailer::Base
     @user = user
     @role = role
     @project = project
-<<<<<<< HEAD
-    mail :to => user.mail,
-      :subject => "[ProjectHUB] Project update: #{@project.name}  #{@project.identifier}"
-=======
     mail_data = user_mails(@project)
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
     mail(to: mail_to, cc: mail_cc, 
       :subject => "[ProjectHUB] New Project Created: #{@project.name}  #{@project.identifier} ")
->>>>>>> a0c06d16bf8774c0c0e052fffb00ec9749ed7cb3
   end
 
   def self.deliver_membership_deleted_email(user, role, project)
