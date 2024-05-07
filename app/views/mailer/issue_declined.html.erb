@@ -1,13 +1,14 @@
-<h1>Issue has been declined.</h1>
-<p>Issue: <%= @issue.subject %></p>
+<% assigned_to_id = @issue.assigned_to_id 
+assignee = User.find_by(id: assigned_to_id) %>
+<h1>Project task has been declined by <%= User.current.name %></h1>
+<p>Project task Subject: <%= @issue.subject %></p>
+<p>Project Name: <%= @issue.project.name %></p>
 <p>Status: <%= @issue.status.name %></p>
-<p>Tracker: <%= @issue.tracker.name %></p>
+<p>Task: <%= @issue.tracker.name %></p>
+<p>Assignee: <%= assignee.name %></p>
 <p>Priority Level: <%= custom_function('Priority Level') %></p>
-<p>Category: <%= @issue.category_id || 'Not assigned' %></p>
+<p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
-<p>Created At: <%= @issue.created_on.strftime("%Y-%m-%d") %></p>
-<p>Project: <%= @issue.project.name %></p>
-<p>Done Ratio: <%= @issue.done_ratio %></p>
 
 <p>Project Members:</p>
 <ul>
@@ -15,10 +16,10 @@
   <% @members.each do |member| %>
     <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
     <% role = Role.find_by(id: role_id) %>
-    <li><%= "#{member.user.name} (Role: #{role&.name || 'Not assigned'})" %></li>
+    <li><%= "#{member.user.name} (#{role&.name || 'Not assigned'})" %></li>
   <% end %>
 </ul>
 
 <p>Please log in to ProjectHUB to view and manage the issue details.</p>
-<p><a href="<%= projecthub_url %>" class="link">ProjectHUB</a></p>
+<p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
 <p>Best Regards</p>

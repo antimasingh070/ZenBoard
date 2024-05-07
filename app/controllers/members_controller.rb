@@ -71,7 +71,7 @@ class MembersController < ApplicationController
         roles = Role.where(id: role_ids) # Retrieve roles based on the role_ids array
         roles.each do |role|
           @role = role
-          Mailer.deliver_membership_added_email(@user, @role, @project)
+          # Mailer.deliver_membership_added_email(@user, @role, @project)
         end
       end
     end
@@ -118,7 +118,7 @@ class MembersController < ApplicationController
   def destroy
     if @member.deletable?
       @member.destroy
-      Mailer.deliver_membership_deleted_email(@user, @role, @project)
+      # Mailer.deliver_membership_deleted_email(@user, @role, @project)
     end
     respond_to do |format|
       format.html {redirect_to_settings_in_projects}

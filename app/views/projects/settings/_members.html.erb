@@ -41,3 +41,4 @@
 <% else %>
 <p class="nodata"><%= l(:label_no_data) %></p>
 <% end %>
+<%= link_to l(:button_submit), check_member_project_path(@project), :data => {:confirm => l(:text_project_check_member_confirmation, @project.to_s)}, :method => :post, :class => 'submit' %>

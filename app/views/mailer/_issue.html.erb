@@ -1,17 +1,34 @@
-<h1>
-  <%= link_to("#{issue.tracker.name} ##{issue.id}: #{issue.subject}", issue_url) %>
-  <%= issue_status_type_badge(issue.status) %>
-</h1>
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @issue.project&.id, custom_field_id: custom_field.id)
+    return unless custom_value # Exit if custom value not found
+    
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
+    custom_field_enumeration&.name
+end %>
+<% assigned_to_id = @issue.assigned_to_id 
+assignee = User.find_by(id: assigned_to_id) %>
+<p>Issue Subject: <%= @issue.subject %></p>
+<p>Project Name: <%= @issue.project.name %></p>
+<p>Status: <%= @issue.status.name %></p>
+<p>Task: <%= @issue.tracker.name %></p>
+<p>Assignee: <%= assignee.name %></p>
+<p>Priority Level: <%= custom_function('Priority Level') %></p>
+<p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+<p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 
-<%= render_email_issue_attributes(issue, user, true) %>
-
-<%= textilizable(issue, :description, :only_path => false) %>
-
-<% if issue.attachments.any? %>
-  <fieldset class="attachments"><legend><%= l(:label_attachment_plural) %></legend>
-  <% issue.attachments.each do |attachment| %>
-    <%= link_to_attachment attachment, :download => true, :only_path => false %>
-    (<%= number_to_human_size(attachment.filesize) %>)<br />
+<p>Project Members:</p>
+<ul>
+  <% @members = @issue.project.members %>
+  <% @members.each do |member| %>
+    <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
+    <% role = Role.find_by(id: role_id) %>
+    <li><%= "#{member.user.name} (#{role&.name || 'Not assigned'})" %></li>
   <% end %>
-  </fieldset>
-<% end %>
+</ul>
+
+<p>Please log in to ProjectHUB to view and manage the issue details.</p>
+<p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
+<p>Best Regards</p>

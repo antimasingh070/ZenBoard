@@ -11,7 +11,10 @@ end %>
     custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
     custom_value.value
 end %>
-
+<% custom_field = CustomField.find_by(name: "author_id")
+custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+id = custom_value&.value&.to_i 
+    user = User.find_by(id: id) %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -46,8 +49,10 @@ end %>
 </head>
 <body>
     <div class="container">
-        <div class="header">A new project has been created in ProjectHUB:</div>
+        <div class="header">A new project has been created by <%= user&.name %>in ProjectHUB:</div>
         <p>Project Name: <%= @project.name %></p>
+        <p>Description: <%= @project.description %></p>
+        <p>Business Need: <%= custom_function('Business Need') %></p>
         <p>Start Date: <%= custom_function_date('Start Date') %></p>
         <p>End Date: <%= custom_function_date('End Date') %></p>
         <p>Planned Go Live Date: <%= custom_function_date('Planned Go Live Date') %></p>
@@ -61,14 +66,14 @@ end %>
         <% if member.user.name != @user || member.roles.first.name != @role %>
         <% role_id = MemberRole.find_by(member_id: member.id)&.role_id # Corrected typo here
             role = Role.find_by(id: role_id) %>
-        <p>Previous Member: <%= "#{member.user.name} (#{role.name})" %></p>
+        <p>Member list with role: <%= "#{member.user.name} (#{role.name})" %></p>
         <% end %>
         <% end %>
         <% if @user && @role %>
         <p>New Member:  <%= "#{@user} (#{@role.name})" %></p>
         <% end %>
         <p>You have been added as a member of this project. Please log in to ProjectHUB to view and manage the project details.</p>
-        <p><a href="" class="link">ProjectHUB</a></p>
+        <p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
         <p>Best Regards</p>
     </div>
 </body>

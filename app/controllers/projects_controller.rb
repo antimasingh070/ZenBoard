@@ -27,11 +27,11 @@ class ProjectsController < ApplicationController
   before_action :authorize,
                 :except => [:index, :autocomplete, :list, :new, :create, :copy,
                             :archive, :unarchive,
-                            :destroy, :bulk_destroy, :hold, :cancelled]
+                            :destroy, :bulk_destroy, :hold, :cancelled, :check_member]
   before_action :authorize_global, :only => [:new, :create]
   before_action :require_admin, :only => [:copy, :archive, :unarchive, :bulk_destroy]
   accept_atom_auth :index
-  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :cancelled
+  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :cancelled, :check_member
   require_sudo_mode :destroy, :bulk_destroy
 
   helper :custom_fields
@@ -102,11 +102,24 @@ class ProjectsController < ApplicationController
     @project.safe_attributes = params[:project]
   end
 
+  def check_member
+    if @project.members.blank?
+      flash[:notice] = "You have not added members for project manager, program manager & PMO roles"
+    else
+      required_roles = Role.where(name: ["Project Manager", "Program Manager", "pmo"]).pluck(:id)
+      Mailer.deliver_membership_added_email(User.current, @project)
+    end
+  end
+  
   def create
     @issue_custom_fields = IssueCustomField.sorted.to_a
     @trackers = Tracker.sorted.to_a
     @project = Project.new
     @project.safe_attributes = params[:project]
+    custom_field = CustomField.find_by(name: "author_id")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+    custom_value.update(value: (User.current.id).to_s)
+    # @project.author_id = User.current.id
     @parent = Project.where(id: @project.parent_id).first
     if @project.id.nil? && !@project.parent_id.nil? && !@parent.nil?
       new_identifier = "#{Project.where(parent_id: @project.parent_id).count + 1}"
@@ -125,12 +138,12 @@ class ProjectsController < ApplicationController
       end
       respond_to do |format|
         format.html do
-          flash[:notice] = l(:notice_successful_create)
+          flash[:notice] = "Please add a member for Program Manager, Project Manager, and PMO roles."
           if params[:continue]
             attrs = {:parent_id => @project.parent_id}.reject {|k,v| v.nil?}
             redirect_to new_project_path(attrs)
           else
-            redirect_to settings_project_path(@project)
+            redirect_to "/projects/#{@project.identifier}/settings/members"
           end
         end
         format.api do
@@ -224,11 +237,15 @@ class ProjectsController < ApplicationController
   end
 
   def update
+    old_custom_field_values = @project.custom_field_values.map { |cfv| [cfv.custom_field_id, cfv.value] }.to_h
     @project.safe_attributes = params[:project]
     @project.status = params[:project][:status] if params[:project][:status].present?
     @parent = Project.where(id: @project.parent_id).first
     return nil if @project.nil?
-
+    custom_field = CustomField.find_by(name: "author_id")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+    custom_value.update(value: (User.current.id).to_s)
+    # @project.author_id = User.current.id
     parent_id = @project.parent_id
     project_id = @project.id
     if project_id.nil? && !parent_id.nil? && (parent_project = Project.find_by(id: parent_id))
@@ -245,7 +262,35 @@ class ProjectsController < ApplicationController
     end
     @project.update_columns(identifier: "#{new_identifier}")
     if @project.save
-      Mailer.deliver_project_updated(User.current, @project)  
+      updated_fields = {}
+      @project.previous_changes.each do |key, values|
+        next if key == 'updated_on'  # Skip the 'updated_on' field
+        updated_fields[key] = { before: values[0], after: values[1] }
+      end
+
+      custom_field_values = params[:project].delete('custom_field_values') || {}
+      custom_field_values.each do |custom_field_id, value|
+        custom_field = CustomField.find_by(id: custom_field_id)
+        next if custom_field.nil?
+  
+        custom_field_name = custom_field.name
+        old_value = old_custom_field_values[custom_field_id.to_i]
+  
+        next if old_value == value  # Skip if the value has not changed
+        if custom_field.field_format != 'date'
+          old_value_name = CustomFieldEnumeration.find_by(id: old_value.to_i, custom_field_id: custom_field_id).try(:name)
+          new_value_name = CustomFieldEnumeration.find_by(id: value.to_i, custom_field_id: custom_field_id).try(:name)
+        elsif custom_field.field_format != 'text'
+          custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id).try(:value)
+        else
+          old_value_name = old_value
+          new_value_name = value
+        end
+  
+        updated_fields[custom_field_name] = { before: old_value_name, after: new_value_name }
+      end
+      
+      Mailer.deliver_project_updated(User.current, @project, updated_fields)  
       respond_to do |format|
         format.html do
           flash[:notice] = l(:notice_successful_update)
@@ -307,7 +352,9 @@ class ProjectsController < ApplicationController
   end
 
   def close
+    old_status = @project.status
     @project.close
+    Mailer.deliver_project_status(User.current, old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_ok }
@@ -315,7 +362,10 @@ class ProjectsController < ApplicationController
   end
 
   def reopen
+    old_status = @project.status
     @project.reopen
+    new_status = @project.status
+    Mailer.deliver_project_status(User.current, old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_ok }
@@ -323,7 +373,9 @@ class ProjectsController < ApplicationController
   end
 
   def hold
+    @old_status = @project.status
     @project.hold
+    Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_hold }
@@ -331,7 +383,9 @@ class ProjectsController < ApplicationController
   end
 
   def cancelled
+    @old_status = @project.status
     @project.cancelled
+    Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_cancelled }

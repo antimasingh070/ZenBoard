@@ -8,12 +8,12 @@
   <% if User.current.allowed_to?(:close_project, @project) %>
     <% if @project.active? %>
       <%= link_to l(:button_close), close_project_path(@project), :data => {:confirm => l(:text_project_close_confirmation, @project.to_s)}, :method => :post, :class => 'icon fas fa-lock' %>
-      <%= link_to "hold_project_path(@project)", data: { confirm: l(:text_project_hold_confirmation, @project.to_s) },
+      <%= link_to hold_project_path(@project), data: { confirm: l(:text_project_hold_confirmation, @project.to_s) },
         method: :post, class: "button-icon-link" do %>
-        <%= image_tag("../images/pause-circle-solid.svg", alt: "Send Back", style: "width: 12px; height: 12px; margin-right: 5px;") %>
+        <%= image_tag("../images/go_live.png", alt: "Send Back", style: "width: 12px; height: 12px; margin-right: 5px;") %>
         Hold
       <% end %>
-      <%= link_to "cancelled_project_path(@project)", data: { confirm: l(:text_project_cancelled_confirmation, @project.to_s) },
+      <%= link_to cancelled_project_path(@project), data: { confirm: l(:text_project_cancelled_confirmation, @project.to_s) },
       method: :post, class: "button-icon-link" do %>
       <%= image_tag("../images/ban-solid.svg", alt: "Send Back", style: "width: 12px; height: 12px; margin-right: 5px;") %>
       Cancelled

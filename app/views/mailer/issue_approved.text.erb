@@ -8,28 +8,27 @@
     custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
     custom_field_enumeration&.name
 end %>
-
-<%= "Issue has been approved." %>
-Issue: <%= @issue.subject %> 
+<% assigned_to_id = @issue.assigned_to_id 
+assignee = User.find_by(id: assigned_to_id) %>
+Project task has been approved by <%= User.current.name %>.
+Project task Subject: <%= @issue.subject %> 
+Project Name: <%= @issue.project.name %>
 Status: <%= @issue.status.name %>
-Tracker: <%= @issue.tracker.name %>
-<%= "Priority Level: #{custom_function('Priority Level')}" %>
-Category: <%= @issue.category_id || 'Not assigned' %>
+Task: <%= @issue.tracker.name %>
+Assignee: <%= assignee.name %>
+Priority Level: <%= custom_function('Priority Level') %>
+Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %>
 Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %>
-Created At: <%= @issue.created_on.strftime("%Y-%m-%d") %>
-Project: <%= @issue.project.name %>
-Done Ratio: <%= @issue.done_ratio %>
 
 Project Members:
 <% @members = @issue.project.members %>
 <% @members.each do |member| %>
   <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
   <% role = Role.find_by(id: role_id) %>
-  <%= "- #{member.user.name} (Role: #{role&.name || 'Not assigned'})" %>
+  <%= "- #{member.user.name} (#{role&.name || 'Not assigned'})" %>
 <% end %>
 
 Please log in to ProjectHUB to view and manage the issue details.
-
-ProjectHUB link: <%= link_to "ProjectHUB", "https://your_projecthub_url" %>
+ProjectHUB link: <%= "https://projecthub.hdbfs.com/#{@issue.id}" %>
 
 Best Regards
