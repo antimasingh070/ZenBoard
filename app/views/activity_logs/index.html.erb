@@ -1,0 +1,93 @@
+<div style="width: 100%; max-width: 1400px; max-height: 200px; margin: 5px auto; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+  <div style="padding: 10px;">
+    <h5>Filter Activity Logs</h5>
+    <%= form_with url: activity_logs_path, method: :get, local: true do %>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <div style="flex: 1;">
+          <label for="entity_type">Entity Type:</label>
+          <%= select_tag :entity_type, options_for_select(@entity_types, params[:entity_type]), include_blank: "All", style: 'width: 100%;' %>
+        </div>
+        <div style="flex: 1;">
+          <label for="field_name">Field Name:</label>
+          <%= select_tag :field_name, options_for_select(@field_names, params[:field_name]), include_blank: "All", style: 'width: 100%;' %>
+        </div>
+        <div style="flex: 1;">
+          <label for="author">Author:</label>
+          <%= select_tag :author, options_for_select(@authors, params[:author]), include_blank: "All", style: 'width: 100%;' %>
+        </div>
+        <div style="flex: 1;">
+          <label for="start_date">Start Date:</label>
+          <%= date_field_tag :start_date, params[:start_date], style: 'width: 100%;' %>
+        </div>
+        <div style="flex: 1;">
+          <label for="end_date">End Date:</label>
+          <%= date_field_tag :end_date, params[:end_date], style: 'width: 100%;' %>
+        </div>
+      </div>
+      <div style="margin-top: 10px;">
+        <%= submit_tag 'Filter', style: 'padding: 5px 10px; cursor: pointer;' %>
+        <%= link_to 'Clear', activity_logs_path, style: 'padding: 5px 10px; margin-left: 5px; text-decoration: none; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;' %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+
+<table class="activity-log-table">
+  <thead>
+    <tr>
+      <th>Entity Type</th>
+      <th>Entity ID</th>
+      <th>Field Name</th>
+      <th>Old Value</th>
+      <th>New Value</th>
+      <th>Author</th>
+      <th>Timestamp</th>
+    </tr>
+  </thead>
+  <tbody>
+  <% @activity_logs.each do |log| %>
+    <tr>
+      <td><%= log.entity_type %></td>
+      <td><%= log.entity_id %></td>
+      <% firstname = User.find_by(id: log.author_id)&.firstname 
+      lastname = User.find_by(id: log.author_id)&.lastname %>
+      <td><%= log.field_name %></td>
+      <td><%= log.old_value %></td>
+      <td><%= log.new_value %></td>
+      <% if log.author_id == "Anonymouse" %>
+        <td><%= "System Generated" %></td>
+      <% else %>
+        <td><%= "#{firstname} #{lastname}" %></td>
+      <% end %>
+      <td><%= log.created_at.in_time_zone("Asia/Kolkata").strftime("%d/%m/%Y %H:%M") %></td>
+    </tr>
+  <% end %>
+</tbody>
+
+</table>
+<%= will_paginate @activity_logs %>
+<style>
+.activity-log-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.activity-log-table th, .activity-log-table td {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+}
+
+.activity-log-table th {
+  background-color: #f2f2f2;
+}
+.same-size {
+  width: 60px; 
+  height: 30px;
+  padding: 5px 5px 5px 5px;
+  font-size: 15px; 
+  text-align: center;
+}
+
+</style>

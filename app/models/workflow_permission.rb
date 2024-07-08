@@ -22,6 +22,76 @@ class WorkflowPermission < WorkflowRule
   validates_presence_of :old_status
   validate :validate_field_name
 
+
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'WorkflowPermission',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: workflow_permission_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      case field_name
+      when 'role_id'
+        old_value = Role.find_by(id: values[0])&.name if values[0].present?
+        new_value = Role.find_by(id: values[1])&.name if values[1].present?
+      when 'tracker_id'
+        old_value = Tracker.find_by(id: values[0])&.name if values[0].present?
+        new_value = Tracker.find_by(id: values[1])&.name if values[1].present?
+      end
+
+      ActivityLog.create(
+        entity_type: 'WorkflowPermission',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'WorkflowPermission',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: workflow_permission_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def workflow_permission_details
+    {
+      id: self.id,
+      role: role_detail,
+      tracker: tracker_detail,
+      field_name: self.field_name
+    }
+  end
+
+  def role_detail
+    { id: self.role_id, name: Role.find_by(id: self.role_id)&.name }
+  end
+
+  def tracker_detail
+    { id: self.tracker_id, name: Tracker.find_by(id: self.tracker_id)&.name }
+  end
+
   # Returns the workflow permissions for the given trackers and roles
   # grouped by status_id
   #

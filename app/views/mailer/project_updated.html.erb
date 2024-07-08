@@ -9,7 +9,13 @@ end %>
 <% def custom_function_date(field_name)
     custom_field = CustomField.find_by(name: field_name)
     custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_value.value
+    custom_field_enumeration = custom_value.value
+    if !custom_field_enumeration.nil? 
+        date = Date.parse(custom_field_enumeration) 
+        formatted_date = date.strftime("%d/%m/%Y")
+    else 
+        custom_field_enumeration 
+    end 
 end %>
 
 <!DOCTYPE html>
@@ -40,12 +46,6 @@ end %>
   <p><strong>Best Regards</strong></p>
 </body>
 </html>
-
-<% def custom_function_date(field_name)
-    custom_field = CustomField.find_by(name: field_name)
-    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_value
-end %>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -92,7 +92,6 @@ end %>
         
         <p>Please log in to ProjectHUB to view and manage the project details.</p>
         <p><a href="" class="link">ProjectHUB</a></p>
-        <p>Best Regards</p>
     </div>
 </body>
 </html>

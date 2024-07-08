@@ -154,6 +154,60 @@ class User < Principal
     end
   end)
 
+  def user_full_name
+    "#{first_name} #{last_name}"
+  end
+
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'User',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: user_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.each do |field_name, values|
+      ActivityLog.create(
+        entity_type: 'User',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: values[0].to_s,
+        new_value: values[1].to_s,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'User',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: user_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def user_details
+    {
+      id: self.id,
+      username: self.username,
+      email: self.email,
+      firstname: self.firstname,
+      lastname: self.lastname
+    }
+  end
+
   def set_mail_notification
     self.mail_notification = Setting.default_notification_option if self.mail_notification.blank?
     true
@@ -864,9 +918,9 @@ class User < Principal
   # Returns the anonymous user.  If the anonymous user does not exist, it is created.  There can be only
   # one anonymous user per database.
   def self.anonymous
-    anonymous_user = AnonymousUser.unscoped.find_by(:lastname => 'Anonymous')
+    anonymous_user = AnonymousUser.unscoped.find_by(:lastname => 'Generated')
     if anonymous_user.nil?
-      anonymous_user = AnonymousUser.unscoped.create(:lastname => 'Anonymous', :firstname => '', :login => '', :status => 0)
+      anonymous_user = AnonymousUser.unscoped.create(:lastname => 'Generated', :firstname => 'System', :login => '', :status => 0)
       raise 'Unable to create the anonymous user.' if anonymous_user.new_record?
     end
     anonymous_user
@@ -922,19 +976,17 @@ class User < Principal
   end
 
   def self.send_dashboard_email
-    user= User.first
-    projects = user.projects
-    Mailer.deliver_send_dashboard_email(user, projects)
+    User.all.each do |user|
+      projects = user.projects
+      Mailer.deliver_send_dashboard_email(user, projects)
+    end
   end
 
   def self.send_wsr_emails
-    user= User.first
-    projects = Project.where(status: 1)
-    # projects.each do |project|
-    project = Project.first
-      Mailer.deliver_send_wsr_email(user,project)
-      puts "Mail sent for project #{project.name}"
-    # end
+      projects = Project.where(status: 1, parent_id: nil)
+      projects.each do  |project|
+        Mailer.deliver_send_wsr_email(project)
+      end
   end
 
   def self.custom_field_value_date(user,issue, field_name) 

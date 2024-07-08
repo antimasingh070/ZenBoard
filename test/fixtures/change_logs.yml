@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  entity_type: MyString
+  entity_id: 1
+  field_name: MyString
+  old_value: MyText
+  new_value: MyText
+
+two:
+  entity_type: MyString
+  entity_id: 1
+  field_name: MyString
+  old_value: MyText
+  new_value: MyText

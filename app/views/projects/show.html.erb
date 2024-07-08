@@ -8,16 +8,8 @@
   <% if User.current.allowed_to?(:close_project, @project) %>
     <% if @project.active? %>
       <%= link_to l(:button_close), close_project_path(@project), :data => {:confirm => l(:text_project_close_confirmation, @project.to_s)}, :method => :post, :class => 'icon fas fa-lock' %>
-      <%= link_to hold_project_path(@project), data: { confirm: l(:text_project_hold_confirmation, @project.to_s) },
-        method: :post, class: "button-icon-link" do %>
-        <%= image_tag("../images/go_live.png", alt: "Send Back", style: "width: 12px; height: 12px; margin-right: 5px;") %>
-        Hold
-      <% end %>
-      <%= link_to cancelled_project_path(@project), data: { confirm: l(:text_project_cancelled_confirmation, @project.to_s) },
-      method: :post, class: "button-icon-link" do %>
-      <%= image_tag("../images/ban-solid.svg", alt: "Send Back", style: "width: 12px; height: 12px; margin-right: 5px;") %>
-      Cancelled
-    <% end %>
+       <%= link_to "Hold", "#", class: "icon icon-move-top", id: "holdLink" %>
+       <%= link_to "Cancel", "#", class: "icon icon-move-top", id: "cancelledLink" %>
     <% else %>
       <%= link_to l(:button_reopen), reopen_project_path(@project), :data => {:confirm => l(:text_project_reopen_confirmation, @project.to_s)}, :method => :post, :class => 'icon icon-unlock' %>
     <% end %>
@@ -53,8 +45,16 @@
   <% unless @project.homepage.blank? %>
     <li><span class="label"><%=l(:field_homepage)%>:</span> <%= link_to_if uri_with_safe_scheme?(@project.homepage), @project.homepage, @project.homepage %></li>
   <% end %>
+  <li class=""><span class="label">Created at: </span><%= @project.updated_on.strftime("%-d %b %Y") %></li>
+  <li class=""><span class="label">Updated at: </span><%= @project.updated_on.strftime("%-d %b %Y") %></li>
   <% render_custom_field_values(@project) do |custom_field, formatted| %>
-    <li class="<%= custom_field.css_classes %>"><span class="label"><%= custom_field.name %>:</span> <%= formatted %></li>
+    <% if custom_field.name == "Revised End Date" %>
+      <% revised_end_date_custom_field = CustomField.find_by(name: "Revised End Date") %>
+      <% revised_end_date_custom_value = @project.custom_values.where(custom_field: revised_end_date_custom_field).order(created_at: :desc).first %>
+        <li class=""><span class="label">Latest Revised End Date: </span><%= revised_end_date_custom_value.value.to_date.strftime("%d/%b/%Y") %></li>
+    <% else %>
+      <li class="<%= custom_field.css_classes %>"><span class="label"><%= custom_field.name %>:</span> <%= formatted %></li>
+    <% end %>
   <% end %>
   </ul>
   <% end %>
@@ -62,7 +62,7 @@
   <% if User.current.allowed_to?(:view_issues, @project) %>
   <div class="issues box">
     <h3 class="icon icon-issue">
-      <%=l(:label_issue_tracking)%>&nbsp;
+      <%= "Trackers" %>&nbsp;
       <%= link_to l(:label_details),
             project_issues_report_details_path(@project, :detail => 'tracker'),
             :class => 'icon-only icon-zoom-in',
@@ -135,13 +135,7 @@
 </div>
 
 <div class="splitcontentright">
-  <% if @news.any? && authorize_for('news', 'index') %>
-  <div class="news box">
-    <h3 class="icon icon-news"><%=l(:label_news_latest)%></h3>
-    <%= render :partial => 'news/news', :collection => @news %>
-    <p><%= link_to l(:label_news_view_all), project_news_index_path(@project) %></p>
-  </div>
-  <% end %>
+
 
   <%= render :partial => 'members_box' %>
 
@@ -170,3 +164,178 @@
 
 <% html_title(l(:label_overview)) -%>
 <%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" %>
+
+
+<div id="holdModal" class="modal">
+<div class="modal-content">
+  <span class="close">&times;</span>
+  <h2>Project on Hold</h2>
+  <form id="holdForm" action="<%= hold_project_path(@project) %>" method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <label for="holdRemarks">Reason to Hold<sup>*</sup>:</label>
+    <textarea id="holdRemarks" name="remarks" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+</div>
+</div>
+
+<div id="cancelledModal" class="modal">
+<div class="modal-content">
+  <span class="close">&times;</span>
+  <h2>Project to cancel</h2>
+  <form id="cancelledForm" action="<%= cancelled_project_path(@project) %>" method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <label for="cancelledRemarks">Reason to cancel<sup>*</sup>:</label>
+    <textarea id="cancelledRemarks" name="remarks" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+</div>
+</div>
+
+<style>
+label > sup {
+  color: #ff0000; /* Red color */
+  font-size: 12px; /* Smaller font size */
+  vertical-align: super; /* Align as superscript */
+}
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  font-weight: bold;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+}
+h2 {
+  font-weight: bold;
+}
+
+/* Modal Content/Box */
+.modal-content {
+  background-color: #0065ff; /* Blue background */
+  color: #fff; /* White text */
+  margin: 15% auto; /* 15% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 29%; /* Smaller width */
+  height: 33%;
+  border-radius: 10px; /* Rounded corners */
+}
+
+/* The Close Button */
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #fff; /* White text on hover */
+  text-decoration: none;
+  cursor: pointer;
+}
+#remarks {
+  width: 100%;
+  height: 80px; /* Adjust the height as needed */
+}
+
+/* Form Styles */
+#holdForm, #cancelledForm {
+  display: flex;
+  flex-direction: column;
+}
+
+
+#holdForm label,
+#cancelledForm label{
+  margin-bottom: 8px;
+}
+
+#holdForm textarea,
+#cancelledForm textarea {
+  margin-bottom: 12px;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  display: flex;
+}
+
+#holdForm button, #cancelledForm button {
+  background-color: #0051cc;
+  color: #fff;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  align-self: center;
+}
+
+#remarks:required:invalid {
+  border-color: #ff0000; /* Red color */
+}
+
+#holdForm button:hover, 
+#cancelledForm button:hover {
+  background-color: #0000FF;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+console.log("DOM fully loaded and parsed");
+
+// Get modals and buttons
+var modals = {
+  cancelled: document.getElementById("cancelledModal"),
+  hold: document.getElementById("holdModal")
+};
+
+var links = {
+  cancelled: document.getElementById("cancelledLink"),
+  hold: document.getElementById("holdLink")
+};
+
+console.log("Modals:", modals);
+console.log("Links:", links);
+
+// Open modals
+Object.keys(links).forEach(key => {
+  if (links[key] && modals[key]) { // Check if both the link and modal exist
+    links[key].onclick = function () {
+      console.log(key + " link clicked");
+      modals[key].style.display = "block";
+    }
+  } else {
+    console.log(key + " link or modal is null");
+  }
+});
+
+// Close modals on span click
+var spans = document.getElementsByClassName("close");
+Array.prototype.forEach.call(spans, function (span) {
+  span.onclick = function () {
+    Object.keys(modals).forEach(key => {
+      if (modals[key]) {
+        modals[key].style.display = "none";
+      }
+    });
+  };
+});
+
+// Close modals on outside click
+window.onclick = function (event) {
+  Object.keys(modals).forEach(key => {
+    if (modals[key] && event.target == modals[key]) {
+      modals[key].style.display = "none";
+    }
+  });
+}
+});
+</script>

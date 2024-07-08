@@ -4,7 +4,7 @@
 <!--[form:project]-->
 <p><%= f.text_field :name, :required => true, :size => 60 %></p>
 <% if action_name == 'settings' %>
-  <p><%= f.select :status, options_for_select(Project::STATUS_OPTIONS.map { |k, v| [v, k] }) %></p>
+  <p><%= f.select :status, options_for_select(Project::STATUS_MAP.map { |k, v| [v, k] }) %></p>
 <% end %>
 <p><%= f.text_area :description, :rows => 8, :class => 'wiki-edit' %></p>
 <p>
@@ -46,8 +46,38 @@
 
 <%= wikitoolbar_for 'project_description' %>
 
-<% @project.visible_custom_field_values.each do |value| %>
-  <p><%= custom_field_tag_with_label :project, value %></p>
+<% if !@project.id.nil? %>
+<p>
+  <label for="revised_end_date">Revised End Date</label>
+  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+  <input type="date" id="revised_end_date" name="revised_end_date" class="form-control">
+  <button type="button" id="update-revised-end-date" class="btn btn-primary">Update</button>
+</p>
+<div class="row">
+  <div class="col-md-6 offset-md-6">
+    <% if @revised_end_date_history&.any? %>
+      <div class="border p-3 mb-3 text-right">
+        <h3 class="text-right">Revised End Date History</h3>
+        <% @revised_end_date_history.each do |history| %>
+          <div class="text-right">
+            <%= history&.value&.to_date&.strftime("%d/%m/%Y") %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+   </div>
+</div>
+<% end %>
+<% if @project.id.nil? %>
+  <% @project.visible_custom_field_values.each do |value| %>
+      <p><%= custom_field_tag_with_label :project, value %></p>
+  <% end %>
+<% else %>
+  <% @project.visible_custom_field_values.each do |value| %>
+    <% unless value.custom_field.name == "Revised End Date" %>
+      <p><%= custom_field_tag_with_label :project, value %></p>
+    <% end %>
+  <% end %>
 <% end %>
 <%= call_hook(:view_projects_form, :project => @project, :form => f) %>
 </div>
@@ -84,3 +114,34 @@
     });
   <% end %>
 <% end %>
+
+
+<script>
+ <% if !@project.id.nil? %>
+  $(document).ready(function() {
+    $('#update-revised-end-date').click(function() {
+     
+      var revisedEndDate = $('#revised_end_date').val();
+      $.ajax({
+        url: '<%= update_revised_end_date_project_path(@project) %>',
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content')
+        },
+        data: { revised_end_date: revisedEndDate },
+        success: function(response) {
+          alert('Revised End Date updated successfully!');
+          // You can redirect or perform any other action here after successful update
+          location.reload();
+        },
+        error: function(xhr, status, error) {
+          alert('Failed to update Revised End Date.');
+          // Handle the error as needed
+        }
+      });
+   
+    });
+  });
+     <% end %>
+</script>
+

@@ -26,7 +26,7 @@ class IssuesController < ApplicationController
   before_action :build_new_issue_from_params, :only => [:new, :create]
   accept_atom_auth :index, :show
   accept_api_auth :index, :show, :create, :update, :destroy, :approve, :decline, :send_back
-
+  # before_action :update_done_ratio_from_issue_actual_end_Date
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
   rescue_from Query::QueryError, :with => :query_error
 
@@ -41,12 +41,26 @@ class IssuesController < ApplicationController
   helper :repositories
   helper :timelog
 
+
+  def activity
+    @issue = Issue.find(params[:id])
+    @activities = @issue.activty_log.order(created_at: :desc)
+  end
+  
+  def update_custom_field(field_name, value)
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
+    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
+    custom_value.update(value: value)
+  end
+
   def send_back
     @issue = Issue.find(params[:id])
     @issue.update(assigned_to_id: @issue.author_id)
     
     update_custom_field("Remarks", params[:remarks])
-    update_custom_field("Action", "36")
+    update_custom_field("Workflow", "7")
+    update_custom_field("Approved By", User.current.name)
+    update_custom_field("Approval Date", Date.today)
     
     if @issue.send_back?
       @auther = User.find_by(id: @issue.author_id)
@@ -60,9 +74,11 @@ class IssuesController < ApplicationController
 
   def approve
     @issue = Issue.find(params[:id])
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
-    custom_value.update(value: "34")
+    binding.pry
+    update_custom_field("Remarks", params[:remarks])
+    update_custom_field("Workflow", "35")
+    update_custom_field("Approved By", User.current.name)
+    update_custom_field("Approval Date", Date.today)
     if @issue.approved?
       @members = @issue.project.members
       Mailer.deliver_issue_approved(User.current, @issue,  @members)
@@ -75,9 +91,10 @@ class IssuesController < ApplicationController
 
   def decline
     @issue = Issue.find(params[:id])
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
-    custom_value.update(value: "35")
+    update_custom_field("Remarks", params[:remarks])
+    update_custom_field("Workflow", "6")
+    update_custom_field("Approved By", User.current.name)
+    update_custom_field("Approval Date", Date.today)
     if @issue.declined?
       @members = @issue.project.members
       Mailer.deliver_issue_declined(User.current, @issue, @members)
@@ -189,6 +206,8 @@ class IssuesController < ApplicationController
   end
 
   def create
+    # @new_issue = Issue.find_by(project_id: @issue.project_id, subject: @issue.subject)
+    # @issue = @new_issue unless @new_issue.nil?
     unless User.current.allowed_to?(:add_issues, @issue.project, :global => true)
       raise ::Unauthorized
     end
@@ -531,12 +550,6 @@ class IssuesController < ApplicationController
   end
 
   private
-
-  def update_custom_field(field_name, value)
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
-    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
-    custom_value.update(value: value)
-  end
 
   def query_error(exception)
     session.delete(:issue_query)

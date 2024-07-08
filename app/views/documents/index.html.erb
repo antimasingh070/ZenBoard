@@ -1,44 +1,101 @@
 <div class="contextual">
-<%= link_to l(:label_document_new), new_project_document_path(@project), :class => 'icon icon-add',
-      :onclick => 'showAndScrollTo("add-document", "document_title"); return false;' if User.current.allowed_to?(:add_documents, @project) %>
+  <%= link_to l(:label_document_new), new_project_document_path(@project), :class => 'icon icon-add',
+        :onclick => 'showAndScrollTo("add-document", "document_title"); return false;' if User.current.allowed_to?(:add_documents, @project) %>
 </div>
 
 <div id="add-document" style="display:none;">
-<h2><%=l(:label_document_new)%></h2>
-<%= labelled_form_for @document, :url => project_documents_path(@project), :html => {:multipart => true} do |f| %>
-<%= render :partial => 'form', :locals => {:f => f} %>
-<p>
-  <%= submit_tag l(:button_create) %>
-  <%= link_to l(:button_cancel), "#", :onclick => '$("#add-document").hide(); return false;' %>
-</p>
-<% end %>
+  <h2><%= l(:label_document_new) %></h2>
+  <%= labelled_form_for @document, :url => project_documents_path(@project), :html => {:multipart => true} do |f| %>
+    <%= render :partial => 'form', :locals => {:f => f} %>
+    <p>
+      <%= submit_tag l(:button_create) %>
+      <%= link_to l(:button_cancel), "#", :onclick => '$("#add-document").hide(); return false;' %>
+    </p>
+  <% end %>
 </div>
 
-<h2><%=l(:label_document_plural)%></h2>
+<h2><%= l(:label_document_plural) %></h2>
 
 <div id="document-list">
-<% if @grouped.empty? %><p class="nodata"><%= l(:label_no_data) %></p><% end %>
-
-<% @grouped.keys.sort.__send__(@sort_by == 'date' ? :reverse_each : :each) do |group| %>
-  <div class="document-group document-group-<%= @sort_by %>">
-    <h3 class="group-name"><%= group %></h3>
-    <%= render :partial => 'documents/document', :collection => @grouped[group] %>
-  </div>
-<% end %>
+  <% if @grouped.empty? %>
+    <p class="nodata"><%= l(:label_no_data) %></p>
+  <% else %>
+    <% @grouped.keys.sort.each do |group| %>
+      <div class="category">
+        <h3 class="category-title"><%= group %></h3>
+        <table class="documents" style="border-collapse: collapse; width: 100%;">
+          <thead>
+            <tr style="border: 1px solid #ddd;">
+              <th style="border: 1px solid #ddd; padding: 8px;"><%= l(:field_title) %></th>
+              <th style="border: 1px solid #ddd; padding: 8px;"><%= l(:field_description) %></th>
+              <th style="border: 1px solid #ddd; padding: 8px;"><%= "Time" %></th>
+              <th style="border: 1px solid #ddd; padding: 8px;"><%= "Upload Files" %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @grouped[group].each do |document| %>
+              <tr style="border: 1px solid #ddd;">
+                <td style="border: 1px solid #ddd; padding: 8px;"><%= link_to document.title, document_path(document) %></td>
+                <td style="border: 1px solid #ddd; padding: 8px;"><%= document.description %></td>
+                <td style="border: 1px solid #ddd; padding: 8px;"><%= format_time(document.created_on) %></td>
+                <td style="border: 1px solid #ddd; padding: 8px;">
+                  <% document.attachments.each do |attachment| %>
+                    <%= link_to attachment.filename, download_named_attachment_path(attachment, attachment.filename) %>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    <% end %>
+  <% end %>
 </div>
 
 <% content_for :sidebar do %>
   <h3><%= l(:label_sort_by, '') %></h3>
   <ul>
-    <li><%= link_to(l(:field_category), {:sort_by => 'category'},
-                    :class => (@sort_by == 'category' ? 'selected' :nil)) %></li>
-    <li><%= link_to(l(:label_date), {:sort_by => 'date'},
-                    :class => (@sort_by == 'date' ? 'selected' :nil)) %></li>
-    <li><%= link_to(l(:field_title), {:sort_by => 'title'},
-                    :class => (@sort_by == 'title' ? 'selected' :nil)) %></li>
-    <li><%= link_to(l(:field_author), {:sort_by => 'author'},
-                    :class => (@sort_by == 'author' ? 'selected' :nil)) %></li>
+    <li><%= link_to(l(:field_category), {:sort_by => 'category'}, :class => (@sort_by == 'category' ? 'selected' : nil)) %></li>
+    <li><%= link_to(l(:label_date), {:sort_by => 'date'}, :class => (@sort_by == 'date' ? 'selected' : nil)) %></li>
+    <li><%= link_to(l(:field_title), {:sort_by => 'title'}, :class => (@sort_by == 'title' ? 'selected' : nil)) %></li>
+    <li><%= link_to(l(:field_author), {:sort_by => 'author'}, :class => (@sort_by == 'author' ? 'selected' : nil)) %></li>
   </ul>
 <% end %>
 
 <% html_title(l(:label_document_plural)) -%>
+
+<style>
+  .category {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: #f9f9f9;
+  }
+
+  .category-title {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+    font-size: 1.2em;
+    color: #333;
+  }
+
+  .documents th, .documents td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  .documents th {
+    background-color: #f2f2f2;
+  }
+
+  .documents tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .documents tr:hover {
+    background-color: #f1f1f1;
+  }
+</style>

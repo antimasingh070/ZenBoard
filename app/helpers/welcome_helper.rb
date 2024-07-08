@@ -19,6 +19,30 @@
 
 module WelcomeHelper
 
+  def working_days_between(start_date, end_date)
+    end_date = end_date.value.to_date
+
+    holidays = [
+      Date.new(Date.today.year, 1, 26),
+      Date.new(Date.today.year, 8, 15),
+      Date.new(Date.today.year, 10, 2),
+      Date.new(Date.today.year, 12, 25),
+      Date.new(Date.today.year, 5, 1)
+    ]
+
+    working_days = 0
+    current_date = start_date
+
+    while current_date <= end_date
+      unless current_date.sunday? || holidays.include?(current_date)
+        working_days += 1
+      end
+      current_date = current_date.next_day
+    end
+
+    working_days
+  end
+
   def custom_field_value(project, field_name)
     if field_name == "Project Activity"
       custom_field = CustomField.find_by(name: field_name)
@@ -138,6 +162,8 @@ module WelcomeHelper
       Project::STATUS_ARCHIVED
     when 'Scheduled for Deletion'
       Project::STATUS_SCHEDULED_FOR_DELETION
+    when 'Hold'
+      Project::STATUS_HOLD
     else
       ''
     end

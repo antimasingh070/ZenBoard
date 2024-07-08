@@ -8,6 +8,20 @@
     custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
     custom_field_enumeration&.name
 end %>
+
+<% def custom_function_date(issue, field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id)
+    custom_field_enumeration = custom_value&.value
+    next unless custom_field_enumeration
+    if !custom_field_enumeration.nil? 
+        date = Date.parse(custom_field_enumeration) 
+        formatted_date = date.strftime("%d/%m/%Y")
+    else 
+        custom_field_enumeration 
+    end 
+end %>
+
 <% assigned_to_id = @issue.assigned_to_id 
 assignee = User.find_by(id: assigned_to_id) %>
 <p>Issue Subject: <%= @issue.subject %></p>
@@ -18,17 +32,26 @@ assignee = User.find_by(id: assigned_to_id) %>
 <p>Priority Level: <%= custom_function('Priority Level') %></p>
 <p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
-
+<p>revised planned due date: <%= custom_function_date(@issue, "Actual End Date")%></p>
 <p>Project Members:</p>
-<ul>
-  <% @members = @issue.project.members %>
-  <% @members.each do |member| %>
-    <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
-    <% role = Role.find_by(id: role_id) %>
-    <li><%= "#{member.user.name} (#{role&.name || 'Not assigned'})" %></li>
-  <% end %>
-</ul>
+<% members_by_role = @issue.project.members.includes(:roles).group_by { |member| member.roles.first.name } %>
+<table style="border-collapse: collapse; width: 100%;">
+  <thead>
+    <tr>
+      <th style="border: 1px solid #ddd; padding: 8px;">Role</th>
+      <th style="border: 1px solid #ddd; padding: 8px;">Members</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% members_by_role.each do |role, members| %>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><%= role %></td>
+        <td style="border: 1px solid #ddd; padding: 8px;"><%= members.map { |member| member.user.name }.join(', ') %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
 
 <p>Please log in to ProjectHUB to view and manage the issue details.</p>
-<p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
 <p>Best Regards</p>

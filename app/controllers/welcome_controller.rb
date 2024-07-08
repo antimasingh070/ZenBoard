@@ -21,6 +21,12 @@ class WelcomeController < ApplicationController
   self.main_menu = false
 
   skip_before_action :check_if_login_required, only: [:robots]
+  # STATUS_ACTIVE     = 1
+  # STATUS_CLOSED     = 5
+  # STATUS_ARCHIVED   = 9
+  # STATUS_SCHEDULED_FOR_DELETION = 10
+  # STATUS_HOLD = 11
+  # STATUS_CANCELLED = 12
 
 
   def date_value(project, field_name)
@@ -29,18 +35,29 @@ class WelcomeController < ApplicationController
     date_string = custom_value&.value
 end
 
-  def project_dashboard
+  def it_project_dashboard 
+
     @project_status_text = {
       Project::STATUS_ACTIVE => 'Active',
       Project::STATUS_CLOSED => 'Closed',
       Project::STATUS_ARCHIVED => 'Archived',
-      Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion'
+      Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion',
+      Project::STATUS_HOLD => "Hold",
+      Project::STATUS_CANCELLED => "Cancelled"
     }
 
     current_user_id = User.current.id
-
+    # Go Live date
+    # @projects = Project.where(parent_id: nil)
     @projects = Project.where(parent_id: nil)
+    .joins("LEFT JOIN custom_values ON custom_values.customized_id = projects.id AND custom_values.customized_type = 'Project'")
+    .joins("LEFT JOIN custom_fields ON custom_fields.id = custom_values.custom_field_id")
+    .where("custom_fields.name = ?", 'Planned Project Go Live Date')
+    .order("custom_values.value DESC")
+    custom_field = CustomField.find_by(name: "Is It Project")
+    customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "1").pluck(:customized_id)
 
+    @projects = @projects.where(id: customized_ids)
     @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
     @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
     @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
@@ -58,15 +75,90 @@ end
     end
 
     @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }
-
     @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
     @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq
     @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq
     @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq
 
     @names = @projects.map(&:name).compact.uniq
+    # Projects going live next week
+    start_date_next_week = Date.today.next_week.beginning_of_week
+    end_date_next_week = Date.today.next_week.end_of_week
+    @next_week_go_live_projects = @projects.select { |project| 
+   begin
+      go_live_date = Date.parse(date_value(project, 'Planned Project Go Live Date'))
+      go_live_date >= start_date_next_week && go_live_date <= end_date_next_week
+    rescue ArgumentError
+      false
+    end
+    }
+
+    # Remove this line if you don't want to limit to the first 3 projects
+    @next_week_go_live_projects = @next_week_go_live_projects[0..2]
+
+ 
   end
 
+  def non_it_project_dashboard
+    begin
+    @project_status_text = {
+      Project::STATUS_ACTIVE => 'Active',
+      Project::STATUS_CLOSED => 'Closed',
+      Project::STATUS_ARCHIVED => 'Archived',
+      Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion',
+      Project::STATUS_HOLD => "Hold",
+      Project::STATUS_CANCELLED => "Cancelled"
+    }
+
+    current_user_id = User.current.id
+    # Go Live date
+    # @projects = Project.where(parent_id: nil)
+    @projects = Project.where(parent_id: nil)
+    .joins("LEFT JOIN custom_values ON custom_values.customized_id = projects.id AND custom_values.customized_type = 'Project'")
+    .joins("LEFT JOIN custom_fields ON custom_fields.id = custom_values.custom_field_id")
+    .where("custom_fields.name = ?", 'Planned Project Go Live Date')
+    .order("custom_values.value DESC")
+    custom_field = CustomField.find_by(name: "Is IT Project")
+    customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "0").pluck(:customized_id)
+    @projects = @projects.where(id: customized_ids)
+    @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
+    @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
+    @projects = @projects.where("custom_field_value(project, 'Template') = ?", params[:template_filter]) if params[:template_filter].present?
+    @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
+    @projects = @projects.where("project.name = ?", params[:name_filter]) if params[:name_filter].present?
+    @projects = @projects.select { |project| member_names(project, 'Project Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
+
+    if params[:start_date_from].present? && params[:start_date_to].present?
+      start_date_range = Date.parse(params[:start_date_from])..Date.parse(params[:start_date_to])
+      @projects = @projects.select { |project| start_date_range.cover?(Date.parse(date_value(project, 'Scheduled Start Date'))) }
+    end
+
+    if params[:end_date_from].present? && params[:end_date_to].present?
+      end_date_range = Date.parse(params[:end_date_from])..Date.parse(params[:end_date_to])
+      @projects = @projects.select { |project| end_date_range.cover?(Date.parse(date_value(project, 'Scheduled End Date'))) }
+    end
+
+    @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }
+    @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
+    @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq
+    @templates = @projects.map { |project| custom_field_value(project, 'Template') }.compact.uniq
+    @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq
+    @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq
+
+    @names = @projects.map(&:name).compact.uniq
+    # Projects going live next week
+    start_date_next_week = Date.today.next_week.beginning_of_week
+    end_date_next_week = Date.today.next_week.end_of_week
+    @next_week_go_live_projects = @projects.select { |project| 
+      go_live_date = Date.parse(date_value(project, 'Planned Project Go Live Date'))
+      go_live_date >= start_date_next_week && go_live_date <= end_date_next_week
+    }
+
+    # Remove this line if you don't want to limit to the first 3 projects
+    @next_week_go_live_projects = @next_week_go_live_projects[0..2]
+    rescue => e
+    end
+  end
   
   def member_names(project, field_name)
     project_lead_role = Role.find_by(name: field_name)

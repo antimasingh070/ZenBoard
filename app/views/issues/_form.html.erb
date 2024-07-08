@@ -17,16 +17,11 @@
 
 <% if @issue.safe_attribute?('tracker_id') || (@issue.persisted? && @issue.tracker_id_changed?) %>
 <p>
-<% if !session[:tracker_id].nil? %>
-<% @issue.update(tracker_id: session[:tracker_id]) %>
-  <%= f.select :tracker_id, trackers_options_for_select(@issue), {:required => true},
-  :onchange => "updateIssueFrom('#{escape_javascript update_issue_form_path(@project, @issue)}', this)",
-  :title => @issue.tracker&.description %>
-<% else %>
+
   <%= f.select :tracker_id, trackers_options_for_select(@issue), {:required => true},
   :onchange => "updateIssueFrom('#{escape_javascript update_issue_form_path(@project, @issue)}', this)",
   :title => @issue.tracker.description %>
-<% end %>
+
   <%= content_tag 'a', l(:label_open_trackers_description), :class => 'icon-only icon-help', :title => l(:label_open_trackers_description), :onclick => "showModal('trackers_description', '500px'); return false;", :href => '#' if trackers_for_select(@issue).any? {|t| t.description.present? } %>
 </p>
   <%= render partial: 'issues/trackers_description', locals: {trackers: trackers_for_select(@issue)} %>

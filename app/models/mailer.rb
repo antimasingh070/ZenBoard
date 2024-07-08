@@ -67,7 +67,7 @@ class Mailer < ActionMailer::Base
       ::I18n.locale = initial_language
     end
   end
-
+  
   # Default URL options for generating URLs in emails based on host_name and protocol
   # defined in application settings.
   def self.default_url_options
@@ -104,13 +104,16 @@ class Mailer < ActionMailer::Base
     @project = issue.project
     @issue = issue
     @user = user
-    issue_send_back(user, issue, auther).deliver_later
+    if Setting.notified_events.include?('issue_send_back')
+      issue_send_back(user, issue, auther).deliver_later
+    end
   end
   
   def issue_approved(user, issue, member_mails)
     @user = user
     @issue = issue
     @author = issue.author
+    binding.pry
     @member_mails = member_mails
     @project = @issue.project
     mail_data = user_mails(@project)
@@ -130,7 +133,10 @@ class Mailer < ActionMailer::Base
       @issue = issue
       @user = user
       @project = issue.project
-      issue_approved(user, issue, member_mails).deliver_later
+      binding.pry
+      if Setting.notified_events.include?('issue_approved')
+        issue_approved(user, issue, member_mails).deliver_later
+      end
     end
   end
 
@@ -157,7 +163,9 @@ class Mailer < ActionMailer::Base
       @issue = issue
       @user = user
       @project = issue.project
-      issue_declined(user, issue, member_mails).deliver_later
+      if Setting.notified_events.include?('issue_declined')
+        issue_declined(user, issue, member_mails).deliver_later
+      end
     end
   end
 
@@ -203,7 +211,9 @@ class Mailer < ActionMailer::Base
   #   Mailer.deliver_issue_add(issue)
   def self.deliver_issue_add(issue)
     user = User.current
-    issue_add(user, issue).deliver_later
+    if Setting.notified_events.include?('issue_added')
+      issue_add(user, issue).deliver_later
+    end
   end
 
   # Builds a mail for notifying user about an issue update
@@ -260,7 +270,9 @@ class Mailer < ActionMailer::Base
       # issue_edit(user, journal).deliver_later
     end
     user = User.current
-    issue_edit(user, journal).deliver_later
+    if Setting.notified_events.include?('issue_updated') ||  Setting.notified_events.include?('issue_note_added') ||  Setting.notified_events.include?('issue_status_updated') ||  Setting.notified_events.include?('issue_assigned_to_updated') ||  Setting.notified_events.include?('issue_priority_updated') ||  Setting.notified_events.include?('issue_fixed_version_updated')
+      issue_edit(user, journal).deliver_later
+    end
   end
 
   # Builds a mail to user about a new document.
@@ -282,7 +294,9 @@ class Mailer < ActionMailer::Base
   def self.deliver_document_added(document, author)
     users = document.notified_users
     users.each do |user|
-      document_added(user, document, author).deliver_later
+      if Setting.notified_events.include?('document_added')
+        document_added(user, document, author).deliver_later
+      end
     end
   end
 
@@ -358,7 +372,9 @@ class Mailer < ActionMailer::Base
     #   news_added(user, news).deliver_later
     # end
     user = User.current
-    news_added(user, news).deliver_later
+    if Setting.notified_events.include?('news_added')
+      news_added(user, news).deliver_later
+    end
   end
 
   # Builds a mail to user about a new news comment.
@@ -384,9 +400,11 @@ class Mailer < ActionMailer::Base
     news = comment.commented
     users = news.notified_users | news.notified_watchers
     users.each do |user|
-      # news_comment_added(user, comment).deliver_later
     end
-    news_comment_added(users, comment).deliver_later
+    if Setting.notified_events.include?('news_added')
+      user = User.current
+      news_comment_added(user, comment).deliver_later
+    end
   end
 
   # Builds a mail to user about a new message.
@@ -413,9 +431,8 @@ class Mailer < ActionMailer::Base
     users |= message.board.notified_watchers
 
     users.each do |user|
-      # message_posted(user, message).deliver_later
+       message_posted(user, message).deliver_later
     end
-    message_posted(users, message).deliver_later
   end
 
   # Builds a mail to user about a new wiki content.
@@ -443,9 +460,8 @@ class Mailer < ActionMailer::Base
   def self.deliver_wiki_content_added(wiki_content)
     users = wiki_content.notified_users | wiki_content.page.wiki.notified_watchers | wiki_content.notified_mentions
     users.each do |user|
-      # wiki_content_added(user, wiki_content).deliver_later
+      wiki_content_added(user, wiki_content).deliver_later
     end
-    wiki_content_added(users, wiki_content).deliver_later
   end
 
   # Builds a mail to user about an update of the specified wiki content.
@@ -639,7 +655,6 @@ class Mailer < ActionMailer::Base
     # sender's remote_ip would be lost on serialization/deserialization
     # we have to pass it with options
     options[:remote_ip] ||= sender.remote_ip
-
     Array.wrap(users).each do |user|
       security_notification(user, sender, options).deliver_later
     end
@@ -791,11 +806,13 @@ class Mailer < ActionMailer::Base
   def mail(headers={}, &block)
     # Add a display name to the From field if Setting.mail_from does not
     # include it
+    headers[:from] = "ProjectHub <antima.singh@gmail.com>"
     begin
       mail_from = Mail::Address.new(Setting.mail_from)
       if mail_from.display_name.blank? && mail_from.comments.blank?
-        mail_from.display_name =
-          @author&.logged? ? @author.name : Setting.app_title
+        # mail_from.display_name =
+        #   @author&.logged? ? @author.name : Setting.app_title
+        mail_from.display_name = "ProjectHub"
       end
       from = mail_from.format
       list_id = "<#{mail_from.address.to_s.tr('@', '.')}>"
@@ -840,7 +857,7 @@ class Mailer < ActionMailer::Base
     if @references_objects
       headers[:references] = @references_objects.collect {|o| "<#{self.class.references_for(o, @user)}>"}.join(' ')
     end
-
+    headers[:from] = "ProjectHub <no-reply@example.com>"
     if block
       super headers, &block
     else
@@ -891,7 +908,6 @@ class Mailer < ActionMailer::Base
     @user = user
     @member_role = member_role
     @role = role
-    # @url = url_for(:controller => 'account', :action => 'activate', :token => token.value)
     mail :to => user.mail,
       :subject => "Project Created"
   end
@@ -905,7 +921,9 @@ class Mailer < ActionMailer::Base
         @user = User.find(member.user.id) if member.user.present?
         @project = project
       end
-      project_created(@user, @member_role, @role, @project).deliver_later
+      if Setting.notified_events.include?('project_created')
+        project_created(@user, @member_role, @role, @project).deliver_later
+      end
     end
   end
 
@@ -931,7 +949,9 @@ class Mailer < ActionMailer::Base
         @user = User.find(member.user.id) if member.user.present?
         @project = project
       end
-      project_updated(@user, @member_role, @role, @project, updated_fields).deliver_later
+      if Setting.notified_events.include?('project_updated')
+        project_updated(@user, @member_role, @role, @project, updated_fields).deliver_later
+      end
     end
   end
 
@@ -953,7 +973,9 @@ class Mailer < ActionMailer::Base
   
 
   def self.deliver_project_status(user, old_status, project)
-    project_status(user, old_status, project).deliver_later
+    if Setting.notified_events.include?('project_status')
+      project_status(user, old_status, project).deliver_later
+    end
   end
 
   def membership_added_email(user, project)
@@ -962,11 +984,13 @@ class Mailer < ActionMailer::Base
     mail_data = user_mails(@project)
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
-    mail(to: mail_to, cc: mail_cc, subject: "[ProjectHUB] New Project Created: #{project.name} #{project.identifier}")    
+    mail(to: mail_to, cc: mail_cc, subject: "[ProjectHUB] Project: #{project.name} #{project.identifier}")    
   end
 
   def self.deliver_membership_added_email(user, project)
-    membership_added_email(user, project).deliver_later
+    if Setting.notified_events.include?('membership_added_email')
+      membership_added_email(user, project).deliver_later
+    end
   end
 
   def membership_deleted_email(user, role, project)
@@ -977,53 +1001,63 @@ class Mailer < ActionMailer::Base
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
     mail(to: mail_to, cc: mail_cc, 
-      :subject => "[ProjectHUB] New Project Created: #{@project.name}  #{@project.identifier} ")
+      :subject => "[ProjectHUB] Project Stackholders changes in: #{@project.name}  #{@project.identifier} ")
   end
 
   def self.deliver_membership_deleted_email(user, role, project)
-    membership_deleted_email(user, role, project).deliver_later
+    if Setting.notified_events.include?('membership_deleted_email')
+      membership_deleted_email(user, role, project).deliver_later
+    end
   end
 
   def send_issue_pdf(user, file_path)
     attachments['issue.pdf'] = File.read(file_path, mode: 'rb')
-    mail(to: "ankitguptalu9@gmail.com", subject: 'New Project Created')
+    mail(to: "singhantima720@gmail.com", subject: 'New Project Created')
   end
 
   def self.deliver_send_issue_pdf(user, file_path)
-    send_issue_pdf(user, file_path).deliver_now
+    if Setting.notified_events.include?('send_issue_pdf')
+      send_issue_pdf(user, file_path).deliver_later
+    end
   end
 
   def send_dashboard_email(user, projects)
     # attachments['project_dashboard.csv'] = File.read(csv_path, mode: 'rb')
     # attachments['project_dashboard_pdf_generated.pdf'] = File.read(pdf_path, mode: 'rb')
     @projects= projects
-    mail(to: "ankitguptalu9@gmail.com", subject: 'New Dashboard Data')
+    mail(to: "singhantima720@gmail.com", subject: 'New Dashboard Data')
   end
+
   def self.deliver_send_dashboard_email(user, projects)
-    send_dashboard_email(user, projects).deliver_now
+    if Setting.notified_events.include?('send_dashboard_email')
+      send_dashboard_email(user, projects).deliver_later
+    end
   end
  
-  def send_wsr_email(user,project)
+  def send_wsr_email(user, project)
     @project = project
     @members = Member.where(project_id: @project.id)
-    
     if @members.any?
       @members.each do |member|
         @member_role = MemberRole.find_by(member_id: member.id)
         @role = Role.find_by(id: @member_role.role_id)
-        @user = User.find(member.user_id)
+        @user = User.find(member.user_id) 
       end
     end
-
+    @project_status = STATUS_MAP[project.status] || "Unknown"
+    mail_data = user_mails(@project)
+    # mail_cc = mail_data[:mail_cc].uniq
+    wsr_mail_to = mail_data[:wsr_mail_to].uniq
+    wsr_mail_cc = mail_data[:wsr_mail_cc].uniq
     # Adjust the recipient of the email based on project or member data
-    @recipient_email = @members.pluck(:user_id).map { |user_id| User.find(user_id).mail }.join(",") # Pluck emails of all project members
-    
-    mail(to: "ankit.gupta.ext@hdbfs.com", subject: 'New Dashboard Data')  
+    # @recipient_email = @members.pluck(:user_id).map { |user_id| User.find(user_id).mail }.join(",") # Pluck emails of all project members   
+    mail(to: wsr_mail_to, cc: wsr_mail_cc, subject: "WSR (Weekly Status Report) - #{@project.name} - #{Time.now.strftime("%B %d, %Y")} ")
   end
+  
 
-  def self.deliver_send_wsr_email(user,projects)
+  def self.deliver_send_wsr_email(user, project)
     if Setting.notified_events.include?('send_wsr_email')
-      send_wsr_email(user,projects).deliver_now
+      send_wsr_email(user, project).deliver_now
     end
   end 
 
@@ -1042,12 +1076,14 @@ class Mailer < ActionMailer::Base
     # Adjust the recipient of the email based on project or member data
     @recipient_email = @members.pluck(:user_id).map { |user_id| User.find(user_id).mail }.join(",") # Pluck emails of all project members
     
-    mail(to: "ankitguptalu9@gmail.com", subject: 'Issue List')
+    mail(to: @recipient_email, subject: "[ProjectHUB] Pending Activity List: #{@project.name} (due date passed)")
   end
 
   def self.deliver_send_issue_list(user, project,overdue_issues)
-    if overdue_issues.any?
-      send_issue_list(user, project, overdue_issues).deliver_now
+    if Setting.notified_events.include?('send_issue_list')
+      if overdue_issues.any?
+        send_issue_list(user, project, overdue_issues).deliver_later
+      end
     end
   end
   
@@ -1059,18 +1095,24 @@ class Mailer < ActionMailer::Base
     project_managers = fetch_project_manager(existing_members)
     program_managers = fetch_program_managers(existing_members)
     pmo = fetch_pmo(existing_members)
-    all_user_ids = fetch_all_project_members(project_managers.pluck(:id), program_managers.pluck(:id), pmo.pluck(:id), existing_members, project)
-    recipient_ids = project_managers.pluck(:id) + program_managers.pluck(:id) + pmo.pluck(:id)
+    recipient_to_ids = project_managers.pluck(:id) + program_managers.pluck(:id) 
+    recipient_cc_ids = pmo.pluck(:id)
+    project_manager_ids = project_managers.pluck(:id) 
+    program_manager_ids = program_managers.pluck(:id) 
     mail_to = []
     mail_cc = []
-    @user = User.current
-    if !all_user_ids.include?(@user.id) || !recipient_ids.include?(@user.id)
-      mail_to << @user.mail
-    end
-    mail_to += User.where(id: all_user_ids).pluck(:id).map { |id| User.find(id).mail }
-    recipient_users = User.where(id: recipient_ids)
-    mail_cc = recipient_users.map(&:mail).uniq
-    { mail_to: mail_to, mail_cc: mail_cc }
+    wsr_mail_to = []
+    wsr_mail_cc = []
+    recipient_to_users = User.where(id: recipient_to_ids)
+    recipient_cc_users = User.where(id: recipient_cc_ids)
+    project_manager_users = User.where(id: project_manager_ids)
+    program_manager_users = User.where(id: program_manager_ids)
+
+    mail_to = recipient_to_users.map(&:mail).uniq
+    mail_cc = recipient_cc_users.map(&:mail).uniq
+    wsr_mail_to = program_manager_users.map(&:mail).uniq
+    wsr_mail_cc = project_manager_users.map(&:mail).uniq
+    { mail_to: wsr_mail_to, mail_cc: wsr_mail_cc, wsr_mail_to: wsr_mail_to, wsr_mail_cc: wsr_mail_cc }
   end
 
   def fetch_all_project_members(project_managers, program_managers, pmo, existing_members, project)

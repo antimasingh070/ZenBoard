@@ -89,7 +89,7 @@
         <td class="subject"><a href="/issues/<%= issue.id %>"><%= issue.subject %></a></td>
         <td class="assigned_to"><%= issue&.assigned_to&.firstname %> <%= issue&.assigned_to&.lastname %></td>
         <td class="updated_on"><%= issue.updated_on %></td>
-        <td class="due_date"><%= custom_field_value_date(issue, "Revised planned due date").to_date %></td>
+        <td class="due_date"><%= custom_field_value_date(issue, "Revised planned due date").to_date.strftime("%d/%m/%Y") %></td>
       </tr>
       <% else %>
       <% end %>

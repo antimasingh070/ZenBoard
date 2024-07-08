@@ -5,7 +5,7 @@ en-GB:
       # Use the strftime parameters for formats.
       # When no format has been given, it uses default.
       # You can provide other formats here if you like!
-      default: "%d/%m/%Y"
+      default: "%m/%d/%Y"
       short: "%d %b"
       long: "%d %B, %Y"
 

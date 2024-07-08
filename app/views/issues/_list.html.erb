@@ -31,13 +31,18 @@
       </td>
     </tr>
   <% end %>
-  <tr id="issue-<%= issue.id %>" class="hascontextmenu <%= cycle('odd', 'even') %> <%= issue.css_classes %> <%= level > 0 ? "idnt idnt-#{level}" : nil %>">
-    <td class="checkbox hide-when-print"><%= check_box_tag("ids[]", issue.id, false, :id => nil) %></td>
-    <% query.inline_columns.each do |column| %>
+
+<tr id="issue-<%= issue.id %>" 
+    class="hascontextmenu <%= cycle('odd', 'even') %> <%= issue.css_classes %> <%= level > 0 ? "idnt idnt-#{level}" : nil %>"
+    data-due-date="<%= issue.due_date %>" 
+    data-revised-end-date="<%= issue.custom_field_values.find { |v| v.custom_field.name == 'Revised Planned Due Date' }&.value %>">
+  <td class="checkbox hide-when-print"><%= check_box_tag("ids[]", issue.id, false, :id => nil) %></td>
+  <% query.inline_columns.each do |column| %>
     <%= content_tag('td', column_content(column, issue), :class => column.css_classes) %>
-    <% end %>
-    <td class="buttons"><%= link_to_context_menu %></td>
-  </tr>
+  <% end %>
+  <td class="buttons"><%= link_to_context_menu %></td>
+</tr>
+
   <% query.block_columns.each do |column|
        if (text = column_content(column, issue)) && text.present? -%>
   <tr class="<%= current_cycle %>">
@@ -55,3 +60,44 @@
 </table>
 </div>
 <% end -%>
+
+<style>
+.due-date-overdue {
+  color: #e5123d; /* Red color for overdue due date */
+}
+
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("DOM fully loaded and parsed");
+
+  // Get today's date in 'YYYY-MM-DD' format
+  const today = new Date().toISOString().split('T')[0]; 
+
+  // Loop through each issue row
+  document.querySelectorAll('tr.issue').forEach(row => {
+    const dueDate = row.getAttribute('data-due-date');
+    const revisedEndDate = row.getAttribute('data-revised-end-date');
+
+    console.log(`Processing issue row: dueDate=${dueDate}, revisedEndDate=${revisedEndDate}`);
+
+    if (revisedEndDate && revisedEndDate !== "null" && new Date(revisedEndDate) <= new Date(today)) {
+      console.log("Revised end date is present and passed, highlighting revised end date");
+      const revisedEndNode = row.querySelector('.cf_24'); // Update the selector to match the correct element
+      if (revisedEndNode) {
+        revisedEndNode.classList.add('due-date-overdue');
+      }
+
+    } else if (dueDate && dueDate !== "null" && new Date(dueDate) < new Date(today)) {
+      console.log("Due date is passed and revised end date is not set or not passed, highlighting due date");
+      const dueDateNode = row.querySelector('.due_date');
+      if (dueDateNode) {
+        dueDateNode.classList.add('due-date-overdue');
+      }
+    }
+  });
+});
+
+</script>
+

@@ -19,7 +19,12 @@
 
 Rails.application.routes.draw do
   root :to => 'welcome#index', :as => 'home'
-  get 'project_dashboard', :to => 'welcome#project_dashboard'
+  get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
+  get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
+  # get 'activity_logs', :to => 'activity_log#activity_logs'
+  get 'projects/:id/activity_log', to: 'projects#activity_log', as: 'project_activity_log'
+  get 'issues/:id/activity_log', to: 'issues#activity_log', as: 'issue_activity_log'
+  resources :activity_logs, only: [:index]
   match 'login', :to => 'account#login', :as => 'signin', :via => [:get, :post]
   match 'logout', :to => 'account#logout', :as => 'signout', :via => [:get, :post]
   match 'account/twofa/confirm', :to => 'account#twofa_confirm', :via => :get
@@ -133,12 +138,14 @@ Rails.application.routes.draw do
     collection do
       get 'autocomplete'
       delete 'bulk_destroy'
+       post 'update_revised_end_date'
     end
 
     member do
       get 'settings(/:tab)', :action => 'settings', :as => 'settings'
       # post :hold
       post :cancelled
+      post 'update_revised_end_date'
       match 'archive', :via => [:post, :put]
       match 'unarchive', :via => [:post, :put]
       match 'check_member', :via => [:post, :put]
@@ -174,7 +181,6 @@ Rails.application.routes.draw do
     get 'versions.:format', :to => 'versions#index'
     get 'roadmap', :to => 'versions#index', :format => false
     get 'versions', :to => 'versions#index'
-
     resources :news, :except => [:show, :edit, :update, :destroy]
     resources :time_entries, :controller => 'timelog', :except => [:show, :edit, :update, :destroy] do
       get 'report', :on => :collection

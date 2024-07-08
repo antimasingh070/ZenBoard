@@ -254,6 +254,15 @@ button:hover {
         </select>
       </div>
       <div class="filter-group">
+        <label for="name_filter">Project Name:</label>
+        <select name="name_filter" id="name_filter">
+          <option value="">All</option>
+          <% @names.each do |name| %>
+            <option value="<%= name %>" <%= 'selected' if params[:name_filter] == name %>><%= name %></option>
+          <% end %>
+        </select>
+      </div>
+      <div class="filter-group">
         <label for="category_filter">Portfolio Category:</label>
         <select name="category_filter" id="category_filter">
           <option value="">All</option>
@@ -343,6 +352,21 @@ button:hover {
     </div>
   </div>
   </div>
+  <div id="notification" class="notification no-print">
+  <% if @next_week_go_live_projects.any? %>
+  <p>Next week project go live: </p>
+  <% @next_week_go_live_projects.each do |project| %>
+    <li>
+      <% go_live_date_str = date_value(project, 'Planned Project Go Live Date') %>
+      <% go_live_date = go_live_date_str.present? ? Date.parse(go_live_date_str) : nil %>
+      <%= "#{go_live_date.strftime('%d/%m/%Y') if go_live_date}, #{project.name}" %>
+      <br>
+    </li>
+  <% end %>
+</div>
+<% end %>
+
+
 
   <img class="print-only-image" src="/images/../images/hdbfs.png" width="200" height="50">
 
@@ -353,10 +377,11 @@ button:hover {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <tr>
-      <th rowspan="2" style="width: 50%; white-space: normal; cursor: pointer;" class="sortable">Project Name</th>
+      <th rowspan="2" style="width: 10%; white-space: normal; cursor: pointer;" class="sortable">Project Name</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Status</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Manager</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Lead</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Size</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Next Week Planned Activity</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Last Activity Completed</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Portfolio Category</th>
@@ -378,27 +403,51 @@ button:hover {
       <% category = custom_field_value(project, "Portfolio Category") %>
       <% portfolio_category_counts[category] += 1 %>
       <tr>
-        <td style="font-size: 10px; width: 500px; height: 20px;" ><%= link_to project.name, project_path(project) %></td>
+        <td style="font-size: 10px;" ><%= link_to project.name, project_path(project) %></td>
+        <% scheduled_start_date = Date.parse(date_value(project, "Scheduled Start Date")) rescue nil %>
         <% scheduled_end_date = Date.parse(date_value(project, "Scheduled End Date")) rescue nil %>
-        <% revised_due_date = Date.parse(date_value(project, "Revised Due Date")) rescue nil %>
+
+        <% revised_end_date_custom_field = CustomField.find_by(name: "Revised End Date") %>
+        <% revised_end_date = project&.custom_values&.where(custom_field: revised_end_date_custom_field)&.order(created_at: :desc)&.first %>
+
         <% if project.closed? || project.hold? || project.cancelled? %>
           <td style="background-color: white; readonly size="5" ><%= @project_status_text[project.status] %></td>
-        <% elsif (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
+        <% elsif (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_end_date.blank?  %>
           <td style="background-color: green; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
-        <% elsif (scheduled_end_date.present? && scheduled_end_date >= Date.today) || revised_due_date.present? %>
+        <% elsif (scheduled_end_date.present? && scheduled_end_date >= Date.today) || revised_end_date.present? %>
           <td style="background-color: #FFBF00; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
-        <% elsif (scheduled_end_date.present? && scheduled_end_date > Date.today) || revised_due_date < Date.today %>
+        <% elsif (scheduled_end_date.present? && scheduled_end_date > Date.today) || revised_end_date < Date.today %>
             <td style="background-color: red; color: white;" readonly size="5"><%= @project_status_text[project.status] %></td>
         <% end %>
         <td  style="font-size: 10px;" ><%= member_name(project, "Project Manager") %></td>
         <td style="font-size: 10px;" ><%= member_name(project, "Project Lead") %></td>
+        <% if scheduled_start_date && (scheduled_end_date || revised_end_date) %>
+        <% end_date = revised_end_date.present? ? revised_end_date : scheduled_end_date %>
+        <% if end_date && scheduled_start_date %>
+          <% working_days = working_days_between(scheduled_start_date, end_date) %>
+          <% project_size = if working_days <= 60 
+                              "Small"
+                            elsif working_days <= 180
+                              "Medium"
+                            else
+                              "Large"
+                            end %>
+      
+          <td style="font-size: 10px;"><%= project_size %></td>
+        <% else %>
+          <td style="font-size: 10px;">N/A</td>
+        <% end %>
+      <% else %>
+        <td style="font-size: 10px;">N/A</td>
+      <% end %>
+
         <td style="font-size: 10px;" ><%= custom_field_value_week(project, "Project Activity") %></td>
         <td style="font-size: 10px;" ><%= custom_field_value(project, "Project Activity") %></td>
         <td style="font-size: 10px;" ><%= custom_field_value(project, "Portfolio Category") %></td>
         <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
         <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
-        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Go Live date")) %></td>
-        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Revised End Date")) %></td>        
+        <td style="font-size: 10px;" ><%= formatted_date(date_value(project, "Planned Project Go Live Date")) %></td>
+        <td style="font-size: 10px;" ><%= formatted_date(revised_end_date.to_s) %></td>        
         <td style="font-size: 10px;" ><%= custom_field_value(project, "User function") %></td>
         <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
         <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
@@ -498,3 +547,30 @@ function sort(column) {
   }
   
 </script>
+
+<style>
+.notification {
+  background-color: rgba(0, 0, 0, 0); /* Transparent background */
+  color: green; /* Red text color */
+  text-align: right;
+  animation: slide-right 8s infinite; /* Animation duration: 4s, Infinite loop */
+  font-weight: bold; /* Make the text bold */
+  padding: 10px; /* Add some padding for better visibility */
+}
+
+@keyframes slide-right {
+  0% {
+    opacity: 1; /* Start with opacity 1 */
+    transform: translateX(0); /* Start at current position */
+  }
+  90% {
+    transform: translateX(20px); /* Move slightly to the right */
+    opacity: 1; /* Stay visible */
+  }
+  100% {
+    transform: translateX(100%); /* Move all the way to the right */
+    opacity: 0; /* Fade out */
+  }
+}
+</style>
+

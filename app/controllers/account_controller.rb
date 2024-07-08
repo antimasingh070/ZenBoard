@@ -31,6 +31,9 @@ class AccountController < ApplicationController
   def login
     if request.post?
       authenticate_user
+      # if User.current.logged?
+      #   check_and_send_wsr_email(User.current)
+      # end
     else
       if User.current.logged?
         redirect_back_or_default home_url, :referer => true
@@ -239,6 +242,32 @@ class AccountController < ApplicationController
 
   private
 
+  def check_and_send_wsr_email(user)
+    current_day = Date.today.strftime('%A')
+    current_date = Date.today
+    case current_day
+    when "Sunday"
+      custom_field = CustomField.find_by(name: 'wsr_date')
+      user = User.first
+        custom_values = user.custom_values.where(custom_field: custom_field)
+        if custom_values.any? { |cv| cv.value.to_date == current_date }
+          return
+        end
+    
+      deliver_wsr_on_login(user)
+      user.custom_field_values = { custom_field.id => current_date + 1 }
+      user.save
+    end
+  end
+
+  def deliver_wsr_on_login(user)
+    # Implement the wsr email sending logic here.
+    projects = Project.where(status: 1, parent_id: nil)
+    projects.each do  |project|
+      Mailer.deliver_send_wsr_email(user, project)
+    end
+  end
+  
   def prevent_twofa_session_replay
     renew_twofa_session(@user)
   end

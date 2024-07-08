@@ -45,6 +45,82 @@ class Member < ActiveRecord::Base
   end)
 
   alias :base_reload :reload
+
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'Member',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: member_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.except('updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      case field_name
+      when 'project_id'
+        old_value = Project.find_by(id: values[0])&.name if values[0].present?
+        new_value = Project.find_by(id: values[1])&.name if values[1].present?
+      when 'user_id'
+        old_value = User.find_by(id: values[0])&.firstname if values[0].present?
+        new_value = User.find_by(id: values[1])&.firstname if values[1].present?
+      end
+
+      ActivityLog.create(
+        entity_type: 'Member',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'Member',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: member_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def member_details
+    {
+      id: self.id,
+      project: project_detail,
+      user: user_detail(self.user_id),
+      roles: roles_detail,
+      created_on: self.created_on
+    }
+  end
+
+  def project_detail
+    { id: self.project_id, name: Project.find_by(id: self.project_id)&.name }
+  end
+
+  def user_detail(user_id)
+    user = User.find_by(id: user_id)
+    { id: user&.id, name: user&.firstname }
+  end
+
+  def roles_detail
+    self.roles.map { |role| { id: role.id, name: role.name } }
+  end
+
   def reload(*args)
     @managed_roles = nil
     base_reload(*args)

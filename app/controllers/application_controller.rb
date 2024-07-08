@@ -19,6 +19,7 @@
 
 require 'uri'
 require 'cgi'
+require 'will_paginate/array'
 
 class Unauthorized < StandardError; end
 

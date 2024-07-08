@@ -29,9 +29,13 @@ class Project < ActiveRecord::Base
   STATUS_HOLD = 11
   STATUS_CANCELLED = 12
 
-  STATUS_OPTIONS = {
+  STATUS_MAP = {
     STATUS_ACTIVE => 'Active',
     STATUS_CLOSED => 'Closed',
+    STATUS_ARCHIVED   => 'Archived',
+    STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for deletion',
+    STATUS_HOLD => 'Hold',
+    STATUS_CANCELLED => 'Cancelled'
   }.freeze
   # Maximum length for project identifiers
   IDENTIFIER_MAX_LENGTH = 100
@@ -91,7 +95,6 @@ class Project < ActiveRecord::Base
   # reserved words
   validates_exclusion_of :identifier, :in => %w(new)
   validate :validate_parent
-
   after_save :update_inherited_members,
              :if => proc {|project| project.saved_change_to_inherit_members?}
   after_save :remove_inherited_member_roles, :add_inherited_member_roles,
@@ -99,7 +102,6 @@ class Project < ActiveRecord::Base
   after_update :update_versions_from_hierarchy_change,
                :if => proc {|project| project.saved_change_to_parent_id?}
   before_destroy :delete_all_members
-  after_save :auto_create_records
   scope :has_module, (lambda do |mod|
     where("#{Project.table_name}.id IN (SELECT em.project_id FROM #{EnabledModule.table_name} em WHERE em.name=?)", mod.to_s)
   end)
@@ -122,12 +124,106 @@ class Project < ActiveRecord::Base
   scope :having_trackers, (lambda do
     where("#{Project.table_name}.id IN (SELECT DISTINCT project_id FROM #{table_name_prefix}projects_trackers#{table_name_suffix})")
   end)
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
 
-  def auto_create_records
+
+  def log_create_activity
+    activity_log = ActivityLog.create(
+      entity_type: 'Project',
+      entity_id: self.id,
+      field_name: 'Project',
+      old_value: nil,
+      new_value: project_details.to_json,
+      author_id: User.current.id
+    )
+  end
+  # changes_hash
+  def log_update_activity
+    saved_changes.except('updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      # Handle specific field conversions
+      case field_name
+      when 'status_id'
+        old_value = STATUS_MAP[values[0]] if values[0].present?
+        new_value = STATUS_MAP[values[1]] if values[1].present?
+      when 'parent_id'
+        old_value = Project.find_by(id: values[0])&.name if values[0].present?
+        new_value = Project.find_by(id: values[1])&.name if values[1].present?
+      end
+  
+      # Create ActivityLog entry
+      ActivityLog.create(
+        entity_type: 'Project',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+  
+  def log_destroy_activity
+    activity_log = ActivityLog.create(
+      entity_type: 'Project',
+      entity_id: self.id,
+      field_name: 'Project',
+      old_value: project_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+  
+  def project_details
+    {
+      id: self.id,
+      name: self.name,
+      description: self.description,
+      status: status_detail,
+      start_date: self.start_date,
+      due_date: self.due_date,
+      created_on: self.created_on,
+      updated_on: self.updated_on,
+      parent: project_detail(self.parent),
+      custom_fields: custom_fields_details
+    }
+  end
+  
+  def status_detail
+    { id: self.status, name: STATUS_MAP[self.status] }
+  end
+  
+  def user_detail(user_id)
+    user = User.find_by(id: user_id)
+    { id: user&.id, name: user&.firstname }
+  end
+  
+  def project_detail(project)
+    { id: project&.id, name: project&.name }
+  end
+  
+  def custom_fields_details
+    self.custom_field_values.map do |cfv|
+      { id: cfv.custom_field_id, name: cfv.custom_field.name, value: cfv.value }
+    end
+  end
+  
+
+  def revised_end_date_history
+    custom_field = CustomField.find_by(name: "Revised End Date")
+    CustomValue.where(custom_field: custom_field, customized: self).order(created_at: :desc)
+  end
+
+  def auto_create_records(template_value)
     template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
     return unless template_field
-  
-    template_value = CustomValue.find_by(customized_type: "Project", customized_id: self.id, custom_field_id: template_field.id)
+    # return unless self.nil?
+
+    template_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: self.id, custom_field_id: template_field.id, value: template_value)
     return unless template_value
   
     custom_field_enumeration = CustomFieldEnumeration.find_by(id: template_value.value.to_i)&.name
@@ -150,19 +246,30 @@ class Project < ActiveRecord::Base
   end
 
   def create_issues_for_field_names(field_names, issues, plan_tracker)
-    issues.each do |issue|
-      @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: issue.subject, author: User.current, start_date: Date.today, due_date: (Date.today +10))
-      skip_loop = false
-      field_names.each do |field_name|
-        custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
-        next unless custom_field
-        custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue.id, custom_field_id: custom_field.id)&.value
-        next unless custom_value
-  
-        @new_issue.custom_field_values = { custom_field.id => custom_value }
-        
+    if  Issue.where(tracker_id: plan_tracker.id, project_id: self.id).count == 0
+      issues.each do |issue|
+        @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: issue.subject)
+        @new_issue.assigned_to_id = User.current.id
+        @new_issue.author = User.current
+        @new_issue.start_date = Date.today
+        @new_issue.due_date = (Date.today +10)
+        field_names.each do |field_name|
+          custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
+          next unless custom_field
+          custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: issue.id, custom_field_id: custom_field.id)
+          custom_value.update(value: "") if custom_value.value.nil?
+          next unless custom_value
+          @new_issue.custom_field_values = { custom_field.id => custom_value }
+        end
+        approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
+        approval_required_custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: issue.id, custom_field_id: approval_required_custom_field.id)
+        approval_required_custom_value.update(value: "0")
+        @new_issue.custom_field_values = { approval_required_custom_field.id => approval_required_custom_value }
+        custom_field = CustomField.find_by(type: "IssueCustomField", name: "Project Activity")
+        custom_field_enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: issue.subject)
+        @new_issue.custom_field_values = { custom_field.id => custom_field_enumeration.id.to_s } unless custom_field_enumeration.nil?
+        @new_issue.save
       end
-      @new_issue.save
     end
   end
 

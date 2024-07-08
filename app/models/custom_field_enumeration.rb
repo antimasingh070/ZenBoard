@@ -27,6 +27,69 @@ class CustomFieldEnumeration < ActiveRecord::Base
 
   scope :active, lambda {where(:active => true)}
 
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'CustomFieldEnumeration',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: custom_field_enumeration_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.except('updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      case field_name
+      when 'custom_field_id'
+        old_value = CustomField.find_by(id: values[0])&.name if values[0].present?
+        new_value = CustomField.find_by(id: values[1])&.name if values[1].present?
+      end
+
+      ActivityLog.create(
+        entity_type: 'CustomFieldEnumeration',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'CustomFieldEnumeration',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: custom_field_enumeration_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def custom_field_enumeration_details
+    {
+      id: self.id,
+      custom_field: custom_field_detail,
+      name: self.name,
+      active: self.active,
+      position: self.position
+    }
+  end
+
+  def custom_field_detail
+    { id: self.custom_field_id, name: CustomField.find_by(id: self.custom_field_id)&.name }
+  end
+
+
   def to_s
     name.to_s
   end

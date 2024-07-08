@@ -42,6 +42,79 @@ class Enumeration < ActiveRecord::Base
   scope :system, lambda {where(:project_id => nil)}
   scope :named, lambda {|arg| where("LOWER(#{table_name}.name) = LOWER(?)", arg.to_s.strip)}
 
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'Enumeration',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: enumeration_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.except('updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      # Handle specific field conversions
+      case field_name
+      when 'project_id'
+        old_value = Project.find_by(id: values[0])&.name if values[0].present?
+        new_value = Project.find_by(id: values[1])&.name if values[1].present?
+      when 'parent_id'
+        old_value = Enumeration.find_by(id: values[0])&.name if values[0].present?
+        new_value = Enumeration.find_by(id: values[1])&.name if values[1].present?
+      end
+
+      ActivityLog.create(
+        entity_type: 'Enumeration',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'Enumeration',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: enumeration_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def enumeration_details
+    {
+      id: self.id,
+      name: self.name,
+      position: self.position,
+      is_default: self.is_default,
+      type: self.type,
+      active: self.active,
+      project: project_detail,
+      parent: parent_detail
+    }
+  end
+
+  def project_detail
+    { id: self.project_id, name: Project.find_by(id: self.project_id)&.name }
+  end
+
+  def parent_detail
+    { id: self.parent_id, name: Enumeration.find_by(id: self.parent_id)&.name }
+  end
+
   def self.default
     # Creates a fake default scope so Enumeration.default will check
     # it's type.  STI subclasses will automatically add their own

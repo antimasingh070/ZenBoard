@@ -20,6 +20,70 @@
 class WorkflowTransition < WorkflowRule
   validates_presence_of :new_status
 
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+
+  def workflow_transition_details
+    {
+      id: self.id,
+      tracker: tracker_details,
+      old_status_id: self.old_status_id,
+      new_status_id: self.new_status_id,
+      role: role_details,
+      assignee: self.assignee,
+      author: self.author
+    }
+  end
+
+  def tracker_details
+    { id: self.tracker_id, name: self.tracker.name }
+  end
+
+  def role_details
+    { id: self.role_id, name: self.role.name }
+  end
+
+  # Logging methods
+  def log_create_activity
+    activity_log = ActivityLog.create(
+      entity_type: 'WorkflowTransition',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: workflow_transition_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.except('updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      ActivityLog.create(
+        entity_type: 'WorkflowTransition',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    activity_log = ActivityLog.create(
+      entity_type: 'WorkflowTransition',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: workflow_transition_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
   def self.replace_transitions(trackers, roles, transitions)
     trackers = Array.wrap trackers
     roles = Array.wrap roles

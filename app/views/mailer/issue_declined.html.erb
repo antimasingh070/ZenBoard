@@ -6,28 +6,27 @@ assignee = User.find_by(id: assigned_to_id) %>
 <p>Status: <%= @issue.status.name %></p>
 <p>Task: <%= @issue.tracker.name %></p>
 <p>Assignee: <%= assignee.name %></p>
-<p>Priority Level: <%= custom_function('Priority Level') %></p>
 <p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 
 <p>Project Members:</p>
-<ul>
-  <% @members = @issue.project.members %>
-  <% @members.each do |member| %>
-    <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
-    <% role = Role.find_by(id: role_id) %>
-<<<<<<< HEAD
-    <li><%= "#{member.user.name} (Role: #{role&.name || 'Not assigned'})" %></li>
-=======
-    <li><%= "#{member.user.name} (#{role&.name || 'Not assigned'})" %></li>
->>>>>>> a0c06d16bf8774c0c0e052fffb00ec9749ed7cb3
-  <% end %>
-</ul>
-
+<% members_by_role = @issue.project.members.includes(:roles).group_by { |member| member.roles.first.name } %>
+<table style="border-collapse: collapse; width: 100%;">
+  <thead>
+    <tr>
+      <th style="border: 1px solid #ddd; padding: 8px;">Role</th>
+      <th style="border: 1px solid #ddd; padding: 8px;">Members</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% members_by_role.each do |role, members| %>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 8px;"><%= role %></td>
+        <td style="border: 1px solid #ddd; padding: 8px;"><%= members.map { |member| member.user.name }.join(', ') %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
 <p>Please log in to ProjectHUB to view and manage the issue details.</p>
-<<<<<<< HEAD
-<p><a href="<%= projecthub_url %>" class="link">ProjectHUB</a></p>
-=======
 <p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
->>>>>>> a0c06d16bf8774c0c0e052fffb00ec9749ed7cb3
 <p>Best Regards</p>

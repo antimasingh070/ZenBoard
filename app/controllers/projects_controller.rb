@@ -27,13 +27,14 @@ class ProjectsController < ApplicationController
   before_action :authorize,
                 :except => [:index, :autocomplete, :list, :new, :create, :copy,
                             :archive, :unarchive,
-                            :destroy, :bulk_destroy, :hold, :cancelled, :check_member]
+                            :destroy, :bulk_destroy, :hold, :cancelled, :check_member, :update_revised_end_date, :activty_log]
   before_action :authorize_global, :only => [:new, :create]
   before_action :require_admin, :only => [:copy, :archive, :unarchive, :bulk_destroy]
   accept_atom_auth :index
-  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :cancelled, :check_member
+  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :cancelled, :check_member, :activty_log, :update_revised_end_date
   require_sudo_mode :destroy, :bulk_destroy
 
+  after_action :create_template_record
   helper :custom_fields
   helper :issues
   helper :queries
@@ -43,6 +44,29 @@ class ProjectsController < ApplicationController
   helper :repositories
   helper :members
   helper :trackers
+
+  def create_template_record
+    begin 
+      template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
+      return unless template_field
+
+      custom_value = params[:project][:custom_field_values][template_field.id.to_s]
+      @project.auto_create_records(custom_value)
+    rescue => e
+    end
+  end
+
+  def activty_logs
+    @project = Project.find(params[:id])
+    @activty_logs = @project.activty_logs.order(created_at: :desc)
+  end
+
+  def update_revised_end_date
+    @project = Project.find(params[:id])
+    new_revised_end_date = params[:revised_end_date]
+    custom_field = CustomField.find_by(name: "Revised End Date")
+    custom_value = CustomValue.find_or_create_by(custom_field: custom_field, customized: @project, value: new_revised_end_date.to_date, created_at: Date.current)
+  end
 
   # Lists visible projects
   def index
@@ -120,9 +144,11 @@ class ProjectsController < ApplicationController
     @trackers = Tracker.sorted.to_a
     @project = Project.new
     @project.safe_attributes = params[:project]
-    custom_field = CustomField.find_by(name: "author_id")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_value.update(value: (User.current.id).to_s)
+    if !@project.id.nil?
+      custom_field = CustomField.find_by(name: "author_id")
+      custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+      custom_value.update(value: (User.current.id).to_s)
+    end
     # @project.author_id = User.current.id
     @parent = Project.where(id: @project.parent_id).first
     if @project.id.nil? && !@project.parent_id.nil? && !@parent.nil?
@@ -201,7 +227,8 @@ class ProjectsController < ApplicationController
     if params[:jump] && redirect_to_project_menu_item(@project, params[:jump])
       return
     end
-
+    @project = Project.find(params[:id])
+    @revised_end_date_history = @project.revised_end_date_history
     respond_to do |format|
       format.html do
         @principals_by_role = @project.principals_by_role
@@ -231,7 +258,8 @@ class ProjectsController < ApplicationController
     @issue_category ||= IssueCategory.new
     @member ||= @project.members.new
     @trackers = Tracker.sorted.to_a
-
+    @project = Project.find(params[:id])
+    @revised_end_date_history = @project.revised_end_date_history
     @version_status = params[:version_status] || 'open'
     @version_name = params[:version_name]
     @versions = @project.shared_versions.status(@version_status).like(@version_name).sorted
@@ -245,10 +273,6 @@ class ProjectsController < ApplicationController
     @project.safe_attributes = params[:project]
     @project.status = params[:project][:status] if params[:project][:status].present?
     @parent = Project.where(id: @project.parent_id).first
-    return nil if @project.nil?
-    custom_field = CustomField.find_by(name: "author_id")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_value.update(value: (User.current.id).to_s)
     # @project.author_id = User.current.id
     parent_id = @project.parent_id
     project_id = @project.id
@@ -276,24 +300,28 @@ class ProjectsController < ApplicationController
       custom_field_values.each do |custom_field_id, value|
         custom_field = CustomField.find_by(id: custom_field_id)
         next if custom_field.nil?
-  
         custom_field_name = custom_field.name
         old_value = old_custom_field_values[custom_field_id.to_i]
   
         next if old_value == value  # Skip if the value has not changed
-        if custom_field.field_format != 'date'
-          old_value_name = CustomFieldEnumeration.find_by(id: old_value.to_i, custom_field_id: custom_field_id).try(:name)
-          new_value_name = CustomFieldEnumeration.find_by(id: value.to_i, custom_field_id: custom_field_id).try(:name)
-        elsif custom_field.field_format != 'text'
-          custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id).try(:value)
+
+        if custom_field.field_format == 'enumeration'
+          if old_value.is_a?(Array)
+            old_value_name = old_value.map { |val| CustomFieldEnumeration.find_by(id: val.to_i, custom_field_id: custom_field_id).try(:name) }.compact
+            new_value_name = value.map { |val| CustomFieldEnumeration.find_by(id: val.to_i, custom_field_id: custom_field_id).try(:name) }.compact
+          else
+            old_value_name = CustomFieldEnumeration.find_by(id: old_value.to_i, custom_field_id: custom_field_id).try(:name)
+            new_value_name = CustomFieldEnumeration.find_by(id: value.to_i, custom_field_id: custom_field_id).try(:name)  
+          end
+        elsif custom_field.field_format == 'date' || custom_field.field_format == 'string' || custom_field.field_format == 'bool' || custom_field.field_format == 'int'
+          old_value_name = old_value
+          new_value_name = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id).try(:value)
         else
           old_value_name = old_value
           new_value_name = value
         end
-  
         updated_fields[custom_field_name] = { before: old_value_name, after: new_value_name }
       end
-      
       Mailer.deliver_project_updated(User.current, @project, updated_fields)  
       respond_to do |format|
         format.html do
@@ -357,13 +385,24 @@ class ProjectsController < ApplicationController
 
   def close
     old_status = @project.status
+  
+    # Check if there are any issues in the project that are not closed
+    open_issues = Issue.where(project_id: @project.id).where.not(status_id: 5) # Assuming status_id: 5 means 'closed'
+  
+    if open_issues.exists?
+      flash[:error] = "Project cannot be closed. Please close the pending activities"
+      redirect_to project_path(@project) and return
+    end
+  
     @project.close
     Mailer.deliver_project_status(User.current, old_status, @project)
+  
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_ok }
     end
   end
+  
 
   def reopen
     old_status = @project.status

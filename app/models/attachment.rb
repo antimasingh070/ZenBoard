@@ -90,6 +90,75 @@ class Attachment < ActiveRecord::Base
 
   safe_attributes 'filename', 'content_type', 'description'
 
+
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'Attachment',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: attachment_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.except('updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      case field_name
+      when 'author_id'
+        old_value = User.find_by(id: values[0])&.firstname if values[0].present?
+        new_value = User.find_by(id: values[1])&.firstname if values[1].present?
+      end
+
+      ActivityLog.create(
+        entity_type: 'Attachment',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'Attachment',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: attachment_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def attachment_details
+    {
+      id: self.id,
+      container_type: self.container_type,
+      container_id: self.container_id,
+      filename: self.filename,
+      filesize: self.filesize,
+      content_type: self.content_type,
+      description: self.description,
+      author: user_detail(self.author_id)
+    }
+  end
+
+  def user_detail(user_id)
+    user = User.find_by(id: user_id)
+    { id: user&.id, name: user&.firstname }
+  end
+
   # Returns an unsaved copy of the attachment
   def copy(attributes=nil)
     copy = self.class.new

@@ -16,25 +16,46 @@ end %>
     custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id)
     custom_value&.value # No need for further processing, return the value directly
 end %>
-<h1><%= link_to(@news.title, @news_url) %></h1>
-<em><%= @news.author.name %></em>
 
-<%= textilizable(@news, :description, :only_path => false) %>
+<div class="news-item">
+  <div class="news-highlight">
+    <strong>Highlights:</strong> <%= link_to(@news.title, @news_url) %>
+  </div>
+  <div class="news-author">
+    <strong>Author name:</strong> <%= @news.author.name %>
+  </div>
+  <div class="news-description">
+    <strong>Description:</strong> <%= textilizable(@news, :description, :only_path => false) %>
+  </div>
+</div>
+
 <h2>Project Details:</h2>
 <ul>
   <li><strong>Name:</strong> <%= @project.name %></li>
   <li><strong>Description:</strong> <%= @project.description %></li>
-  <li><strong>Status:</strong> @project_status</li>
+  <li><strong>Status:</strong><%= @project_status %></li>
   <li><strong>Priority Level:</strong> <%= custom_function('Priority Level') %></li>
-  <li><strong>Planned Go Live Date:</strong>  <%= custom_function_date('Planned Go Live Date')</li>
+  <li><strong>Planned Go Live Date:</strong>  <%= custom_function_date('Planned Go Live Date') %></li>
   <li><strong>Start Date:</strong> <%= custom_function_date('Start at') %></li>
   <li><strong>End Date:</strong> <%= custom_function_date('Due Date') %> </li>
-  <p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
 </ul>
-<% if @news.attachments.any? -%>
-<fieldset class="attachments"><legend><%= l(:label_attachment_plural) %></legend>
-<% @news.attachments.each do |attachment| -%>
-  <%= link_to_attachment attachment, :download => true, :only_path => false %> (<%= number_to_human_size(attachment.filesize) %>)<br />
-<% end -%>
-</fieldset>
-<% end -%>
+
+
+<style>
+.news-item {
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.news-highlight, .news-author, .news-description {
+  margin-bottom: 10px;
+}
+
+.news-highlight strong, .news-author strong, .news-description strong {
+  color: #333;
+}
+
+</style>

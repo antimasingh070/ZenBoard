@@ -617,9 +617,9 @@ en:
     other: "%{count} projects"
   label_project_all: All Projects
   label_project_latest: Latest projects
-  label_issue: Issue
+  label_issue: Project Task
   label_issue_new: New issue
-  label_issue_plural: Issues
+  label_issue_plural: Project tasks
   label_issue_view_all: View all issues
   label_issues_by: "Issues by %{value}"
   label_issue_added: Issue added
@@ -1258,8 +1258,8 @@ en:
   text_comma_separated: Multiple values allowed (comma separated).
   text_line_separated: Multiple values allowed (one line for each value).
   text_issues_ref_in_commit_messages: Referencing and fixing issues in commit messages
-  text_issue_added: "Issue %{id} has been reported by %{author}."
-  text_issue_updated: "Issue %{id} has been updated by %{author}."
+  text_issue_added: "Project task %{id} has been reported by %{author}."
+  text_issue_updated: "Project task %{id} has been updated by %{author}."
   text_wiki_destroy_confirmation: Are you sure you want to delete this wiki and all its content?
   text_issue_category_destroy_question: "Some issues (%{count}) are assigned to this category. What do you want to do?"
   text_issue_category_destroy_assignments: Remove category assignments

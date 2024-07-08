@@ -345,7 +345,9 @@ class Journal < ActiveRecord::Base
   end
 
   def send_notification
-    if notify? &&
+    issue = Issue.find_by(id: self.journalized_id)
+
+    if notify? && issue.tracker_id  == 2 &&
         (
           Setting.notified_events.include?('issue_updated') ||
           (Setting.notified_events.include?('issue_note_added') && notes.present?) ||

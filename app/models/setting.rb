@@ -104,6 +104,54 @@ class Setting < ActiveRecord::Base
   @cached_settings = {}
   @cached_cleared_on = Time.now
 
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'Setting',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: setting_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.each do |field_name, values|
+      ActivityLog.create(
+        entity_type: 'Setting',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: values[0].to_s,
+        new_value: values[1].to_s,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'Setting',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: setting_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def setting_details
+    {
+      id: self.id,
+      name: self.name,
+      value: self.value
+    }
+  end
+
   def value
     v = read_attribute(:value)
     # Unserialize serialized settings
@@ -152,6 +200,7 @@ class Setting < ActiveRecord::Base
         changes << name
       end
     end
+
     if changes.any?
       Mailer.deliver_settings_updated(User.current, changes)
     end

@@ -70,8 +70,8 @@ class Issue < ActiveRecord::Base
   validates_length_of :subject, :maximum => 255
   validates_inclusion_of :done_ratio, :in => 0..100
   validates :estimated_hours, :numericality => {:greater_than_or_equal_to => 0, :allow_nil => true, :message => :invalid}
-  validates :start_date, :date => true
-  validates :due_date, :date => true
+  validates :start_date, :date => true, if: -> { tracker != 5 }
+  validates :due_date, :date => true, if: -> { tracker != 5 }
   # validates :validate_issue, :validate_required_fields, :validate_permissions
 
   scope :visible, (lambda do |*args|
@@ -128,7 +128,102 @@ class Issue < ActiveRecord::Base
   after_create_commit :add_auto_watcher
   after_commit :create_parent_issue_journal
   before_save :update_estimated_time
+  after_commit :update_done_ratio_from_issue_actual_end_Date
   # Returns a SQL conditions string used to find all issues visible by the specified user
+  after_commit :update_role
+
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'Issue',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: issue_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+  
+    saved_changes.except('lock_version', 'updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+        # Handle specific field conversions
+        case field_name
+        when 'tracker_id'
+          old_value = Tracker.find_by(id: values[0])&.name if values[0].present?
+          new_value = Tracker.find_by(id: values[1])&.name if values[1].present?
+        when 'project_id'
+          old_value = Project.find_by(id: values[0])&.name if values[0].present?
+          new_value = Project.find_by(id: values[1])&.name if values[1].present?
+        when 'category_id'
+          old_value = IssueCategory.find_by(id: values[0])&.name if values[0].present?
+          new_value = IssueCategory.find_by(id: values[1])&.name if values[1].present?
+        when 'status_id'
+          old_value = IssueStatus.find_by(id: values[0])&.name if values[0].present?
+          new_value = IssueStatus.find_by(id: values[1])&.name if values[1].present?
+        when 'assigned_to_id'
+          old_value = User.find_by(id: values[0])&.firstname if values[0].present?
+          new_value = User.find_by(id: values[1])&.firstname if values[1].present?
+        when 'priority_id'
+          old_value = IssuePriority.find_by(id: values[0])&.name if values[0].present?
+          new_value = IssuePriority.find_by(id: values[1])&.name if values[1].present?
+        when 'fixed_version_id'
+          old_value = Version.find_by(id: values[0])&.name if values[0].present?
+          new_value = Version.find_by(id: values[1])&.name if values[1].present?
+        when 'author_id'
+          old_value = User.find_by(id: values[0])&.firstname if values[0].present?
+          new_value = User.find_by(id: values[1])&.firstname if values[1].present?
+        when 'parent_id'
+          old_value = Issue.find_by(id: values[0])&.subject if values[0].present?
+          new_value = Issue.find_by(id: values[1])&.subject if values[1].present?
+        end
+  
+      # Create ActivityLog entry
+        ActivityLog.create(
+          entity_type: 'Issue',
+          entity_id: self.id,
+          field_name: field_name,
+          old_value: old_value,
+          new_value: new_value,
+          author_id: User.current.id
+        )
+      end
+  end
+  
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'Issue',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: issue_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+
+
+  def update_role
+    begin
+      custom_field = CustomField.find_by(type: "IssueCustomField", name: "Role")
+      custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
+      if custom_value.value.blank?
+        member = Member.find_by(user_id: self.assigned_to_id, project_id: self.project_id)
+        role_id = MemberRole.find_by(member_id: member.id).try(:role_id)
+        role_name = Role.find_by(id: role_id).try(:name)
+        custom_field_enumeration_id = CustomFieldEnumeration.find_by(name: role_name, custom_field_id: custom_field&.id).try(:id)
+        custom_value.update(value: custom_field_enumeration_id.to_s) unless custom_field_enumeration_id.nil?
+      end
+    rescue => e
+    end
+  end
+
   def send_back?
     self.assigned_to_id == self.author_id
     custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
@@ -139,9 +234,9 @@ class Issue < ActiveRecord::Base
   end
 
   def approved?
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
-    custom_value&.value == "34"
+    custom_value&.value == "35"
   rescue NoMethodError, ActiveRecord::RecordNotFound
     false
   end
@@ -1704,11 +1799,116 @@ class Issue < ActiveRecord::Base
 
   private
 
-  def update_estimated_time
-    return unless due_date && start_date
-    estimated_hours = ((due_date - start_date) * 24).to_i
-    self.estimated_hours = estimated_hours
+  def issue_details
+    {
+      id: self.id,
+      tracker: tracker_detail,
+      project: project_detail,
+      subject: self.subject,
+      description: self.description,
+      due_date: self.due_date,
+      category: category_detail,
+      status: status_detail,
+      assigned_to: user_detail(self.assigned_to_id),
+      priority: priority_detail,
+      fixed_version: version_detail,
+      author: user_detail(self.author),
+      lock_version: self.lock_version,
+      created_at: self.created_on,
+      updated_at: self.updated_on,
+      start_date: self.start_date,
+      done_ratio: self.done_ratio,
+      estimated_hours: self.estimated_hours,
+      parent: issue_detail(self.parent),
+      root_id: self.root_id,
+      lft: self.lft,
+      rgt: self.rgt,
+      is_private: self.is_private,
+      closed_on: self.closed_on,
+      custom_fields: custom_fields_details
+    }
   end
+
+  def tracker_detail
+    { id: self.tracker_id, name: Tracker.find_by(id: self.tracker_id)&.name }
+  end
+
+  def project_detail
+    { id: self.project_id, name: Project.find_by(id: self.project_id)&.name }
+  end
+
+  def category_detail
+    { id: self.category_id, name: IssueCategory.find_by(id: self.category_id)&.name }
+  end
+
+  def status_detail
+    { id: self.status_id, name: IssueStatus.find_by(id: self.status_id)&.name }
+  end
+
+  def priority_detail
+    { id: self.priority_id, name: IssuePriority.find_by(id: self.priority_id)&.name }
+  end
+
+  def version_detail
+    { id: self.fixed_version_id, name: Version.find_by(id: self.fixed_version_id)&.name }
+  end
+
+  def user_detail(user)
+    { id: User.current.id, name: User.current.firstname }
+  end
+
+  def issue_detail(issue)
+    { id: issue&.id, subject: issue&.subject }
+  end
+
+  def custom_fields_details
+    self.custom_field_values.map do |cfv|
+      { id: cfv.custom_field_id, name: cfv.custom_field.name, value: cfv.value }
+    end
+  end
+
+  def update_done_ratio_from_issue_actual_end_Date
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")
+    return unless custom_field
+    custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field.id)
+    return unless custom_value
+    custom_value = custom_value.value
+    if !custom_value.nil?
+      begin
+        formatted_date = Date.parse(custom_value)
+        if formatted_date <= Date.today
+          self.update_columns(done_ratio: 100, status_id: 3)
+        end
+      rescue ArgumentError => e
+      end
+    end
+  end
+
+  def update_estimated_time
+    begin
+    return unless due_date && start_date
+  
+    holidays = [
+      Date.new(Date.today.year, 1, 26),
+      Date.new(Date.today.year, 8, 15),
+      Date.new(Date.today.year, 10, 2),
+      Date.new(Date.today.year, 12, 25),
+      Date.new(Date.today.year, 5, 1)
+    ]
+
+    custom_field = CustomField.find_by(name: "Revised Planned Due Date")
+    custom_value_date = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field.id).try(:value)
+    end_date = custom_value_date.present? ? custom_value_date.to_date : due_date
+  
+    working_days = (start_date..end_date).reject do |date|
+      date.sunday? || holidays.include?(date)
+    end
+  
+    self.estimated_hours = (working_days.count * 24).to_i
+  rescue => e
+  end
+  end
+  
 
   def user_tracker_permission?(user, permission)
     if project && !project.active?
@@ -2091,7 +2291,7 @@ class Issue < ActiveRecord::Base
   end
 
   def send_notification
-    if notify? && Setting.notified_events.include?('issue_added')
+    if notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2
       Mailer.deliver_issue_add(self)
     end
   end

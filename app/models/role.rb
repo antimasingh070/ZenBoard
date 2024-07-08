@@ -110,6 +110,53 @@ class Role < ActiveRecord::Base
     'default_time_entry_activity_id'
   )
 
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'Role',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: role_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.each do |field_name, values|
+      ActivityLog.create(
+        entity_type: 'Role',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: values[0].to_s,
+        new_value: values[1].to_s,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'Role',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: role_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def role_details
+    {
+      id: self.id,
+      name: self.name
+    }
+  end
+
   # Copies attributes from another role, arg can be an id or a Role
   def copy_from(arg, options={})
     return unless arg.present?

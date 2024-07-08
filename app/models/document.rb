@@ -51,6 +51,75 @@ class Document < ActiveRecord::Base
   end)
 
   safe_attributes 'category_id', 'title', 'description', 'custom_fields', 'custom_field_values'
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
+
+  def log_create_activity
+    ActivityLog.create(
+      entity_type: 'Document',
+      entity_id: self.id,
+      field_name: 'Create',
+      old_value: nil,
+      new_value: document_details.to_json,
+      author_id: User.current.id
+    )
+  end
+
+  def log_update_activity
+    saved_changes.except('updated_on').each do |field_name, values|
+      old_value = values[0].to_s
+      new_value = values[1].to_s
+
+      # Handle specific field conversions
+      case field_name
+      when 'project_id'
+        old_value = Project.find_by(id: values[0])&.name if values[0].present?
+        new_value = Project.find_by(id: values[1])&.name if values[1].present?
+      when 'category_id'
+        old_value = DocumentCategory.find_by(id: values[0])&.name if values[0].present?
+        new_value = DocumentCategory.find_by(id: values[1])&.name if values[1].present?
+      end
+
+      ActivityLog.create(
+        entity_type: 'Document',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
+  end
+
+  def log_destroy_activity
+    ActivityLog.create(
+      entity_type: 'Document',
+      entity_id: self.id,
+      field_name: 'Delete',
+      old_value: document_details.to_json,
+      new_value: nil,
+      author_id: User.current.id
+    )
+  end
+
+  def document_details
+    {
+      id: self.id,
+      title: self.title,
+      description: self.description,
+      project: project_detail,
+      category: category_detail
+    }
+  end
+
+  def project_detail
+    { id: self.project_id, name: Project.find_by(id: self.project_id)&.name }
+  end
+
+  def category_detail
+    { id: self.category_id, name: DocumentCategory.find_by(id: self.category_id)&.name }
+  end
 
   def visible?(user=User.current)
     !user.nil? && user.allowed_to?(:view_documents, project)
