@@ -20,6 +20,7 @@
 module WelcomeHelper
 
   def working_days_between(start_date, end_date)
+    begin
     end_date = end_date.value.to_date
 
     holidays = [
@@ -41,6 +42,8 @@ module WelcomeHelper
     end
 
     working_days
+    rescue => e
+    end
   end
 
   def custom_field_value(project, field_name)

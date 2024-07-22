@@ -74,7 +74,6 @@ class IssuesController < ApplicationController
 
   def approve
     @issue = Issue.find(params[:id])
-    binding.pry
     update_custom_field("Remarks", params[:remarks])
     update_custom_field("Workflow", "35")
     update_custom_field("Approved By", User.current.name)

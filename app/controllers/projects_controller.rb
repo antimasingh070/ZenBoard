@@ -289,10 +289,11 @@ class ProjectsController < ApplicationController
     #   new_identifier = "hdbfs_#{Project.where(parent_id: parent_id).last.id + 1}"
     # end
     # @project.update_columns(identifier: "#{new_identifier}")
+
     if @project.save
       updated_fields = {}
       @project.previous_changes.each do |key, values|
-        next if key == 'updated_on'  # Skip the 'updated_on' field
+        next if key == 'updated_on' || key == '11'   # Skip the 'updated_on' field
         updated_fields[key] = { before: values[0], after: values[1] }
       end
 

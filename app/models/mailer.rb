@@ -113,7 +113,6 @@ class Mailer < ActionMailer::Base
     @user = user
     @issue = issue
     @author = issue.author
-    binding.pry
     @member_mails = member_mails
     @project = @issue.project
     mail_data = user_mails(@project)
@@ -133,7 +132,6 @@ class Mailer < ActionMailer::Base
       @issue = issue
       @user = user
       @project = issue.project
-      binding.pry
       if Setting.notified_events.include?('issue_approved')
         issue_approved(user, issue, member_mails).deliver_later
       end

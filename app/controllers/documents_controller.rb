@@ -27,7 +27,7 @@ class DocumentsController < ApplicationController
 
   helper :attachments
   helper :custom_fields
-
+  
   def index
     @sort_by = %w(category date title author).include?(params[:sort_by]) ? params[:sort_by] : 'category'
     documents = @project.documents.includes(:attachments, :category).to_a
@@ -68,6 +68,27 @@ class DocumentsController < ApplicationController
     end
   end
 
+  def create_document
+    @document = @project.documents.build(document_params)
+    @document.save_attachments(params[:attachments])  # Assuming this method handles attachments
+  
+    respond_to do |format|
+      if @document.save
+        format.html do
+          flash[:notice] = t(:notice_successful_create)
+          redirect_to project_documents_path(@project)
+        end
+        format.json do
+          render json: { status: 'success', message: 'Document created successfully', document: @document }, status: :created
+        end
+      else
+        format.html { render :new }
+        format.json { render json: { status: 'error', errors: @document.errors.full_messages }, status: :unprocessable_entity }
+      end
+    end
+  end
+  
+
   def edit
   end
 
@@ -96,4 +117,11 @@ class DocumentsController < ApplicationController
     end
     redirect_to document_path(@document)
   end
+
+  private
+
+  def document_params
+    params.require(:document).permit(:title, :description, :category_id, :is_private, :project_id, :created_on)
+  end
+
 end

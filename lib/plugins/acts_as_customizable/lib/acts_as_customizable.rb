@@ -67,7 +67,6 @@ module Redmine
         # values is a hash like {'1' => 'foo', 2 => 'bar'}
         def custom_field_values=(values)
           values = values.stringify_keys
-
           custom_field_values.each do |custom_field_value|
             key = custom_field_value.custom_field_id.to_s
             if values.has_key?(key)
@@ -78,6 +77,7 @@ module Redmine
         end
 
         def custom_field_values
+       
           @custom_field_values ||= available_custom_fields.collect do |field|
             x = CustomFieldValue.new
             x.custom_field = field
@@ -144,12 +144,13 @@ module Redmine
               target_custom_values << target
             end
           end
-          self.custom_values = target_custom_values
+          # self.custom_values = target_custom_values
           custom_values.each(&:save)
           touch if !saved_changes? && custom_values.any?(&:saved_changes?)
           @custom_field_values_changed = false
           true
         end
+        
 
         def reassign_custom_field_values
           if @custom_field_values

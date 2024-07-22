@@ -132,6 +132,7 @@ module Redmine
               end
               links << content_tag('li', link_to('Activity Logs', activity_logs_path)) if User.current.admin?
 
+              links << content_tag('li', link_to('Project Score Card', project_score_card_path)) 
               # custom_field = CustomField.find_by(name: "Template")
               # return "" unless custom_field
               # project_ids = User.current.project.pluck(:id)

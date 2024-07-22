@@ -201,8 +201,8 @@ class User < Principal
   def user_details
     {
       id: self.id,
-      username: self.username,
-      email: self.email,
+      username: self.login,
+      email: self.mail,
       firstname: self.firstname,
       lastname: self.lastname
     }

@@ -128,6 +128,26 @@ class Project < ActiveRecord::Base
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
+  # before_save :skip_custom_field_save
+  # before_destroy :skip_custom_field_delete
+
+  # def skip_custom_field_save
+  #   self.custom_field_values.reject! do |custom_field_value|
+  #     # Add your condition here to determine which custom fields to skip
+  #     custom_field_value.custom_field.name == "Revised End Date"
+  #   end
+  # end
+
+  # def skip_custom_field_delete
+  #   custom_values.where(custom_field_id: custom_field_ids_to_skip).each do |custom_value|
+  #     custom_value.skip_destroy = true
+  #   end
+  # end
+
+  # def custom_field_ids_to_skip
+  #   # Replace with your logic to determine which custom fields to skip
+  #   CustomField.where(name: "Revised End Date").pluck(:id)
+  # end
 
   def log_create_activity
     activity_log = ActivityLog.create(

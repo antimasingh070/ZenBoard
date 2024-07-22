@@ -18,9 +18,23 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 Rails.application.routes.draw do
+  
+  namespace :api do
+    namespace :v1 do
+      resources :issues
+      resources :projects
+      resources :users
+    end
+  end
+  
+
+
+
   root :to => 'welcome#index', :as => 'home'
   get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
+  get 'project_score_card', to: 'welcome#project_score_card'
+  get '/projects_for_period', to: 'welcome#projects_for_period'
   # get 'activity_logs', :to => 'activity_log#activity_logs'
   get 'projects/:id/activity_log', to: 'projects#activity_log', as: 'project_activity_log'
   get 'issues/:id/activity_log', to: 'issues#activity_log', as: 'issue_activity_log'

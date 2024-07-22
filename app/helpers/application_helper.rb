@@ -49,6 +49,29 @@ module ApplicationHelper
     end
   end
 
+  def indent_icon(indent)
+    return '' if indent <= 5
+
+    max_indent_level = 4  # Number of different levels of indentation (5, 10, 15, 20)
+    step_size = 10         # Indentation step size
+
+    # Calculate the number of '<' symbols based on the indent level
+    icon_count = (indent / step_size).to_i  # Determine how many '<' symbols are needed
+    icon_count = [icon_count, max_indent_level].min  # Limit to the maximum defined indent levels
+
+    icon = "\u203A" * icon_count  # Generate the appropriate number of '<' symbols
+
+    content_tag(:span, icon.html_safe, style: "color: grey;")
+  end
+
+  def project_style(project, indent)
+    if indent > 0
+      ""
+    else
+      ""
+    end
+  end
+
   # Displays a link to user's account page if active
   def link_to_user(user, options={})
     user.is_a?(User) ? link_to_principal(user, options) : h(user.to_s)
