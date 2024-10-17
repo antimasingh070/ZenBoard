@@ -4,7 +4,7 @@
 <%= form_tag(project_files_path(@project), :multipart => true, :class => "tabular") do %>
 <div class="box">
 
-<% if @versions.any? %>
+<% if @versions&.any? %>
 <p><label for="version_id"><%=l(:field_version)%></label>
 <%= select_tag "version_id", content_tag('option', '') +
                              options_from_collection_for_select(@versions, "id", "name") %></p>

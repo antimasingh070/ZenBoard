@@ -1,0 +1,261 @@
+<!-- Container for the split content layout -->
+<div class="splitcontent">
+
+  <!-- Left side: Meeting Details -->
+  <div class="splitcontentleft">
+    <h2><strong>Meeting Details</strong></h2>
+    <div class="detail-item">
+      <strong>Title:</strong> <%= @meeting.title %>
+    </div>
+    <div class="detail-item">
+      <strong>Scheduled:</strong> <%= @meeting.scheduled_at.strftime("%d %b %Y %H:%M") %>
+    </div>
+    <div class="detail-item">
+      <strong>Function:</strong> <%= @meeting.function_name %>
+    </div>
+    <div class="detail-item">
+      <strong>Note:</strong> <%= @meeting.note %>
+    </div>
+
+    <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
+      <div class="meeting-actions">
+        <%= link_to 'Edit', edit_business_requirement_meeting_path(@business_requirement, @meeting), class: 'btn btn-warning btn-sm' %>
+        <%= link_to 'Delete', business_requirement_meeting_path(@business_requirement, @meeting), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm' %>
+        <button class="btn btn-primary btn-sm" onclick="toggleMomForm()">New/Edit MOM</button>
+      </div>
+    <% end %>
+
+    <%= link_to 'Back to Meetings', business_requirement_path(@business_requirement), class: 'btn btn-secondary btn-sm' %>
+  </div>
+
+  <!-- Right side: MOM Details and Attendees -->
+  <div class="splitcontentright">
+    <!-- Attendee Details Section -->
+    <% if @meeting.meeting_attendees.any? %>
+      <div class="members box">
+          <h3 class="icon icon-group"><%= l(:label_attendee_plural) %></h3>
+            <ul>
+              <% @meeting.meeting_attendees.each do |attendee| %>
+                <li><%= attendee.user.name %></li>
+              <% end %>
+            </ul>
+      </div>
+    <% end %>
+    <!-- MOM Details Section -->
+    <div id="mom-details" class="mom-details">
+      <% if @meeting.mom.present? %>
+        <h3><strong>MOM</strong></h3>
+        <div class="detail-item">
+          <strong>Function:</strong> <%= @meeting.mom.function_name %>
+        </div>
+        <div class="detail-item">
+          <strong>Status:</strong> <%= Mom::STATUS_MAP[@meeting.mom.status] || 'Unknown' %>
+        </div>
+        <div class="detail-item">
+          <strong>Summary:</strong> <%= @meeting.mom.summary %>
+        </div>
+        <div class="detail-item">
+          <strong>Target Date:</strong> <%= @meeting.mom.target_date %>
+        </div>
+
+        <hr/>
+
+        <% if @meeting.mom.id.present? %>
+            <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
+              <!-- Points Form Section -->
+              <%= labelled_form_for([@meeting.mom, @meeting.mom.points.build], url: business_requirement_meeting_mom_points_path(@business_requirement, @meeting, @meeting.mom), local: true) do |form| %>
+                <h3>Add New Point</h3>
+                <p>
+                  <%= form.text_field :description, required: true, class: 'form-control', placeholder: 'Point Description' %>
+                  <%= form.submit 'Add Point', class: 'btn btn-primary' %>
+                </p>
+              <% end %>
+            <% end %>
+
+            <% end %>
+
+          <!-- Points Section -->
+          <div class="points-list">
+            <h4>Points</h4>
+            <ul>
+            <% @points.each do |point| %>
+              <li class="point-item">
+                <div class="point-details" style="display: flex; align-items: center;">
+                  <strong>Description:</strong> <%= point.description %>
+                  <% if point.rejected? %>
+                    <%= content_tag(:span, 'Rejected', class: 'badge badge-success ml-2') %>
+                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 && point.present? %>
+                      <%= button_to 'Accept', accept_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-success btn-sm ml-2' %>
+                    <% end %>
+                  <% elsif point.approved? %>
+                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 && point.present? %>
+                      <%= content_tag(:span, 'Accepted', class: 'badge badge-success ml-2') %>
+                      <%= button_to 'Reject', reject_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-danger btn-sm ml-2' %>
+                    <% end %>
+                  <% else %>
+                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 && point.present? %>
+                      <%= button_to 'Accept', accept_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-success btn-sm ml-2' %>
+                      <%= button_to 'Reject', reject_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-danger btn-sm ml-2' %>
+                    <% end %>
+                  <% end %>
+                </div>
+            
+                <!-- Remarks Section -->
+                <div class="remarks-section">
+                  <button class="toggle-remarks-btn" onclick="toggleRemarks(<%= point.id %>)">
+                    <%= point.remarks.any? ? 'Show Remarks' : 'Add Remarks' %>
+                  </button>
+            
+                  <div id="remarks-<%= point.id %>" class="remarks-container" style="display: none;">
+                    <% point.remarks.each do |remark| %>
+                      <div class="remark-item">
+                        <p><strong>Remark by <%= User.find_by(id: remark.author_id).firstname %>:</strong> <%= remark.content %></p>
+                      </div>
+                    <% end %>
+            
+                    <!-- Add new remark form -->
+                    <% if !point.approved? && !point.rejected? %>
+                      <%= form_with(model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, Remark.new], local: true, html: { class: 'remark-form' }) do |form| %>
+                        <div class="form-group">
+                          <%= form.label :content, "Add a Remark:" %>
+                          <%= form.text_area :content, required: true, rows: 2 %>
+                        </div>
+                        <%= form.hidden_field :author_id, value: User.current.id %>
+                        <%= form.submit "Add", class: "btn btn-primary btn-sm" %>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </div>
+              </li>
+            <% end %>
+            
+            </ul>
+          </div>
+        <% else %>
+          <p>No MOM available for this meeting.</p>
+        <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- MOM Form Section (initially hidden) -->
+<div id="mom-form" class="box tabular" style="display: none;">
+
+  <%=  labelled_form_for [@business_requirement, @meeting, @meeting.mom || @meeting.build_mom ], :html => {:multipart => true} do |form| %>
+    <h3><%= @meeting.mom.id.present? ? 'Edit MOM' : 'Create MOM' %></h3>
+    <p>
+        <%= form.select :function_name, options_for_select([['', '']] + @function_name.map { |fn| [fn, fn] }, @meeting.mom.function_name), {}, class: 'form-control' %>
+    </p>
+    <p><%= form.select :status, options_for_select(Mom::STATUS_MAP.map { |k, v| [v, k] }, @meeting.mom.status), {}, class: 'form-control', required: true %></p>
+ 
+    <p><%= form.text_area :summary, rows: 3, class: 'form-control' %></p>
+    
+    <p><%= form.date_field :target_date, class: 'form-control' %></p>
+    <p><%= form.submit @meeting.mom.id.present? ? 'Update MOM' : 'Create MOM', class: 'btn btn-primary' %></p>
+  <% end %>
+</div>
+
+<!-- JavaScript for toggling MOM form -->
+<script>
+// JavaScript to toggle the visibility of the MOM form
+function toggleMomForm() {
+  var formContainer = document.getElementById('mom-form');
+  formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
+}
+
+// JavaScript to handle form submission
+document.addEventListener('DOMContentLoaded', function() {
+  var momFormToggleButton = document.getElementById('mom-form-toggle');
+  if (momFormToggleButton) {
+    momFormToggleButton.addEventListener('click', toggleMomForm);
+  }
+});
+
+  function toggleMomForm() {
+    var formContainer = document.getElementById('mom-form');
+    var momDetails = document.getElementById('mom-details');
+    
+    if (formContainer.style.display === 'none') {
+      formContainer.style.display = 'block';
+      momDetails.style.display = 'none';
+    } else {
+      formContainer.style.display = 'none';
+      momDetails.style.display = 'block';
+    }
+  }
+
+  function toggleRemarks(pointId) {
+    var remarksContainer = document.getElementById('remarks-' + pointId);
+    remarksContainer.style.display = remarksContainer.style.display === 'none' ? 'block' : 'none';
+  }
+</script>
+
+<!-- Styles for improved UI/UX -->
+<style>
+/* app/assets/stylesheets/application.css */
+
+.splitcontent {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.splitcontentleft,
+.splitcontentright {
+  width: 48%;
+}
+
+.detail-item,
+.point-item,
+.attendees-list ul {
+  margin-bottom: 8px;
+}
+
+.ml-2 {
+  margin-left: 0.5rem; /* Adjust as needed */
+}
+
+.meeting-actions,
+.remarks-section {
+  margin-top: 10px;
+}
+
+.points-list ul {
+  list-style-type: none;
+  padding: 0;
+}
+
+.point-item {
+  padding: 5px;
+  border-bottom: 1px solid #ddd;
+}
+
+.point-actions {
+  margin-bottom: 5px;
+}
+
+.remarks-container {
+  margin-top: 5px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 5px;
+  background-color: #fff;
+}
+
+.toggle-remarks-btn {
+  cursor: pointer;
+}
+
+.form-container {
+  margin-top: 20px;
+}
+
+.btn-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+</style>

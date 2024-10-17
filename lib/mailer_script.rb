@@ -4,14 +4,14 @@ class MailerScript
     def self.send_issue_email
       # user= User.first
       users.each do |user|
-        Mailer.deliver_send_issue_pdf(user, '/Users/user/ProjectHub/app/issues.pdf')
+        Mailer.deliver_send_issue_pdf(user, '/Users/user/Trackmine/app/issues.pdf')
       end
     end
 
     def self.send_dashboard_email
       # user= User.first
       users.each do |user|
-        Mailer.deliver_send_dashboard_email(user, '/Users/user/ProjectHub/project_dashboard.csv','/Users/user/ProjectHub/project_dashboard_pdf_generated.pdf')
+        Mailer.deliver_send_dashboard_email(user, '/Users/user/Trackmine/project_dashboard.csv','/Users/user/Trackmine/project_dashboard_pdf_generated.pdf')
       end
     end
 

@@ -9,24 +9,6 @@ assignee = User.find_by(id: assigned_to_id) %>
 <p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 
-<p>Project Members:</p>
-<% members_by_role = @issue.project.members.includes(:roles).group_by { |member| member.roles.first.name } %>
-<table style="border-collapse: collapse; width: 100%;">
-  <thead>
-    <tr>
-      <th style="border: 1px solid #ddd; padding: 8px;">Role</th>
-      <th style="border: 1px solid #ddd; padding: 8px;">Members</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% members_by_role.each do |role, members| %>
-      <tr>
-        <td style="border: 1px solid #ddd; padding: 8px;"><%= role %></td>
-        <td style="border: 1px solid #ddd; padding: 8px;"><%= members.map { |member| member.user.name }.join(', ') %></td>
-      </tr>
-    <% end %>
-  </tbody>
-</table>
-<p>Please log in to ProjectHUB to view and manage the issue details.</p>
-<p><a href="<%= https://projecthub.hdbfs.com/#{@issue.id} %>" class="link">ProjectHUB</a></p>
+<p>Please log in to Trackmine to view and manage the issue details.</p>
+<p><a href="<%= https://Trackmine.neo.com/#{@issue.id} %>" class="link">Trackmine</a></p>
 <p>Best Regards</p>

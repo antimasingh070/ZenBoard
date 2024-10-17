@@ -64,8 +64,8 @@ Mail.defaults do
   delivery_method :smtp, {
     address: 'smtp.gmail.com',
     port: 587,
-    user_name: 'ankitgupta96572@gmail.com',
-    password: 'jyuo hxyb xnwn cqew',
+    user_name: 'singhantima720@gmail.com',
+    password: 'cyqd pihf ypci wyik',
     authentication: 'plain'
   }
 end
@@ -73,7 +73,7 @@ end
 # Create and deliver the email
 mail = Mail.new do
   from     'ankigupta96572@gmail.com'
-  to       'ankit.gupta.ext@hdbfs.com'
+  to       'ankit.gupta.ext@neo.com'
   subject  'Your Table Content'
   html_part do
     content_type 'text/html; charset=UTF-8'

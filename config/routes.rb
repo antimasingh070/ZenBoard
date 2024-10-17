@@ -18,7 +18,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 Rails.application.routes.draw do
-  
+  require 'delayed_job_web'
+mount DelayedJobWeb => '/delayed_job'
+
   namespace :api do
     namespace :v1 do
       resources :issues
@@ -35,6 +37,7 @@ Rails.application.routes.draw do
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
   get 'project_score_card', to: 'welcome#project_score_card'
   get '/projects_for_period', to: 'welcome#projects_for_period'
+  get '/fetch_members', to: 'welcome#fetch_members' 
   # get 'activity_logs', :to => 'activity_log#activity_logs'
   get 'projects/:id/activity_log', to: 'projects#activity_log', as: 'project_activity_log'
   get 'issues/:id/activity_log', to: 'issues#activity_log', as: 'issue_activity_log'
@@ -148,6 +151,28 @@ Rails.application.routes.draw do
   post 'issues/:object_id/watchers', :to => 'watchers#create', :object_type => 'issue'
   delete 'issues/:object_id/watchers/:user_id' => 'watchers#destroy', :object_type => 'issue'
 
+  resources :business_requirements do
+    resources :br_stakeholders, only: [:new, :create, :edit, :update, :destroy]
+    member do
+      post 'add_attachment'
+      get 'accept'
+      patch 'accept'
+      patch 'decline'
+    end
+    resources :meetings do
+      resources :meeting_attendees, only: [:new, :create, :edit, :update, :destroy]
+      resources :moms do
+        resources :points do
+          member do
+            post 'accept'
+            post 'reject'
+          end
+          resources :remarks, only: [:create]  
+        end
+      end
+    end
+  end
+
   resources :projects do
     collection do
       get 'autocomplete'
@@ -165,6 +190,7 @@ Rails.application.routes.draw do
       match 'check_member', :via => [:post, :put]
       match 'close', :via => [:post, :put]
       match 'hold', :via => [:post, :put]
+      match 'go_live', :via => [:post, :put]
       match 'reopen', :via => [:post, :put]
       match 'copy', :via => [:get, :post]
       match 'bookmark', :via => [:delete, :post]
@@ -203,7 +229,12 @@ Rails.application.routes.draw do
     shallow do
       resources :issue_categories
     end
-    resources :documents, :except => [:show, :edit, :update, :destroy]
+    resources :documents, :except => [:show, :edit, :update, :destroy] do
+      member do
+        get 'download' # This creates a route for /documents/:id/download
+      end
+    end
+
     resources :boards
     shallow do
       resources :repositories, :except => [:index, :show] do
@@ -242,6 +273,7 @@ Rails.application.routes.draw do
       post :approve
       post :decline
       post :send_back
+      get :download_sameple_workflow_template
       # Used when updating the form of an existing issue
       patch 'edit', :to => 'issues#edit'
       get 'tab/:name', :action => 'issue_tab', :as => 'tab'
@@ -343,7 +375,7 @@ Rails.application.routes.draw do
   get 'attachments/download/:id/:filename', :to => 'attachments#download', :id => /\d+/, :filename => /.*/, :as => 'download_named_attachment'
   get 'attachments/download/:id', :to => 'attachments#download', :id => /\d+/
   get 'attachments/thumbnail/:id(/:size)', :to => 'attachments#thumbnail', :id => /\d+/, :size => /\d+/, :as => 'thumbnail'
-  resources :attachments, :only => [:show, :update, :destroy]
+  resources :attachments, :only => [:edit, :show, :update, :destroy]
   constraints object_type: /(issues|versions|news|messages|wiki_pages|projects|documents|journals)/ do
     get 'attachments/:object_type/:object_id/edit', :to => 'attachments#edit_all', :as => :object_attachments_edit
     patch 'attachments/:object_type/:object_id', :to => 'attachments#update_all', :as => :object_attachments

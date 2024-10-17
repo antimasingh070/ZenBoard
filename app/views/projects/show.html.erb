@@ -8,8 +8,9 @@
   <% if User.current.allowed_to?(:close_project, @project) %>
     <% if @project.active? %>
       <%= link_to l(:button_close), close_project_path(@project), :data => {:confirm => l(:text_project_close_confirmation, @project.to_s)}, :method => :post, :class => 'icon fas fa-lock' %>
-       <%= link_to "Hold", "#", class: "icon icon-move-top", id: "holdLink" %>
-       <%= link_to "Cancel", "#", class: "icon icon-move-top", id: "cancelledLink" %>
+      <%= link_to "Hold", "#", class: "icon icon-move-top", id: "holdLink" %>
+      <%= link_to "Go Live", "#", class: "icon icon-move-top", id: "go_liveLink" %>
+      <%= link_to "Cancel", "#", class: "icon icon-move-top", id: "cancelledLink" %>
     <% else %>
       <%= link_to l(:button_reopen), reopen_project_path(@project), :data => {:confirm => l(:text_project_reopen_confirmation, @project.to_s)}, :method => :post, :class => 'icon icon-unlock' %>
     <% end %>
@@ -29,6 +30,8 @@
   <p class="warning"><span class="icon"><i class="fas fa-lock"></i></span><%= l(:text_project_closed) %></p>
 <% elsif @project.hold? %>
   <p class="warning"><span class="icon"><i class="fas fa-pause-circle"></i></span><%= l(:text_project_hold) %></p>
+<% elsif @project.go_live? %>
+  <p class="warning"><span class="icon"><i class="fas fa-pause-circle"></i></span><%= l(:text_project_go_live) %></p>
 <% elsif @project.cancelled? %>
   <p class="warning"><span class="icon"><i class="fas fa-clock"></i></span><%= l(:text_project_cancelled) %></p>
 <% end %>
@@ -51,7 +54,7 @@
     <% if custom_field.name == "Revised End Date" %>
       <% revised_end_date_custom_field = CustomField.find_by(name: "Revised End Date") %>
       <% revised_end_date_custom_value = @project.custom_values.where(custom_field: revised_end_date_custom_field).order(created_at: :desc).first %>
-        <li class=""><span class="label">Latest Revised End Date: </span><%= revised_end_date_custom_value.value.to_date.strftime("%d/%b/%Y") %></li>
+        <li class=""><span class="label">Revised End Date: </span><%= revised_end_date_custom_value.value.to_date.strftime("%d/%b/%Y") %></li>
     <% else %>
       <li class="<%= custom_field.css_classes %>"><span class="label"><%= custom_field.name %>:</span> <%= formatted %></li>
     <% end %>
@@ -150,6 +153,32 @@
   </div>
   <% end %>
 
+   <% if @revised_end_date_history&.any? %>
+  <div class="news box">
+    <h3>Revised End Dates</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Revised End Date</th>
+          <th>Reason</th>
+          <th>Author</th>
+          <th>Updated At</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @revised_end_date_history.each do |revised_end_date| %>
+          <tr>
+            <td style="width: 50px;"><%= revised_end_date&.value&.to_date&.strftime("%-d %b %y") %></td>
+            <td style="width: 100px;"><%= revised_end_date&.reason %></td>
+            <td style="width: 50px;"><%= User.find_by(id: (revised_end_date&.author_id)).try(:name) %></td>
+            <td style="width: 50px;"><%= revised_end_date&.created_at&.in_time_zone("Asia/Kolkata")&.strftime("%-d %b %y %H:%M") %></td>
+          </tr>
+        <% end %> 
+      </tbody>
+    </table>
+  </div>
+  <% end %>
+
   <%= call_hook(:view_projects_show_right, :project => @project) %>
 </div>
 </div>
@@ -179,6 +208,19 @@
 </div>
 </div>
 
+<div id="go_liveModal" class="modal">
+<div class="modal-content">
+  <span class="close">&times;</span>
+  <h2>Project on Live</h2>
+  <form id="go_liveForm" action="<%= go_live_project_path(@project) %>" method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <label for="go_liveRemarks">Reason to gone live<sup>*</sup>:</label>
+    <textarea id="go_liveRemarks" name="remarks" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+</div>
+</div>
+
 <div id="cancelledModal" class="modal">
 <div class="modal-content">
   <span class="close">&times;</span>
@@ -193,6 +235,20 @@
 </div>
 
 <style>
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th, td {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+  word-wrap: break-word;
+}
+th {
+  background-color: #f2f2f2;
+}
 label > sup {
   color: #ff0000; /* Red color */
   font-size: 12px; /* Smaller font size */
@@ -247,27 +303,30 @@ h2 {
 }
 
 /* Form Styles */
-#holdForm, #cancelledForm {
+#holdForm, #go_liveForm, #cancelledForm {
   display: flex;
   flex-direction: column;
 }
 
 
-#holdForm label,
+#holdForm label, #go_liveForm label,
 #cancelledForm label{
   margin-bottom: 8px;
 }
 
-#holdForm textarea,
+#holdForm textarea, #go_liveForm textarea,
 #cancelledForm textarea {
   margin-bottom: 12px;
   padding: 8px;
   border: none;
   border-radius: 4px;
   display: flex;
+  width: 280px; /* Set a fixed width */
+  height: 40px; /* Set a fixed height */
+  resize: none; 
 }
 
-#holdForm button, #cancelledForm button {
+#holdForm button, #go_liveForm button, #cancelledForm button {
   background-color: #0051cc;
   color: #fff;
   padding: 8px 16px;
@@ -282,7 +341,7 @@ h2 {
   border-color: #ff0000; /* Red color */
 }
 
-#holdForm button:hover, 
+#holdForm button:hover, #go_liveForm button:hover,
 #cancelledForm button:hover {
   background-color: #0000FF;
 }
@@ -294,12 +353,14 @@ console.log("DOM fully loaded and parsed");
 // Get modals and buttons
 var modals = {
   cancelled: document.getElementById("cancelledModal"),
-  hold: document.getElementById("holdModal")
+  hold: document.getElementById("holdModal"),
+  go_live: document.getElementById("go_liveModal")
 };
 
 var links = {
   cancelled: document.getElementById("cancelledLink"),
-  hold: document.getElementById("holdLink")
+  hold: document.getElementById("holdLink"),
+  go_live: document.getElementById("go_liveLink")
 };
 
 console.log("Modals:", modals);

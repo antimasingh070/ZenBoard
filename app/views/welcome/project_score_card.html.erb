@@ -81,6 +81,19 @@
 
 <div class="project-scorecard">
   <h1>IT Project Scorecard</h1>
+  <!-- Filter Form -->
+  <div class="filter-form">
+    <%= form_with url: project_score_card_path, method: :get, local: true do %>
+      <label for="role">Role:</label>
+      <%= select_tag :role, options_from_collection_for_select(Role.all, :name, :name, params[:role]), include_blank: true %>
+
+      <label for="member_name">Member Name:</label>
+      <%= select_tag :member_name, options_for_select(User.pluck(:firstname, :lastname).map { |firstname, lastname| ["#{firstname} #{lastname}", "#{firstname} #{lastname}"] }, params[:member_name]), include_blank: true, class: "searchable-dropdown" %>
+
+
+      <%= submit_tag "Filter", class: "filter-button" %>
+    <% end %>
+  </div>
   <h2>Average Delay: <%= @average_delay %> days</h2>
   <div class="meters-container">
     <div class="progress" data-period="last_year" data-progress="<%= @total_last_year %>">

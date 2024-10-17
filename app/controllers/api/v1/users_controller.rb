@@ -4,7 +4,6 @@ module Api
         skip_before_action :verify_authenticity_token  # Skip CSRF protection for API
   
         def create
-            binding.pry
             permitted_params = user_params
 
             # If you need to merge in additional parameters like email (params[:user][:mail])
@@ -13,7 +12,6 @@ module Api
             end
             
             @user = User.new(permitted_params) 
-            binding.pry
           if @user.save
             api_key = @user.api_key # or however the API key is generated/retrieved
 

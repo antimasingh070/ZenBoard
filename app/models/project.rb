@@ -28,6 +28,7 @@ class Project < ActiveRecord::Base
   STATUS_SCHEDULED_FOR_DELETION = 10
   STATUS_HOLD = 11
   STATUS_CANCELLED = 12
+  STATUS_GO_LIVE = 13
 
   STATUS_MAP = {
     STATUS_ACTIVE => 'Active',
@@ -35,6 +36,7 @@ class Project < ActiveRecord::Base
     STATUS_ARCHIVED   => 'Archived',
     STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for deletion',
     STATUS_HOLD => 'Hold',
+    STATUS_GO_LIVE => 'Go Live',
     STATUS_CANCELLED => 'Cancelled'
   }.freeze
   # Maximum length for project identifiers
@@ -64,6 +66,7 @@ class Project < ActiveRecord::Base
   has_many :changesets, :through => :repository
   has_one :wiki, :dependent => :destroy
   # Custom field for the project issues
+  belongs_to :br 
   has_and_belongs_to_many :issue_custom_fields,
                           lambda {order(:position)},
                           :class_name => 'IssueCustomField',
@@ -127,27 +130,39 @@ class Project < ActiveRecord::Base
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity
+  after_save :add_pmo
 
-  # before_save :skip_custom_field_save
-  # before_destroy :skip_custom_field_delete
-
-  # def skip_custom_field_save
-  #   self.custom_field_values.reject! do |custom_field_value|
-  #     # Add your condition here to determine which custom fields to skip
-  #     custom_field_value.custom_field.name == "Revised End Date"
-  #   end
-  # end
-
-  # def skip_custom_field_delete
-  #   custom_values.where(custom_field_id: custom_field_ids_to_skip).each do |custom_value|
-  #     custom_value.skip_destroy = true
-  #   end
-  # end
-
-  # def custom_field_ids_to_skip
-  #   # Replace with your logic to determine which custom fields to skip
-  #   CustomField.where(name: "Revised End Date").pluck(:id)
-  # end
+  def add_pmo
+    begin
+      role = Role.find_by!(name: "PMO")
+      
+      # Find the master project
+      project = Project.find_by!(name: "Master Project") # Use find_by! to ensure project exists
+      # Get user IDs of PMO members from the master project
+      member_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
+      uer_ids = Member.where(id: member_ids, project_id: project.id).pluck(:user_id)
+      # Iterate through each user and add them to the current project
+      user_ids.each do |user_id|
+        # Find or create the member for the current project
+        member = Member.find_or_initialize_by(user_id: user_id, project_id: self.id)
+        if member.new_record?
+          member.roles = [Role.find(role.id)]
+          member.save!
+        end
+        if member.persisted?
+          # Associate the member with the role
+          MemberRole.find_or_create_by(member_id: member.id, role_id: role.id, inherited_from: nil)
+        else
+          Rails.logger.error("Failed to create or find member with user_id: #{user_id} for project: #{project.id}")
+        end
+      end
+    rescue ActiveRecord::RecordNotFound => e
+      # Handle specific cases when role or project is not found
+      Rails.logger.error "Role or Project not found: #{e.message}"
+      flash[:error] = "PMO role not found. Please check your setup."
+    rescue StandardError => e
+    end
+  end
 
   def log_create_activity
     activity_log = ActivityLog.create(
@@ -231,7 +246,6 @@ class Project < ActiveRecord::Base
       { id: cfv.custom_field_id, name: cfv.custom_field.name, value: cfv.value }
     end
   end
-  
 
   def revised_end_date_history
     custom_field = CustomField.find_by(name: "Revised End Date")
@@ -239,58 +253,73 @@ class Project < ActiveRecord::Base
   end
 
   def auto_create_records(template_value)
-    template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
-    return unless template_field
-    # return unless self.nil?
-
-    template_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: self.id, custom_field_id: template_field.id, value: template_value)
-    return unless template_value
-  
-    custom_field_enumeration = CustomFieldEnumeration.find_by(id: template_value.value.to_i)&.name
-    return unless custom_field_enumeration
-  
-    tracker = Tracker.find_by(name: custom_field_enumeration)
-    return unless tracker
-  
-    master_project = Project.find_by(name: "Master Project")
-    return unless master_project
-  
-    issues = Issue.where(tracker_id: tracker.id, project_id: master_project.id)
-  
-    plan_tracker = Tracker.find_by(name: "Project Plan- Activity List")
-    return unless plan_tracker
-  
-    # Get all unique field names from CustomFields for Issues
-    field_names = CustomField.where(type: "IssueCustomField").pluck(:name).uniq
-    create_issues_for_field_names(field_names, issues, plan_tracker)
+    begin
+      template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
+      template_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: self.id, custom_field_id: template_field.id, value: template_value)
+      custom_field_enumeration = CustomFieldEnumeration.find_by(id: template_value.value.to_i).name
+      tracker = Tracker.find_by(name: custom_field_enumeration)
+      master_project = Project.find_by(name: "Master Project")
+      issues = Issue.where(tracker_id: tracker.id, project_id: master_project.id)
+      plan_tracker = Tracker.find_by(name: "Project Plan- Activity List")
+      field_names = CustomField.where(type: "IssueCustomField").pluck(:name).uniq
+      create_issues_for_field_names(field_names, issues, plan_tracker, master_project)
+    rescue => e
+    end
   end
 
-  def create_issues_for_field_names(field_names, issues, plan_tracker)
-    if  Issue.where(tracker_id: plan_tracker.id, project_id: self.id).count == 0
+  def create_issues_for_field_names(field_names, issues, plan_tracker, master_project)
+    begin
+      return unless Issue.where(tracker_id: plan_tracker.id, project_id: self.id).count.zero?
+  
       issues.each do |issue|
         @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: issue.subject)
-        @new_issue.assigned_to_id = User.current.id
-        @new_issue.author = User.current
-        @new_issue.start_date = Date.today
-        @new_issue.due_date = (Date.today +10)
-        field_names.each do |field_name|
-          custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
-          next unless custom_field
-          custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: issue.id, custom_field_id: custom_field.id)
-          custom_value.update(value: "") if custom_value.value.nil?
-          next unless custom_value
-          @new_issue.custom_field_values = { custom_field.id => custom_value }
+        @new_issue.assign_attributes(assigned_to_id: User.current.id, author: User.current, start_date: Date.today, due_date: Date.today + 10)
+  
+        # Handle parent issue
+        if issue.parent_id.present?
+          parent_issue = Issue.find_by(id: issue.parent_id, project_id: master_project.id)
+          if parent_issue
+            parent = Issue.find_by(project_id: self.id, subject: issue.subject)
+            unless parent
+              parent = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: parent_issue.subject, 
+                                 assigned_to_id: User.current.id, author: User.current, start_date: Date.today, due_date: Date.today + 10)
+              set_custom_fields(parent, issue, field_names)
+              parent.save!
+            end
+            @new_issue.parent_id = parent.id
+          end
         end
-        approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
-        approval_required_custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: issue.id, custom_field_id: approval_required_custom_field.id)
-        approval_required_custom_value.update(value: "0")
-        @new_issue.custom_field_values = { approval_required_custom_field.id => approval_required_custom_value }
-        custom_field = CustomField.find_by(type: "IssueCustomField", name: "Project Activity")
-        custom_field_enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: issue.subject)
-        @new_issue.custom_field_values = { custom_field.id => custom_field_enumeration.id.to_s } unless custom_field_enumeration.nil?
-        @new_issue.save
+  
+        # Set custom fields for the new issue
+        set_custom_fields(@new_issue, issue, field_names)
+  
+        # Save the new issue
+        @new_issue.save!
       end
+    rescue => e
+      # Handle or log the error as needed
     end
+  end
+
+  def set_custom_fields(issue, source_issue, field_names)
+    field_names.each do |field_name|
+      custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
+      next unless custom_field
+      custom_value = CustomValue.find_or_initialize_by(customized_type: "Issue", customized_id: source_issue.id, custom_field_id: custom_field.id)
+      custom_value.value = custom_value.value.presence || ""
+      issue.custom_field_values = { custom_field.id => custom_value }
+    end
+  
+    # Set the "Approval Required" custom field
+    approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
+    approval_required_custom_value = CustomValue.find_or_initialize_by(customized_type: "Issue", customized_id: source_issue.id, custom_field_id: approval_required_custom_field.id)
+    approval_required_custom_value.value = "0"
+    issue.custom_field_values = { approval_required_custom_field.id => approval_required_custom_value }
+  
+    # Set the "Project Activity" custom field
+    project_activity_field = CustomField.find_by(type: "IssueCustomField", name: "Project Activity")
+    project_activity_enumeration = CustomFieldEnumeration.find_by(custom_field_id: project_activity_field.id, name: source_issue.subject)
+    issue.custom_field_values = { project_activity_field.id => project_activity_enumeration.id.to_s } if project_activity_enumeration
   end
 
   def copy_tracker_issues_to_project_activity_list(tracker_id)
@@ -579,6 +608,10 @@ class Project < ActiveRecord::Base
     end
   end
 
+  def go_live?
+    self.status == STATUS_GO_LIVE
+  end
+
   def hold?
     self.status == STATUS_HOLD
   end
@@ -631,21 +664,25 @@ class Project < ActiveRecord::Base
     reload
   end
 
+  def go_live
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_CLOSED, Project::STATUS_CANCELLED, Project::STATUS_ACTIVE]).update_all(status: Project::STATUS_GO_LIVE)
+  end
+
   def close
-    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_CANCELLED, Project::STATUS_ACTIVE]).update_all(status: Project::STATUS_CLOSED)
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_GO_LIVE, Project::STATUS_CANCELLED, Project::STATUS_ACTIVE]).update_all(status: Project::STATUS_CLOSED)
   end
 
   def hold
-    self_and_descendants.where(status: [Project::STATUS_CANCELLED, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_HOLD)
+    self_and_descendants.where(status: [Project::STATUS_CANCELLED, Project::STATUS_GO_LIVE, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_HOLD)
   end
 
 
   def cancelled
-    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_CANCELLED)
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_GO_LIVE, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_CANCELLED)
   end 
 
   def reopen
-    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_CANCELLED, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_ACTIVE)
+    self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_GO_LIVE, Project::STATUS_CANCELLED, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_ACTIVE)
   end
 
   # Returns an array of projects the project can be moved to

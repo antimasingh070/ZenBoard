@@ -1,0 +1,216 @@
+<!-- Bootstrap CSS -->
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- jQuery and Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<h1>Business Requirements</h1>
+
+<div class="d-flex justify-content-end">
+  <%= link_to 'New Business Requirement', new_business_requirement_path, class: 'btn btn-primary' %>
+</div>
+<br>
+<table>
+  <thead>
+    <tr>
+      <th>Identifier</th>
+      <th>Requirement Case</th>
+      <th>Description</th>
+      <th>Status</th>
+      <th>Stackhholders</th>
+      <th colspan="3">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if @business_requirements.blank? %>
+        <tr><td colspan=6 style="text-align: center">No recorods to Display</td></tr>
+    <% else %>
+      <% @business_requirements.each do |business_requirement| %>
+          
+        <tr>
+          <td><%= business_requirement.identifier %></td>
+          <td><%= business_requirement.requirement_case %></td>
+          <td><%= business_requirement.description %></td>
+          <td><%= BusinessRequirement::STATUS_MAP[business_requirement.status] %></td>
+          <td><% grouped_stakeholders = business_requirement.br_stakeholders.group_by { |stakeholder| stakeholder.role.name } %>
+
+          <ul>
+          <% grouped_stakeholders.each do |role_name, stakeholders| %>
+              <li>
+              <strong><%= role_name %></strong> - <%= stakeholders.map { |stakeholder| stakeholder.user.name }.join(', ') %>
+              </li>
+          <% end %>
+          </ul></td>
+          <td>
+            <%= link_to 'Show', business_requirement_path(business_requirement), class: 'btn btn-info btn-sm', title: 'Show Business Requirement' %>
+            <% if business_requirement.status == 7 %>
+              <%= content_tag(:span, 'Accepted', class: 'badge badge-success') %>
+            <% elsif business_requirement.status == 8 %>
+              <%= content_tag(:span, 'Declined', class: 'badge badge-danger') %>
+            <% else %>
+              <%= link_to 'Accept', '#', class: 'btn btn-success btn-sm', title: 'Accept Business Requirement', data: { toggle: 'modal', target: "#acceptModal-#{business_requirement.id}" } %>
+              <%= link_to 'Decline', decline_business_requirement_path(business_requirement), method: :patch, class: 'btn btn-danger btn-sm', title: 'Decline Business Requirement' %>
+            <% end %>
+          </td>
+        </tr>
+
+        <!-- Accept Modal -->
+        <div class="modal fade" id="acceptModal-<%= business_requirement.id %>" tabindex="-1" role="dialog" aria-labelledby="acceptModalLabel" aria-hidden="true">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="acceptModalLabel">Accept Business Requirement</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                <%= labelled_form_for(business_requirement, url: accept_business_requirement_path(business_requirement), method: :patch, html: { id: "acceptForm-#{business_requirement.id}" }) do |f| %>
+                  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+              <%= hidden_field_tag :id, business_requirement.id %>
+
+              <p><%= f.text_field :requirement_case, size: 60, class: 'form-control', placeholder: 'Enter the requirement_case here', required: true if business_requirement.requirement_case.blank? %></p>
+              <p><%= f.text_field :identifier, size: 30, class: 'form-control', placeholder: 'the identifier generate automatically', required: true, disabled: true  if business_requirement.identifier.blank? %></p>
+              <p><%= f.text_area :description, rows: 4, class: 'form-control', placeholder: 'Describe the Business Requirement here', required: true   if business_requirement.description.blank? %></p>
+              <p><%= f.text_field :cost_benefits, rows: 1, class: 'form-control', placeholder: 'Enter the cost benefits here' if business_requirement.cost_benefits.blank? %></p>
+              <p><%= f.select :status, options_for_select(BusinessRequirement::STATUS_MAP.map { |k, v| [v, k] }, business_requirement.status), {}, class: 'form-control' if business_requirement.status.blank? %></p>
+              <p><%= f.text_field :project_sponsor, rows: 1, class: 'form-control', placeholder: 'Enter project sponsor here' if business_requirement.project_sponsor.blank? %></p>
+              <% if business_requirement.project_category.blank? %>
+              <p><%= f.select :project_category, options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, business_requirement.project_category), {}, class: 'form-control', required: true %>
+                <p class="text-danger">This field is required.</p>
+              <% end %></p>
+              <% if business_requirement.priority_level.blank? %>
+              <p><%= f.select :priority_level, options_for_select([['', '']] + @priority_level.map { |level| [level, level] }, business_requirement.priority_level), {}, class: 'form-control', required: true %>
+                <p class="text-danger">This field is required.</p>
+              <% end %></p>
+              <p><%= f.select :template, options_for_select([['', '']] + @template.map { |template| [template, template] }, business_requirement.template), {}, class: 'form-control' if business_requirement.template.blank? %></p>
+              <% if business_requirement.portfolio_category.all?(&:blank?) %>
+              <p><%= f.select :portfolio_category, options_for_select(@portfolio_categories, business_requirement.portfolio_category), {}, { multiple: true, class: 'form-control', prompt: '' } %><p class="text-danger">This field is required.</p>
+              <% end %></p>
+              <% if business_requirement.requirement_received_from.all?(&:blank?) %>
+              <p><%= f.select :requirement_received_from, options_for_select(@requirement_received_from, business_requirement.requirement_received_from), {}, { multiple: true, class: 'form-control', prompt: '' } %><p class="text-danger">This field is required.</p>
+              <% end %></p>
+              <p><%= f.select :application_name, options_for_select(@application_name, business_requirement.application_name), {}, { multiple: true, class: 'form-control', prompt: '' } if business_requirement.application_name.all?(&:blank?) %></p>
+
+              <div class="row">
+                <div class="col-md-6">
+                  <p><%= f.date_field :requirement_submitted_date, required: true, class: 'form-control' if business_requirement.requirement_submitted_date.blank? %></p>
+                  <p><%= f.date_field :scheduled_end_date, class: 'form-control' if business_requirement.scheduled_end_date.blank? %></p>
+                </div>
+              </div>
+      
+              <div class="row">
+                <div class="col-md-6">
+                  <p><%= f.date_field :actual_start_date, class: 'form-control' if business_requirement.actual_start_date.blank? %></p>
+                  <p><%= f.date_field :actual_end_date, class: 'form-control' if business_requirement.actual_end_date.blank? %></p>
+                </div>
+              </div>
+      
+              <p><%= f.date_field :revised_end_date, class: 'form-control' if business_requirement.revised_end_date.blank? %></p>
+              <p><%= f.text_area(:business_need_as_per_business_case, rows: 2, required: true, class: 'form-control', placeholder: 'State the business need here') if business_requirement.business_need_as_per_business_case.blank? %></p>
+              <p><%= f.date_field :planned_project_go_live_date, required: true, class: 'form-control' if business_requirement.planned_project_go_live_date.blank? %></p>
+              <p><%= f.check_box :is_it_project, label: "Is IT Project?", required: true, class: 'form-check-input' if business_requirement.is_it_project.blank? %></p>
+              <div >
+                <%= f.submit 'Submit', class: 'btn btn-primary' %>
+              </div>
+            <% end %>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      <% end %>
+    <% end %>
+  </tbody>
+</table>
+
+<style>
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: Arial, sans-serif;
+}
+
+th, td {
+    border: 1px solid #dddddd;
+    padding: 8px;
+    text-align: left;
+    font-size: 14px;
+}
+
+th {
+    background-color: #f9f9f9;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    margin: 2px;
+}
+
+.btn-custom-success {
+    background-color: #28a745; /* Bootstrap green color */
+    border-color: #28a745;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-warning {
+    background-color: #ffc107;
+    color: black;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-sm {
+    font-size: 12px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Attach event listener to the form's submit button
+  document.querySelectorAll('form[id^="acceptForm-"]').forEach(function(form) {
+    form.addEventListener('submit', function(event) {
+      let isValid = true;
+      let fields = ['priority_level', 'scheduled_start_date', 'planned_project_go_live_date', 'function', 'portfolio_category', 'project_category'];
+      
+      fields.forEach(function(fieldId) {
+        let field = form.querySelector(`#${fieldId}`);
+        if (field && !field.value.trim()) {
+          isValid = false;
+          field.classList.add('is-invalid'); // Add error styling (you need to define this class in your CSS)
+        } else {
+          field.classList.remove('is-invalid');
+        }
+      });
+
+      if (!isValid) {
+        event.preventDefault(); // Prevent form submission
+        alert('Please fill in all required fields.');
+      }
+    });
+  });
+});
+
+</script>

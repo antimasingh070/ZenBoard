@@ -69,35 +69,44 @@
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  console.log("DOM fully loaded and parsed");
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM fully loaded and parsed");
 
-  // Get today's date in 'YYYY-MM-DD' format
-  const today = new Date().toISOString().split('T')[0]; 
+    // Get today's date in 'YYYY-MM-DD' format
+    const today = new Date().toISOString().split('T')[0];
 
-  // Loop through each issue row
-  document.querySelectorAll('tr.issue').forEach(row => {
-    const dueDate = row.getAttribute('data-due-date');
-    const revisedEndDate = row.getAttribute('data-revised-end-date');
+    // Loop through each issue row
+    document.querySelectorAll('tr.issue').forEach(row => {
+      const dueDate = row.getAttribute('data-due-date');
+      const revisedEndDate = row.getAttribute('data-revised-end-date');
 
-    console.log(`Processing issue row: dueDate=${dueDate}, revisedEndDate=${revisedEndDate}`);
+      console.log(`Processing issue row: today=${today}, dueDate=${dueDate}, revisedEndDate=${revisedEndDate}`);
 
-    if (revisedEndDate && revisedEndDate !== "null" && new Date(revisedEndDate) <= new Date(today)) {
-      console.log("Revised end date is present and passed, highlighting revised end date");
-      const revisedEndNode = row.querySelector('.cf_24'); // Update the selector to match the correct element
-      if (revisedEndNode) {
-        revisedEndNode.classList.add('due-date-overdue');
+      // Case 1: If "Revised Planned Due Date" is present and passed, highlight it (Revised Planned Due Date takes priority)
+      if (revisedEndDate && revisedEndDate !== "null" && new Date(revisedEndDate) <= new Date(today)) {
+        console.log("Revised end date is present and passed, highlighting revised end date");
+        const revisedEndNode = row.querySelector('.cf_59'); // Update the selector to match the correct element
+        if (revisedEndNode) {
+          revisedEndNode.classList.add('due-date-overdue'); // Highlight Revised Planned Due Date in red
+        }
+
+      // Case 2: If "Revised Planned Due Date" is not present and "Due Date" is passed, highlight Due Date
+      } else if ((!revisedEndDate || revisedEndDate === "null") && dueDate && new Date(dueDate) < new Date(today)) {
+        console.log("Revised end date is not set, and due date is passed, highlighting due date");
+        const dueDateNode = row.querySelector('.due_date');
+        if (dueDateNode) {
+          dueDateNode.classList.add('due-date-overdue'); // Highlight Due Date in red
+        }
+
+      // Case 3: If "Revised Planned Due Date" is present and not passed, no highlighting
+      } else if (revisedEndDate && new Date(revisedEndDate) > new Date(today)) {
+        console.log("Revised end date is present and not passed, no highlighting");
+
+      // Case 4: If neither due date nor revised planned due date is passed, no highlighting
+      } else {
+        console.log("Neither due date nor revised end date need highlighting");
       }
-
-    } else if (dueDate && dueDate !== "null" && new Date(dueDate) < new Date(today)) {
-      console.log("Due date is passed and revised end date is not set or not passed, highlighting due date");
-      const dueDateNode = row.querySelector('.due_date');
-      if (dueDateNode) {
-        dueDateNode.classList.add('due-date-overdue');
-      }
-    }
+    });
   });
-});
-
 </script>
 

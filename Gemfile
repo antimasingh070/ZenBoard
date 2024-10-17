@@ -16,6 +16,14 @@ gem 'rbpdf', '~> 1.21.3'
 gem 'addressable'
 gem 'rubyzip', '~> 2.3.0'
 gem 'will_paginate'
+gem 'jquery-rails'
+gem 'redis'
+gem 'redis-rails'
+gem 'puma'
+gem 'listen', '~> 3.0.5'
+gem 'delayed_job_active_record'
+gem 'daemons'
+gem 'delayed_job_web'
 
 #  Ruby Standard Gems
 gem 'csv', '~> 3.2.6'
@@ -93,7 +101,7 @@ else
 end
 
 group :development do
-  gem 'listen', '~> 3.3'
+  # gem 'listen', '~> 3.3'
   gem "yard"
 end
 

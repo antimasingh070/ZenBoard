@@ -18,6 +18,7 @@ module Redmine
       notifications << Notifiable.new('issue_approved')
       notifications << Notifiable.new('issue_send_back')
       notifications << Notifiable.new('issue_declined')
+      notifications << Notifiable.new('issue_pending_approval')
       notifications << Notifiable.new('issue_note_added', 'issue_updated')
       notifications << Notifiable.new('issue_status_updated', 'issue_updated')
       notifications << Notifiable.new('issue_assigned_to_updated', 'issue_updated')
@@ -35,6 +36,7 @@ module Redmine
       notifications << Notifiable.new('membership_added_email')
       notifications << Notifiable.new('membership_deleted_email')
       notifications << Notifiable.new('send_dashboard_email')
+      notifications << Notifiable.new('meeting_invitation')
       notifications
     end
   end

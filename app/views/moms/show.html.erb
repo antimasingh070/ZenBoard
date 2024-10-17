@@ -1,0 +1,32 @@
+<h1>Meeting: <%= @meeting.title %></h1>
+
+<p><strong>Date:</strong> <%= @meeting.scheduled_at %></p>
+<%= link_to 'New MOM', new_business_requirement_meeting_mom_path(@business_requirement, @meeting), class: 'btn btn-primary' %>
+
+<h2>Minutes of Meeting (MOM)</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Details</th>
+      <th>Action Items</th>
+      <th colspan="3">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+      <tr>
+        <td><%= @meeting.mom.summary %></td>
+        <td><%= @meeting.mom.function_name %></td>
+        <td>
+          <%= link_to 'Show', business_requirement_meeting_mom_path(@business_requirement, @meeting), class: 'btn btn-info btn-sm', title: 'Show MOM' %>
+          <%= link_to 'Edit', edit_business_requirement_meeting_mom_path(@business_requirement, @meeting), class: 'btn btn-warning btn-sm', title: 'Edit MOM' %>
+          <%= link_to 'Delete', business_requirement_meeting_mom_path(@business_requirement, @meeting), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm', title: 'Delete MOM' %>
+        </td>
+      </tr>
+  </tbody>
+</table>
+
+<%= link_to 'Back to Meetings', business_requirement_path(@business_requirement), class: 'btn btn-secondary' %>
+
+<style>
+/* Same CSS as before */
+</style>

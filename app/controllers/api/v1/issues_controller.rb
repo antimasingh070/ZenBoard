@@ -14,7 +14,6 @@ module Api
         end
   
         def create
-          binding.pry
           @issue = Issue.new(issue_params.to_h.merge(author_id: current_user.id))
         
           if @issue.save

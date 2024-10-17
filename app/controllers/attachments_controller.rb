@@ -175,11 +175,15 @@ class AttachmentsController < ApplicationController
     else
       @attachment.destroy
     end
-
-    respond_to do |format|
-      format.html {redirect_to_referer_or project_path(@project)}
-      format.js
-      format.api {render_api_ok}
+    if  @attachment.container_type == "BusinessRequirement"
+      @business_requirement =BusinessRequirement.find(@attachment.container_id)
+      redirect_to business_requirement_path(@business_requirement), notice: 'Attachment was successfully destroyed.'
+    else
+      respond_to do |format|
+        format.html {redirect_to_referer_or project_path(@project)}
+        format.js
+        format.api {render_api_ok}
+      end
     end
   end
 

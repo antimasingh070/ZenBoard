@@ -1457,6 +1457,8 @@ en-GB:
   label_auto_watch_on_issue_contributed_to: Project tasks I contributed to
   text_project_close_confirmation: Are you sure you want to close the '%{value}' project
     to make it read-only?
+  label_br_new: "Business Requirement"
+  label_br_plural: "Business Requirements"
   text_project_check_member_confirmation: Before proceeding, please confirm that you have added members for the Program Manager, Project Manager, and PMO roles.
   text_issue_approve_confirmation: Are you sure you want to approve the '%{value}' issue?
   text_issue_send_back_confirmation: Are you sure you want to send back the '%{value}' issue?

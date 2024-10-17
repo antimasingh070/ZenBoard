@@ -1,230 +1,311 @@
-<% def custom_field_value(issue, field_name) %>
-  <% custom_field = CustomField.find_by(name: field_name) %>
-  <% custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id) %>
-  <% custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i) %>
-  <% custom_field_enumeration&.name %>
-<% end %>
-<% def custom_field_value(project, field_name) %>
-  <% custom_field = CustomField.find_by(name: field_name) %>
-  <% custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id) %>
-  <% custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i) %>
-  <% custom_field_enumeration&.name %>
-<% end %>
-<% def custom_field_value_date(project, field_name) %>
-    <% custom_field = CustomField.find_by(name: field_name) %>
-    <% custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id) %>
-    <% custom_field_enumeration = custom_value&.value %>
- 
-  <% end %>
+<% 
+# Define holidays and exclusions (fixed holidays, Sundays, and 1st & 2nd Saturdays)
+holidays = [
+  Date.new(Date.today.year, 1, 26),  # Republic Day
+  Date.new(Date.today.year, 5, 1),   # Labor Day
+  Date.new(Date.today.year, 8, 15),  # Independence Day
+  Date.new(Date.today.year, 10, 2),  # Gandhi Jayanti
+  Date.new(Date.today.year, 12, 25)  # Christmas
+]
 
-<% def custom_field_value_issuedate(project, field_name) %>
-  <% custom_field = CustomField.find_by(name: field_name) %>
-  <% custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: project&.id, custom_field_id: custom_field&.id) %>
-  <% custom_field_enumeration = custom_value&.value %>
-  <% if !custom_field_enumeration.nil? %>
-  <% date = Date.parse(custom_field_enumeration) %>
-  <% formatted_date = date.strftime("%d/%m/%Y") %>
-  <% else %>
-  <% custom_field_enumeration %>
-  <% end %>
-<% end %>
+# Method to check if a day is a working day
+def working_day?(date, holidays)
+  # Exclude Sundays
+  return false if date.sunday?
+  
+  # Exclude 1st and 2nd Saturdays of the month
+  return false if date.saturday? && (date.day <= 14)
+  
+  # Exclude holidays
+  return false if holidays.include?(date)
+  
+  true
+end
+def custom_field_value(issue, field_name) 
+  custom_field = CustomField.find_by(name: field_name) 
+  custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id) 
+  custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i) 
+  custom_field_enumeration&.name 
+end 
 
-<% start_date_previous_week = Date.today.prev_week.beginning_of_week %>
-<% end_date_previous_week = Date.today.prev_week.end_of_week %>
-<% closed_issues_previous_week = @project.issues.where(tracker_id: 2, closed_on: start_date_previous_week..end_date_previous_week) %>
+def custom_field_project_value(project, field_name) 
+  custom_field = CustomField.find_by(name: field_name) 
+  custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id) 
+  custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i) 
+  custom_field_enumeration&.name 
+end 
+
+def custom_field_project_text(project, field_name) 
+  custom_field = CustomField.find_by(name: field_name) 
+  custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id).try(:value) 
+end 
+
+def custom_field_issue_text(issue, field_name) 
+  custom_field = CustomField.find_by(name: field_name) 
+  custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id).try(:value) 
+end 
+
+def custom_field_value_date(project, field_name) 
+  custom_field = CustomField.find_by(name: field_name) 
+  custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id) 
+  custom_field_date = custom_value&.value 
+  if !custom_field_date.blank? 
+    date = Date.parse(custom_field_date) 
+    formatted_date = date&.strftime("%d/%m/%y") 
+    formatted_date 
+  else 
+    custom_field_date 
+  end 
+end
+
+def custom_field_value_issue_date(issue, field_name) 
+  custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name) 
+  custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: project&.id, custom_field_id: custom_field&.id) 
+  custom_field_date = custom_value&.value 
+  if !custom_field_date.blank? 
+    date = Date.parse(custom_field_date) 
+    formatted_date = date.strftime("%d/%m/%Y") 
+    formatted_date 
+  else 
+    custom_field_date 
+  end 
+end 
+
+def member_name(project, field_name) 
+  project_lead_role = Role.find_by(name: field_name) 
+  member_ids_with_lead_role = MemberRole.where(role_id: project_lead_role&.id).pluck(:member_id) 
+  project_lead_user_ids = Member.where(project_id: project.id, id: member_ids_with_lead_role).pluck(:user_id) 
+  if project_lead_user_ids.present? 
+    project_lead_users = User.where(id: project_lead_user_ids) 
+    project_lead_names = project_lead_users.pluck(:firstname, :lastname) 
+    if project_lead_names.size == 1 
+      firstname, lastname = project_lead_names.first 
+      return "#{firstname} #{lastname}" 
+    else 
+      return project_lead_names.map { |firstname, lastname| "#{firstname} #{lastname}" }.join(', ') 
+    end 
+  else 
+    return "" 
+  end 
+end 
+
+start_date_previous_week = Date.today.prev_week.beginning_of_week
+end_date_previous_week = Date.today.prev_week.end_of_week
+closed_working_days = (start_date..end_date).select { |date| working_day?(date, holidays) }
+# Fetch closed issues
+closed_issues = @project.issues.where(tracker_id: 2, status_id: 5)
+
+# Collect closed issues from the previous week
+closed_issues_previous_week = closed_issues.select do |issue|
+  begin
+    issue_range = issue.custom_field_values.find { |cfv| cfv.custom_field_id == CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")&.id }&.value
+    if issue_range.present?
+      issue_to_date = Date.parse(issue_range)
+      (closed_working_days).include?(issue_to_date)
+    else
+      puts "Actual End Date is not set for Issue ##{issue.id}"
+      false
+    end
+  rescue ArgumentError => e
+    puts "Error parsing date for Issue ##{issue.id}: #{e.message}"
+    false
+  end
+end
+
+# Similar logic for upcoming issues
+start_date = Date.today
+end_date = Date.today + 7.days
+upcoming_working_days = (start_date..end_date).select { |date| working_day?(date, holidays) }
+# Fetch upcoming issues
+upcoming_issues = @project.issues.where(tracker_id: 2).where.not(status_id: 5)
+
+# Collect upcoming issues with actual end dates within the next week
+upcoming_actual_end_date_issues = upcoming_issues.select do |issue|
+  begin
+    issue_range = issue.custom_field_values.find { |cfv| cfv.custom_field_id == CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")&.id }&.value
+    if issue_range.present?
+      issue_to_date = Date.parse(issue_range)
+      (upcoming_working_days).include?(issue_to_date)
+    else
+      puts "Actual End Date is not set for Issue ##{issue.id}"
+      false
+    end
+  rescue ArgumentError => e
+    puts "Error parsing date for Issue ##{issue.id}: #{e.message}"
+    false
+  end
+end
+
+@tracker = Tracker.find_by(name: "Risk Register")
+@risks = @project.issues.where(status_id: 5, tracker_id: @tracker.id)
+%>
+
 <% "Closed issues from #{start_date_previous_week} to #{end_date_previous_week}:" %>
-<% start_date = Date.today %>
-<% end_date = Date.today + 7.days %> 
-<% upcoming_due_date_issues = @project.issues.where(tracker_id: 2, due_date: start_date..end_date) %>
 <% "Issues with due dates from #{start_date} to #{end_date}:" %>
-<% def member_name(project, field_name) %>
-  <% project_lead_role = Role.find_by(name: field_name) %>
-
-  <% member_ids_with_lead_role = MemberRole.where(role_id: project_lead_role&.id).pluck(:member_id) %>
-  <% project_lead_user_ids = Member.where(project_id: project.id, id: member_ids_with_lead_role).pluck(:user_id) %>
-
-  <% if project_lead_user_ids.present? %>
-    <% project_lead_users = User.where(id: project_lead_user_ids) %>
-    <% project_lead_names = project_lead_users.pluck(:firstname, :lastname) %>
-    <% if project_lead_names.size == 1 %>
-      <% firstname, lastname = project_lead_names.first %>
-      <% return "#{firstname} #{lastname}" %>
-    <% else %>
-      <% return project_lead_names.map { |firstname, lastname| "#{firstname} #{lastname}" }.join(', ') %>
-    <% end %>
-  <% else %>
-    <% return "" %>
-  <% end %>
-<% end %>
 
 <!DOCTYPE html>
 <html>
-<head>
-<style>
-*{
-font-size: 15px;
-}
-table {
-  font-family: arial, sans-serif;
-  border-collapse: collapse;
-  width: 100%;
-}
-td, th {
-  border: 1px solid black;
-  text-align: left;
-  padding: 8px;
-}
-.side_status {
-text-align: center;
-}
-</style>
-</head>
 <body>
-
-<h1>PROJECT WEEKLY STATUS REPORT - <%= @project.name %></h1>
-<div style= "width: 500px; float: left;">
-<table>
- <tr>
- <td style= "font-weight: bold">
- OVERALL PROJECT STATUS</td>
- <% scheduled_end_date = Date.parse(custom_field_value_date(@project, "Scheduled End Date")) rescue nil %>
+  <h1>PROJECT WEEKLY STATUS REPORT - <%= @project.name %></h1>
+  <div style= "width: 500px; float: left;">
+    <table>
+      <tr>
+        <td style= "font-weight: bold">OVERALL PROJECT STATUS</td>
+        <% scheduled_end_date = Date.parse(custom_field_value_date(@project, "Scheduled End Date")) rescue nil %>
         <% revised_due_date = Date.parse(custom_field_value_date(@project, "Revised Due Date")) rescue nil %>
-        <% if @project.closed? || @project.hold? || @project.cancelled? %>
+        <% if @project.closed? || @project.hold? || @project.cancelled?  || @project.go_live? %>
           <td style="background-color: white; readonly size="5" ><%= @project_status %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
           <td style="background-color: green; color: white;" readonly size="5"><%= "Off Track" %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date >= Date.today) || revised_due_date.present? %>
           <td style="background-color: #FFBF00; color: white;" readonly size="5"><%= "At Risk" %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date > Date.today) || revised_due_date < Date.today %>
-            <td style="background-color: red; color: white;" readonly size="5"><%= "On Track" %></td>
+          <td style="background-color: red; color: white;" readonly size="5"><%= "On Track" %></td>
         <% end %>
- </tr>
- <tr>
- <td style= "font-weight: bold">Project Name</td>
- <td><%= @project.name %></td>
- <td style= "font-weight: bold">Project Code</td>
- <td><%= @project.identifier %></td>
- </tr>
- <tr>
- <td style= "font-weight: bold">Project Manager</td>
- <td><%= member_name(@project, "Project Manager") %></td>
- <td style= "font-weight: bold">Date of status entry</td>
- <td>3/27/2024</td>
- </tr>
- <tr>
- <td style= "font-weight: bold">Go live - Planned Date</td>
- <td><%= custom_field_value_date(@project, "Planned Project Go Live date") %></td>
- <td style= "font-weight: bold">Go live - Actual Date</td>
- <td></td>
- </tr>
-  <tr>
- <td style= "font-weight: bold">Project Start Date</td>
- <td><%= custom_field_value_date(@project, "Scheduled Start Date") %></td>
- <td style= "font-weight: bold">Project Sponsor Name</td>
- <td><%= member_name(@project, "Project Sponsor") %></td>
- </tr>
-</table>
-</div>
-<div style= "width: 300px; float: right;">
-<table>
- <tr style= "background-color: grey;"><td class= "side_status">STATUS KEY</td></tr>
- <tr style= "background-color: red;"><td  class= "side_status">ROADBLOCK / COVERAGE</td></tr>
- <tr style= "background-color: orange;"><td  class= "side_status">POTENTIAL RISKS / DELAYS</td></tr>
- <tr style= "background-color: #90EE90;"><td  class= "side_status">ON TRACK</td></tr>
- <tr style= "background-color: green;"><td  class= "side_status">COMPLETED</td></tr>
-</table>
-
-</div>
-<% @tracker = Tracker.find_by(name: "Risk Register") %>
-<% @risks = @project.issues.where(tracker_id: @tracker.id) %>
-<div style="clear: both"></div>
-
-<h1 style="padding-top: 100px">RISKS AND ROADBLOCKS/HELP REQUIRED</h1>
-<div style= "height: 300px;">
-<table>
-<tr style= "background-color: #c1c4e3">
-<th class= "side_status">RISK NUMBER</th>
-<th class= "side_status">DESCRIPTION</th>
-<th class= "side_status" style= "background-color: #ba0b11; color: white">Team/Owner Name</th>
-<th class= "side_status">FIX</th>
-</tr>
-<% @count =1 %>
-
-<% @risks.each do |risk| %>
-  <% if risk.blank? %>
-  <tr><td>no recorods found</td></tr>
-<tr>
-<td><%= @count %></td>
-<td><%= risk.subject %></td>
-<% user = User.find_by(id: risk.assigned_to_id) %>
-<td><%= user ? "#{user.firstname} #{user.lastname}" : "Not Assigned" %></td>
-<td>FIX</td>
-</tr>
-<% end %>
-<% @count=@count+1 %>
-<% end %>
-</table>
-<h1 style="padding-top: 40px">ACTIVITY COMPLETED THIS WEEK</h1>
-<div style= "height: 300px;">
-<table>
-  <tr>
-    <th class="side_status">Milestones</th>
-    <th class="side_status">Activity Name</th>
-    <th class="side_status">Summary</th>
-    <th class="side_status">Remarks</th>
-    <th class="side_status">Scheduled Start Date</th>
-    <th class="side_status">Actual Start Date</th>
-    <th class="side_status">Scheduled End Date</th>
-    <th class="side_status">Actual End Date</th>
-  </tr>
-  <tr>
-      <td><%= closed_issues_previous_week.count %></td>
-    <% closed_issues_previous_week.each do |closed_issue| %>
-      <% if closed_issue.blank? %>
-      <tr><td>no recorods found</td></tr>
-        <td><%= closed_issue.subject %></td>
-        <td><%= closed_issue.description %></td>
-        <td><%= "" %></td>
-        <td><%= closed_issue.start_date&.strftime("%d/%m/%y") %></td>
-        <td><%= custom_field_value_issuedate(closed_issue, "Actual Start Date") %></td>
-        <td><%= closed_issue.due_date&.strftime("%d/%m/%y") %></td>
-        <td><%= custom_field_value_issuedate(closed_issue, "Actual End Date") %></td>
+      </tr>
+      <tr>
+        <td style= "font-weight: bold">Project Name</td>
+        <td><%= @project.name %></td>
+        <td style= "font-weight: bold">Project Code</td>
+        <td><%= @project.identifier %></td>
+      </tr>
+      <tr>
+        <td style= "font-weight: bold">Project Manager</td>
+        <td><%= member_name(@project, "Project Manager") %></td>
+        <td style= "font-weight: bold">Date of status entry</td>
+        <td><%= Date.today.strftime("%d/%m%Y") %></td>
+      </tr>
+      <tr>
+        <td style= "font-weight: bold">Go live - Planned Date</td>
+        <td><%= custom_field_value_date(@project, "Planned Project Go Live date") %></td>
+        <td style= "font-weight: bold">Revised End Date</td>
+        <td><%= custom_field_value_date(@project, "Revised End Date") %></td>
+      </tr>
+      <tr>
+        <td style= "font-weight: bold">Project Start Date</td>
+        <td><%= custom_field_value_date(@project, "Scheduled Start Date") %></td>
+        <td style= "font-weight: bold">Project Sponsor</td>
+        <td><%= member_name(@project, "Project Sponsor") %></td>
+      </tr>
+      <tr>
+        <td style= "font-weight: bold">Reason - Revised Due Date</td>
+        <td colspan="3"><%= custom_field_value_date(@project, "Reason Revised Due Date") %></td>
+      </tr>
+    </table>
+  </div>
+  <div style="clear: both"></div>
+    <h1 style="padding-top: 100px">RISKS AND ROADBLOCKS/HELP REQUIRED</h1>
+    <div style= "height: 300px;">
+      <table>
+        <tr style= "background-color: #c1c4e3">
+          <th class= "side_status">Risk Number</th>
+          <th class= "side_status">Subject</th>
+          <th class= "side_status">Description</th>
+          <th class= "side_status">Identified Date</th>
+          <th class= "side_status" style= "background-color: #ba0b11; color: white">Risk Owner</th>
+        </tr>
+        <% @count =1 %>
+        <% @risks.each do |risk| %>
+          <% if risk.blank? %>
+            <td> colspan="5" style="text-align: center;">No recorods to display.</td>
+          <% else %>
+            <% risks.each do |risk| %>
+              <tr>
+                <td><%= @count %></td>
+                <td><%= risk.subject %></td>
+                <td><%= risk.description %></td>
+                <td><%= custom_field_issue_date(risk, "Identifier date") %></td>
+                <td><%= custom_field_issue_date(risk, "Risk Owner") %></td>
+              </tr>
+              <% @count=@count+1 %>
+            <% end %>
+          <% end %>
         <% end %>
-    <% end %>
-  </tr>
-</table>
-<h1 style="padding-top: 40px; ">WORK PLANNED ACTIVITY FOR NEXT WEEK</h1>
-<div style= "height: 300px;">
-<table>
-  <tr style="background-color: #c1c4e3;">
-    <th class="side_status">Activity</th>
-    <th class="side_status">DESCRIPTION</th>
-    <th class="side_status" style="background-color: #ba0b11; color: white;">Team/Owner Name</th>
-    <th class="side_status">Status</th>
-    <th class="side_status">Scheduled Start Date</th>
-    <th class="side_status">Actual Start Date</th>
-    <th class="side_status">Scheduled End Date</th>
-    <th class="side_status">Actual End Date</th>
-  </tr>
-  <% upcoming_due_date_issues.each do |opened_issues| %>
-    <tr>
-      <td><%= opened_issues.subject %></td>
-      <td><%= opened_issues.description %></td>
-      <% user = User.find_by(id: opened_issues.assigned_to_id) %>
-      <td><%= user ? "#{user.firstname} #{user.lastname}" : "Not Assigned" %></td>
-      <td><%= IssueStatus.find(opened_issues.status_id).name %></td>
-      <td><%= opened_issues.start_date&.strftime("%d/%m/%y") %></td>
-      <td><%= custom_field_value_issuedate(opened_issues, "Actual Start Date") %></td>
-      <td><%= opened_issues.due_date&.strftime("%d/%m/%y") %></td>
-      <td><%= custom_field_value_issuedate(opened_issues, "Actual End Date") %></td>
-    </tr>
-  <% end %>
-</table>
-<p style="padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">Regards,</p>
-<p style="padding-top: 0px; padding-bottom: 0px; margin-bottom: 0px; margin-top: 0px">Sweta Mehta</p>
-<p style="padding-top: 0px; padding-bottom: 0px; margin-bottom: 0px; margin-top: 0px">PMO</p>
-<span style="padding-top: 0px; padding-bottom: 0px; margin-bottom: 0px">HDB Financial Services Ltd</span>
-</div>
+      </table>
+    </div>
+    <h1 style="padding-top: 40px">ACTIVITY COMPLETED THIS WEEK</h1>
+    <div style= "height: 300px;">
+      <table>
+        <tr style="background-color: #c1c4e3;">
+          <th class="side_status">Activity Name</th>
+          <th class="side_status">Description</th>
+          <th class="side_status">Scheduled Start Date</th>
+          <th class="side_status">Scheduled End Date</th>
+          <th class="side_status">Actual Start Date</th>
+          <th class="side_status">Actual End Date</th>
+          <th class="side_status">Revised Planned Due Date</th>
+        </tr>
+        <% if closed_issues_previous_week.blank? %>
+          <td colspan="7" style="text-align: center;">No records to display.</td>
+        <% else %>
+          <% closed_issues_previous_week.each do |closed_issue| %>
+            <tr>
+              <td><%= closed_issue.subject %></td>
+              <td><%= closed_issue.description %></td>
+              <td><%= closed_issue.start_date&.strftime("%d/%m/%y") %></td>
+              <td><%= closed_issue.due_date&.strftime("%d/%m/%y") %></td>
+              <td><%= custom_field_issue_date(closed_issue, "Actual Start Date") %></td>
+              <td><%= custom_field_issue_date(closed_issue, "Actual End Date") %></td>
+              <td><%= custom_field_issue_date(closed_issue, "Revised Planned Due Date") %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      </table>
+    </div>
+    <h1 style="padding-top: 40px; ">WORK PLANNED ACTIVITY FOR NEXT WEEK</h1>
+    <div style= "height: 300px;">
+      <table>
+        <tr style="background-color: #c1c4e3;">
+          <th class="side_status">Activity</th>
+          <th class="side_status" style="background-color: #ba0b11; color: white;">Assignee</th>
+          <th class="side_status">Status</th>
+          <th class="side_status">Scheduled Start Date</th>
+          <th class="side_status">Scheduled End Date</th>
+          <th class="side_status">Actual Start Date</th>
+          <th class="side_status">Actual End Date</th>
+          <th class="side_status">Revised Planned Due Date</th>
+        </tr>
+        <% if upcoming_actual_end_date_issues.blank? %>
+          <td colspan="8" style="text-align: center;">No records to display.</td>
+        <% else %>
+          <% upcoming_actual_end_date_issues.each do |opened_issues| %>
+            <tr>
+              <td><%= opened_issues.subject %></td>
+              <% user = User.find_by(id: opened_issues.assigned_to_id) %>
+              <td><%= user ? "#{user.firstname} #{user.lastname}" : "" %></td>
+              <td><%= IssueStatus.find(opened_issues.status_id).name %></td>
+              <td><%= opened_issues.start_date&.strftime("%d/%m/%y") %></td>
+              <td><%= opened_issues.due_date&.strftime("%d/%m/%y") %></td>
+              <td><%= custom_field_issue_date(opened_issues, "Actual Start Date") %></td>
+              <td><%= custom_field_issue_date(opened_issues, "Actual End Date") %></td>
+              <td><%= custom_field_issue_date(opened_issues, "Revised Planned Due Date") %></td>
+            </tr>
+          <% end %>
+        <% end %>
+      </table>
+    </div>
+  </div>
+  <p style="padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">Regards,</p>
+  <p style="padding-top: 0px; padding-bottom: 0px; margin-bottom: 0px; margin-top: 0px">PMO</p>
+  <span style="padding-top: 0px; padding-bottom: 0px; margin-bottom: 0px">nknkc</span>
 </body>
 </html>
 
+<style>
+  *{
+    font-size: 15px;
+  }
+  table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+  }
+  td, th {
+    border: 1px solid black;
+    text-align: left;
+    padding: 8px;
+  }
+  .side_status {
+  text-align: center;
+  }
+</style>

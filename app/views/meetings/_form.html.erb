@@ -1,0 +1,79 @@
+<% if @meeting.errors.any? %>
+  <div id="error_explanation">
+    <h2><%= pluralize(@meeting.errors.count, "error") %> prohibited this meeting from being saved:</h2>
+    <ul>
+      <% @meeting.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<div class="box tabular">
+  <p><%= f.text_field :title, class: 'form-control', placeholder: 'Title', required: true %></p>
+  <p><%= f.select :status, options_for_select(Meeting::STATUS_MAP.map { |k, v| [v, k] }, @meeting.status), {}, class: 'form-control', required: true %></p>
+  <p><%= f.date_field :scheduled_at, class: 'form-control', placeholder: 'Scheduled Date', required: true %></p>
+   <p><%= f.select :function_name, options_for_select([['', '']] + @function_name.map { |function_name| [function_name, function_name] }, @meeting.function_name), {}, class: 'form-control' %></p>
+  <p><%= f.text_area :note, rows: 2, class: 'form-control', placeholder: 'Note', required: true %></p>
+  <% if !@meeting.id.nil? %>
+    <p> <%= f.label :user_id, "Attendees" %> <%= link_to "Add Attendee", '#', id: 'add_attendee', class: 'btn btn-primary' %></p>
+    <div id="attendees">
+    <% @meeting.meeting_attendees.each_with_index do |attendee, index| %>
+        <div id="attendee_<%= index %>" class="attendee">
+          <%= hidden_field_tag "meeting[meeting_attendees_attributes][#{index}][id]", attendee.id %>
+          <p>
+            <label for="attendee_user_id_<%= index %>">Attendee</label>
+            <%= select_tag "meeting[meeting_attendees_attributes][#{index}][user_id]", options_from_collection_for_select(User.all, :id, :name, attendee.user_id), class: 'form-control' %>
+
+            <% @business_requirement =BusinessRequirement.find_by(id: @meeting.business_requirement_id) %>
+            <%= link_to 'Remove Attendee', business_requirement_meeting_meeting_attendee_path(@business_requirement, @meeting, attendee), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm' %>
+          </p>
+          
+        </div>
+      <% end %>              
+    </div>
+  <% end %>
+
+  <div class="card-footer">
+          <%= f.submit 'Save Meeting', class: 'btn btn-primary' %>
+            <%= link_to 'Back to Meetings', business_requirement_path(@business_requirement), class: 'btn btn-secondary' %><business_requirement>
+  </div>
+</div>
+
+<script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function() {
+    let attendeeIndex = <%= @meeting.meeting_attendees.size %>;
+
+    // Add new attendee
+    document.getElementById('add_attendee').addEventListener('click', function(e) {
+      e.preventDefault();
+      let newFields = `
+        <div id="attendee_${attendeeIndex}" class="attendee">
+          <p>
+            <label for="attendee_user_id_${attendeeIndex}">Attendee</label><br>
+            <select name="meeting[meeting_attendees_attributes][${attendeeIndex}][user_id]" id="attendee_user_id_${attendeeIndex}" class="form-control">
+              <% User.all.each do |user| %>
+                <option value="<%= user.id %>"><%= user.name %></option>
+              <% end %>
+            </select>
+          </p>
+          <input type="hidden" name="meeting[meeting_attendees_attributes][${attendeeIndex}][_destroy]" value="false">
+          <a href="#" class="remove_fields btn btn-danger" data-index="${attendeeIndex}">Remove attendee</a>
+        </div>`;
+      document.getElementById('attendees').insertAdjacentHTML('beforeend', newFields);
+      attendeeIndex++;
+    });
+
+    // Remove attendee
+    document.addEventListener('click', function(e) {
+      if (e.target && e.target.classList.contains('remove_fields')) {
+        e.preventDefault();
+        let index = e.target.getAttribute('data-index');
+        let attendeeDiv = document.getElementById(`attendee_${index}`);
+        let hiddenField = attendeeDiv.querySelector('input[type="hidden"]');
+        hiddenField.value = '1'; // Mark as destroyed
+        attendeeDiv.style.display = 'none'; // Hide the attendee fields
+      }
+    });
+  });
+</script>

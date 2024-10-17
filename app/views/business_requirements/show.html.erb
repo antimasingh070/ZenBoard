@@ -1,0 +1,129 @@
+<div class="box-tabular">
+  <div class="splitcontent">
+    <div class="splitcontentleft">
+      <h2><strong><%=l(:label_business_requirement)%></strong></h2>
+        <% fields = {
+            "Requirement Case" => @business_requirement.requirement_case,
+            "Identifier" => @business_requirement.identifier,
+            "Project Identifier" => @business_requirement.project_identifier,
+            "Description" => @business_requirement.description,
+            "Cost Benefits" => @business_requirement.cost_benefits,
+            "Status" => BusinessRequirement::STATUS_MAP[@business_requirement.status],
+            "Project Sponsor" => @business_requirement.project_sponsor,
+            "Requirement Submitted Date" => @business_requirement.requirement_submitted_date&.strftime("%d %b %Y"),
+            "Scheduled End Date" => @business_requirement.scheduled_end_date&.strftime("%d %b %Y"),
+            "Actual Start Date" => @business_requirement.actual_start_date&.strftime("%d %b %Y"),
+            "Actual End Date" => @business_requirement.actual_end_date&.strftime("%d %b %Y"),
+            "Revised End Date" => @business_requirement.revised_end_date&.strftime("%d %b %Y"),
+            "Business Need As Per Business Case" => @business_requirement.business_need_as_per_business_case,
+            "Planned Project Go-Live Date" => @business_requirement.planned_project_go_live_date&.strftime("%d %b %Y"),
+            "Project Category" => @business_requirement.project_category,
+            "Priority Level" => @business_requirement.priority_level,
+            "Vendor Name" => @business_requirement.vendor_name,
+            "Project?Enhancement" => @business_requirement.project_enhancement,
+            "Template" => @business_requirement.template,
+            "Portfolio Category" => @business_requirement.portfolio_category.is_a?(Array) ? @business_requirement.portfolio_category.reject(&:blank?).join(', ') : @business_requirement.portfolio_category,
+            "Requirement Received From" => @business_requirement.requirement_received_from.is_a?(Array) ? @business_requirement.requirement_received_from.reject(&:blank?).join(', ') : @business_requirement.requirement_received_from,
+            "Application Name" => @business_requirement.application_name.is_a?(Array) ? @business_requirement.application_name.reject(&:blank?).join(', ') : @business_requirement.application_name
+        } %>
+        
+        <% fields.each do |label, value| %>
+            <% if value.present? %>
+              <li><span class="label"><%= label %>: <%= value %></span></li>
+            <% end %>
+        <% end %>
+        <h3>Attachments</h3>
+        <ul>
+          <% @business_requirement.attachments.each do |attachment| %>
+            <li>
+              <%= link_to attachment.filename, attachment_path(attachment) %>  |
+              <%= link_to 'Delete', attachment_path(attachment), method: :delete, class: 'btn btn-warning btn-sm', title: 'Delete Attachment' %> 
+            </li>
+          <% end %>
+        </ul>
+        <% if  @business_requirement.status != 7 &&  @business_requirement.status != 8 %>
+          <%= link_to 'Edit', edit_business_requirement_path(@business_requirement), class: 'btn btn-warning btn-sm', title: 'Edit business_requirementD' %> |
+          <%= link_to 'Delete', business_requirement_path(@business_requirement), method: :delete, class: 'btn btn-warning btn-sm', title: 'Delete business_requirementD' %>  |
+        <% end %>
+        <%= link_to 'Dashboard', business_requirements_path, class: 'btn btn-secondary' %>
+
+    </div>
+
+    <!-- Second Part: Meetings Table (Right) -->
+    <div class="splitcontentright">
+      <% if @business_requirement.br_stakeholders.any? %>
+          <div class="members box">
+              <h3 class="icon icon-group"><%= l(:label_member_plural) %></h3>
+              <% @business_requirement.br_stakeholders.group_by(&:role_id).each do |role_id, stackholders| %>
+                  <% role_name = Role.find(role_id).name %>
+                  <p>
+                      <strong><%= role_name %></strong> - 
+                      <%= stackholders.map { |stackholder| stackholder.user.name }.join(', ') %>
+                  </p>
+              <% end %>
+          </div>
+      <% end %>
+
+     
+      <h2><strong>Meetings</strong></h2>
+      <div class="d-flex justify-content-end">
+        <% if  @business_requirement.status != 7 &&  @business_requirement.status != 8 %>
+          <%= link_to 'Schedule New Meeting', new_business_requirement_meeting_path(@business_requirement), class: 'btn btn-primary' %>
+        <% end %>
+    </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Date</th>
+            <th>Attendees</th>
+            <th colspan="3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if @business_requirement.meetings.blank? %>
+            <tr><td colspan=6 style="text-align: center">No recorods to Display</td></tr>
+          <% else %>
+            <% @business_requirement.meetings.each do |meeting| %>
+              <tr>
+                <td><%= meeting.title %></td>
+                <td><%= meeting.scheduled_at.strftime("%d %b %Y") %></td>
+                <td>
+                  <% meeting.meeting_attendees.each do |attendee| %>
+                    <p><%= attendee.user.name %></p>
+                  <% end %>
+                </td>
+                <td>
+                  <%= link_to 'Show', business_requirement_meeting_path(@business_requirement, meeting), class: 'btn btn-info btn-sm', title: 'Show Meeting' %>
+                  
+                </td>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+table th, table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+table th {
+  background-color: #f4f4f4;
+}
+
+.btn {
+  margin-right: 5px;
+}
+</style>

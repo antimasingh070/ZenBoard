@@ -21,11 +21,11 @@ class IssuesController < ApplicationController
   default_search_scope :issues
   before_action :find_issue, :only => [:show, :edit, :update, :issue_tab]
   before_action :find_issues, :only => [:bulk_edit, :bulk_update, :destroy]
-  before_action :authorize, :except => [:index, :new, :create, :approve, :decline, :send_back]
+  before_action :authorize, :except => [:index, :new, :create, :approve, :decline, :send_back, :download_sameple_workflow_template]
   before_action :find_optional_project, :only => [:index, :new, :create]
   before_action :build_new_issue_from_params, :only => [:new, :create]
   accept_atom_auth :index, :show
-  accept_api_auth :index, :show, :create, :update, :destroy, :approve, :decline, :send_back
+  accept_api_auth :index, :show, :create, :update, :destroy, :approve, :decline, :send_back, :download_sameple_workflow_template
   # before_action :update_done_ratio_from_issue_actual_end_Date
   rescue_from Query::StatementInvalid, :with => :query_statement_invalid
   rescue_from Query::QueryError, :with => :query_error
@@ -42,6 +42,23 @@ class IssuesController < ApplicationController
   helper :timelog
 
 
+  def download_sameple_workflow_template
+    document = Document.find(params[:id]) # Fetch the document by ID
+    # Check if the document has an associated attachment (or file)
+    if document && document.attachments.any?
+      # Send the file for download
+      attachment = document.attachments.first
+      
+      send_file attachment.diskfile,
+                filename: attachment.filename,
+                type: attachment.content_type,
+                disposition: 'attachment' # Forces download
+    else
+      # If the document or attachment doesn't exist, respond with a 404
+      head :not_found
+    end
+  end
+
   def activity
     @issue = Issue.find(params[:id])
     @activities = @issue.activty_log.order(created_at: :desc)
@@ -51,20 +68,23 @@ class IssuesController < ApplicationController
     custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
     custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
     custom_value.update(value: value)
+    @issue.custom_field_values = {custom_field.id => custom_value}
+    @issue.save
   end
 
   def send_back
     @issue = Issue.find(params[:id])
     @issue.update(assigned_to_id: @issue.author_id)
-    
     update_custom_field("Remarks", params[:remarks])
-    update_custom_field("Workflow", "7")
+    update_custom_field("Workflow", "18")
     update_custom_field("Approved By", User.current.name)
     update_custom_field("Approval Date", Date.today)
     
     if @issue.send_back?
+      add_journal_entry(@issue, User.current, "")
       @auther = User.find_by(id: @issue.author_id)
       Mailer.deliver_issue_send_back(User.current, @issue, @auther)
+      Mailer.deliver_issue_send_back_to_approver(User.current, @issue, @auther)
       flash[:notice] = "Issue sent back to the Author successfully."
     else
       flash[:alert] = "Failed to send back issue."
@@ -75,10 +95,11 @@ class IssuesController < ApplicationController
   def approve
     @issue = Issue.find(params[:id])
     update_custom_field("Remarks", params[:remarks])
-    update_custom_field("Workflow", "35")
+    update_custom_field("Workflow", "16")
     update_custom_field("Approved By", User.current.name)
     update_custom_field("Approval Date", Date.today)
     if @issue.approved?
+      add_journal_entry(@issue, User.current, "")
       @members = @issue.project.members
       Mailer.deliver_issue_approved(User.current, @issue,  @members)
       flash[:notice] = "Issue approved successfully."
@@ -91,10 +112,11 @@ class IssuesController < ApplicationController
   def decline
     @issue = Issue.find(params[:id])
     update_custom_field("Remarks", params[:remarks])
-    update_custom_field("Workflow", "6")
+    update_custom_field("Workflow", "17")
     update_custom_field("Approved By", User.current.name)
     update_custom_field("Approval Date", Date.today)
     if @issue.declined?
+      add_journal_entry(@issue, User.current, "")
       @members = @issue.project.members
       Mailer.deliver_issue_declined(User.current, @issue, @members)
       flash[:notice] = "Issue declined successfully."
@@ -105,10 +127,27 @@ class IssuesController < ApplicationController
   end
 
   def index
+    @project = Project.find(params[:project_id])
+    pmo = Role.find_by(name: "PMO")
+    project_manager = Role.find_by(name: "Project Manager")
+    program_manager = Role.find_by(name: "Program Manager")
+
+    # Fetch all user_ids of members for the project
+    user_ids = Member.where(project_id: @project.id).pluck(:user_id)
+
+    # Check if any of the required roles are missing members
+    if [project_manager, program_manager].any? do |role|
+      Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: role.id }).empty?
+    end
+      flash[:error] = "Please add a member for Program Manager, Project Manager roles."
+      return redirect_to "/projects/#{@project.identifier}/settings/members"
+    end
     use_session = !request.format.csv?
     retrieve_default_query(use_session)
     retrieve_query(IssueQuery, use_session)
-
+    master_project = Project.find_by(name: "Master Project")
+    # Now find the document associated with this project
+    @document = Document.find_by(project_id: master_project.id, title: "Workflow Document")
     if @query.valid?
       respond_to do |format|
         format.html do
@@ -550,6 +589,26 @@ class IssuesController < ApplicationController
 
   private
 
+  def add_journal_entry(issue, user, notes = nil)
+    issue.init_journal(user, notes)
+  
+    # Assuming you want to log custom field changes
+    issue.custom_field_values.each do |cf|
+      if cf.value_was != cf.value
+        issue.current_journal.details << JournalDetail.new(
+          :property  => 'cf',
+          :prop_key  => cf.custom_field_id,
+          :old_value => cf.value_was,  # Get the old value
+          :value     => cf.value       # Get the new value
+        )
+      end
+    end
+  
+    # Save the journal (doesn't require saving the issue)
+    issue.current_journal.save
+  end
+    
+  
   def query_error(exception)
     session.delete(:issue_query)
     super

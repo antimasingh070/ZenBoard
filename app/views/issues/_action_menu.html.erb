@@ -25,48 +25,51 @@
     workflow_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
     workflow_custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: workflow_custom_field.id) %>
 
-    <% if tracker.id == 2 && approval_custom_value && (approval_custom_value.value == "1") && @issue.author_id != current_user_id && !User.current.admin? %>
-      <% if (matched_roles.include?(current_user_id) || @issue.assigned_to_id == User.current.id) %>
-        <% if workflow_custom_value.nil? || @issue.declined? %>
-          <%= link_to "Approve", "#", class: "icon icon-unlock", id: "approveLink" %>
-          <%= link_to "Send Back", "#", class: "icon icon-move-top", id: "sendBackLink" %>
-        <% elsif @issue.approved? %>
-          <%= link_to "Decline", "#", class: "icon icon-lock", id: "declineLink" %>
-          <%= link_to l(:button_edit), edit_issue_path(@issue),
-                  :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
-                  :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
-          <%= link_to l(:button_log_time), new_issue_time_entry_path(@issue),
-                      :class => 'icon icon-time-add' if User.current.allowed_to?(:log_time, @project) %>
-          <%= actions_dropdown do %>
-            <%= watcher_link(@issue, User.current) %>
-            <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
-                        :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
-              <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
-              <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
-                          :data => {:confirm => issues_destroy_confirmation_message(@issue)},
-                          :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
-          <% end %>
-        <% end %>
-      <% else %>
-      <% end %>
-    <% else %>
+    <% if @issue.tracker_id == 2 && approval_custom_value && (approval_custom_value.value == "1") && @issue.author_id == current_user_id || User.current.admin? %>
     <%= link_to "Approve", "#", class: "icon icon-unlock", id: "approveLink" %>
-          <%= link_to "Send Back", "#", class: "icon icon-move-top", id: "sendBackLink" %>
-      <%= link_to l(:button_edit), edit_issue_path(@issue),
+        <%= link_to "Decline", "#", class: "icon icon-unlock", id: "declineLink" %>
+        <%= link_to "Send Back", "#", class: "icon icon-move-top", id: "sendBackLink" %>
+       <%= link_to l(:button_edit), edit_issue_path(@issue),
                   :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
                   :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
+        <%= link_to l(:button_log_time), new_issue_time_entry_path(@issue),
+                    :class => 'icon icon-time-add' if User.current.allowed_to?(:log_time, @project) %>
+        <%= actions_dropdown do %>
+          <%= watcher_link(@issue, User.current) %>
+          <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
+                      :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
+            <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+            <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
+                        :data => {:confirm => issues_destroy_confirmation_message(@issue)},
+                        :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
+        <% end %>
+    <% elsif @issue.tracker_id == 2 && approval_custom_value && (approval_custom_value.value == "1") && (matched_roles.include?(current_user_id) || @issue.assigned_to_id == User.current.id) %>
+      <% if !@issue.approved?  || !@issue.declined? %>
+        <%= link_to "Approve", "#", class: "icon icon-unlock", id: "approveLink" %>
+        <%= link_to "Decline", "#", class: "icon icon-unlock", id: "declineLink" %>
+        <%= link_to "Send Back", "#", class: "icon icon-move-top", id: "sendBackLink" %>
+      <% else %>
+        <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+      <% end %>
+    <% elsif @issue.tracker_id == 2  %>
+      <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+    <% else %>
+      <%= link_to l(:button_edit), edit_issue_path(@issue),
+                :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
+                :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
       <%= link_to l(:button_log_time), new_issue_time_entry_path(@issue),
                   :class => 'icon icon-time-add' if User.current.allowed_to?(:log_time, @project) %>
-      <%= watcher_link(@issue, User.current) %>
-      <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
-                  :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
       <%= actions_dropdown do %>
-        <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
-        <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
-                    :data => {:confirm => issues_destroy_confirmation_message(@issue)},
-                    :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
+        <%= watcher_link(@issue, User.current) %>
+        <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
+                    :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
+          <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+          <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
+                      :data => {:confirm => issues_destroy_confirmation_message(@issue)},
+                      :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
       <% end %>
     <% end %>
+
   </div>
 
 
@@ -159,8 +162,8 @@
       cursor: pointer;
     }
     #remarks {
-      width: 100%;
-      height: 80px; /* Adjust the height as needed */
+      width: 100px;
+      height: 20px; /* Adjust the height as needed */
     }
 
     /* Form Styles */
@@ -179,10 +182,11 @@
     #sendBackForm textarea,
     #declineForm textarea,
     #approveForm textarea {
-      margin-bottom: 12px;
-      padding: 8px;
+      margin-bottom: 6px;
+      padding: 6px;
       border: none;
       border-radius: 4px;
+      resize: none; 
     }
 
     #sendBackForm button, #declineForm button, #approveForm button {

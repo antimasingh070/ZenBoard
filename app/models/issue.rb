@@ -225,26 +225,27 @@ class Issue < ActiveRecord::Base
   end
 
   def send_back?
+    begin
     self.assigned_to_id == self.author_id
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
-    custom_value&.value == "36"
-  rescue NoMethodError, ActiveRecord::RecordNotFound
-    false
+    custom_value&.value == "18"
+    rescue => e
+    end
   end
 
   def approved?
     custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
-    custom_value&.value == "35"
+    custom_value&.value == "16"
   rescue NoMethodError, ActiveRecord::RecordNotFound
     false
   end
   
   def declined?
-    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Action")
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
-    custom_value&.value == "35"
+    custom_value&.value == "17"
   rescue NoMethodError, ActiveRecord::RecordNotFound
     false
   end
@@ -2291,7 +2292,12 @@ class Issue < ActiveRecord::Base
   end
 
   def send_notification
-    if notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2
+    approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
+    approval_required_custom = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: approval_required_custom_field.id)
+    if notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2 && approval_required_custom.value == 1
+      Mailer.deliver_issue_pending_approval(self)
+      Mailer.deliver_issue_add(self)
+    elsif notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2
       Mailer.deliver_issue_add(self)
     end
   end

@@ -368,16 +368,25 @@ button:hover {
       </div>
       
       <div class="filter-group">
+      <label for="manager_filter">Project Manager:</label>
+      <select name="manager_filter" id="manager_filter">
+        <option value="">All</option>
+        <% @managers.each do |manager| %>
+          <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
+        <% end %>
+      </select>
+    </div>
+    
+    <div class="filter-group">
       <label for="status_filter">Status:</label>
       <select name="status_filter" id="status_filter">
         <option value="">All</option>
         <% @statuses.each do |status| %>
-          <% selected = (params[:status_filter] == status_id(status) || (status == 'Active' && params[:status_filter].blank?)) ? 'selected' : '' %>
-          <option value="<%= status_id(status) %>" <%= selected %>><%= status %></option>
+          <option value="<%= status_id(status) %>" <%= 'selected' if params[:status_filter].to_s == status_id(status).to_s %>><%= status %></option>
         <% end %>
       </select>
-      </div> 
-      <div class="filter-group">
+    </div>
+    <div class="filter-group">
         <label for="days_input">Project Variance:</label>
         <input type="number" name="days" id="days_input" value="<%= (params[:days].present? ? params[:days].to_i : 30) %>">
         
@@ -426,7 +435,7 @@ button:hover {
 
 
 
-  <img class="print-only-image" src="/images/../images/hdbfs.png" width="200" height="50">
+  <img class="print-only-image" src="/images/../images/neo.png" width="200" height="50">
   <h2>Average Delay: <%= @average_delay.nil? || @average_delay < 0 ? 'N/A' : "#{@average_delay} days" %></h2>
 
 <table>
@@ -449,7 +458,8 @@ button:hover {
       <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Go Live date <span class="sort-icon"></span></th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Revised End Date <span class="sort-icon"></span></th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Document Uploaded(Uploaded/Mandate)</th>
+      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Task View(Delayed|Open|Toal)</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
@@ -525,6 +535,7 @@ button:hover {
   var endDateTo = document.getElementById('end_date_to');
   var showSubprojectsTrue = document.getElementById('show_subprojects_true');
   var showSubprojectsFalse = document.getElementById('show_subprojects_false');
+  var status = document.getElementById('status_filter');
   var formGroup = document.getElementById('form-group');
   
   if (daysInput) daysInput.value = '30';
@@ -532,6 +543,7 @@ button:hover {
   if (startDateTo) startDateTo.value = '';
   if (endDateFrom) endDateFrom.value = '';
   if (endDateTo) endDateTo.value = '';
+  if (status) status.value = '';
 
   if (showSubprojectsTrue) showSubprojectsTrue.checked = false;
   if (showSubprojectsFalse) showSubprojectsFalse.checked = true;

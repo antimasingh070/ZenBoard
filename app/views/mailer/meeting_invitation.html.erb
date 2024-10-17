@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+  </head>
+  <body>
+    <p>Dear <%= @user.name %>,</p>
+    <p>You are invited to a meeting titled "<strong><%= @meeting.title %></strong>" scheduled at <strong><%= @meeting.scheduled_at %></strong> for Business Requirement <strong><%= @business_requirement.requirement_case %></strong></p>
+    <p>Note: <%= @meeting.note %></p>
+    <p>Please attend the meeting on time.</p>
+    <p>Please log in to Trackmine to view and manage the issue details.</p>
+
+    <p>Best Regards</p>
+  </body>
+</html>

@@ -603,16 +603,26 @@ module ApplicationHelper
                        :class => 'autocomplete',
                        :data => {:automcomplete_url => url},
                        :autocomplete => 'off')
+  
+    # Links for "All Projects", "IT Dashboard", and "Non-IT Dashboard"
     all = link_to(l(:label_project_all), projects_path(:jump => current_menu_item),
                   :class => (@project.nil? && controller.class.main_menu ? 'selected' : nil))
+    it_dashboard = link_to('Jump to IT Dashboard', it_project_dashboard_path, class: 'dashboard-link')
+    non_it_dashboard = link_to('Jump to Non-IT Dashboard', non_it_project_dashboard_path, class: 'dashboard-link')
+    +
+    content_tag('div', it_dashboard, class: 'drdn-items it-dashboard selection') +
+    content_tag('div', non_it_dashboard, class: 'drdn-items non-it-dashboard selection')
+    # Content for the dropdown
     content =
       content_tag('div',
-                  content_tag('div', q, :class => 'quick-search') +
-                    content_tag('div', render_projects_for_jump_box(projects, selected: @project),
-                                :class => 'drdn-items projects selection') +
-                    content_tag('div', all, :class => 'drdn-items all-projects selection'),
-                  :class => 'drdn-content')
-    content_tag('div', trigger + content, :id => "project-jump", :class => "drdn")
+      content_tag('div', q, :class => 'quick-search') +
+      content_tag('div', render_projects_for_jump_box(projects, selected: @project),
+                  :class => 'drdn-items projects selection') +
+                    content_tag('div', all, :class => 'drdn-items all-projects selection') +
+                    content_tag('div', it_dashboard, :class => 'drdn-items it-dashboard selection') +
+                    content_tag('div', non_it_dashboard, :class => 'drdn-items non-it-dashboard selection'),
+                    :class => 'drdn-content')
+                    content_tag('div', trigger + content, :id => "project-jump", :class => "drdn")
   end
 
   def project_tree_options_for_select(projects, options = {})
@@ -766,7 +776,7 @@ module ApplicationHelper
 
   def page_header_title
     if @project.nil? || @project.new_record?
-      h(Setting.app_title)
+      "Trackmine"
     else
       b = []
       ancestors = (@project.root? ? [] : @project.ancestors.visible.to_a)

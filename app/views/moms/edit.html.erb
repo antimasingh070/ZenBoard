@@ -1,0 +1,4 @@
+<%= labelled_form_for [@business_requirement, @meeting, @mom], :html => {:multipart => true} do |f| %>
+    <%= render :partial => 'form', :locals => { :f => f } %>
+<% end %>
+  

@@ -20,6 +20,13 @@
     <%= link_to_if_authorized l(:label_settings),
               {:controller => 'projects', :action => 'settings', :id => @project, :tab => 'issues'},
               :class => 'icon icon-settings' if User.current.allowed_to?(:edit_project, @project) %>
+    
+      <!-- New link for downloading the sample workflow template -->
+      <%= link_to l(:label_download_sample_document), 
+      download_sameple_workflow_template_issue_path(@document), 
+            class: 'icon icon-download' %>
+
+
   <% end %>
 </div>
 

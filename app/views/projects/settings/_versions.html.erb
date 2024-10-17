@@ -1,4 +1,4 @@
-<% if @versions.any? %>
+<% if @versions&.any? %>
   <div class="contextual">
     <%= link_to l(:label_close_versions), close_completed_project_versions_path(@project), :class => 'icon icon-locked', :method => :put %>
   </div>

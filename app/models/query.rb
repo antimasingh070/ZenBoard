@@ -689,6 +689,7 @@ class Query < ActiveRecord::Base
       [l(:project_status_active), "#{Project::STATUS_ACTIVE}"],
       [l(:project_status_closed), "#{Project::STATUS_CLOSED}"],
       [l(:project_status_hold), "#{Project::STATUS_HOLD}"],
+      [l(:project_status_go_live), "#{Project::STATUS_GO_LIVE}"],
       [l(:project_status_cancelled), "#{Project::STATUS_CANCELLED}"]
     ]
   end

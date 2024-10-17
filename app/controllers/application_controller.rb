@@ -774,6 +774,10 @@ class ApplicationController < ActionController::Base
     render_api_head :no_content
   end
 
+  def render_api_go_live
+    render_api_head :no_content
+  end
+
   def render_api_cancelled
     render_api_head :no_content
   end

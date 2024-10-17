@@ -27,14 +27,14 @@ class ProjectsController < ApplicationController
   before_action :authorize,
                 :except => [:index, :autocomplete, :list, :new, :create, :copy,
                             :archive, :unarchive,
-                            :destroy, :bulk_destroy, :hold, :cancelled, :check_member, :update_revised_end_date, :activty_log]
+                            :destroy, :bulk_destroy, :go_live, :hold, :cancelled, :check_member, :update_revised_end_date, :activty_log]
   before_action :authorize_global, :only => [:new, :create]
   before_action :require_admin, :only => [:copy, :archive, :unarchive, :bulk_destroy]
   accept_atom_auth :index
-  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :hold, :cancelled, :check_member, :activty_log, :update_revised_end_date
+  accept_api_auth :index, :show, :create, :update, :destroy, :archive, :unarchive, :close, :reopen, :go_live, :hold, :cancelled, :check_member, :activty_log, :update_revised_end_date
   require_sudo_mode :destroy, :bulk_destroy
 
-  after_action :create_template_record
+  after_action :create_template_record, only: [:create]
   helper :custom_fields
   helper :issues
   helper :queries
@@ -63,11 +63,26 @@ class ProjectsController < ApplicationController
 
   def update_revised_end_date
     @project = Project.find(params[:id])
+  
+    if params[:reason].blank?
+      flash[:error] = "Reason can't be blank."
+      return
+    end
+  
     new_revised_end_date = params[:revised_end_date]
     custom_field = CustomField.find_by(name: "Revised End Date")
-    custom_value = CustomValue.find_or_create_by(custom_field: custom_field, customized: @project, value: new_revised_end_date.to_date, created_at: Date.current)
-  end
+    if new_revised_end_date.present?
+      custom_value = CustomValue.find_or_create_by(custom_field: custom_field, customized: @project, value: new_revised_end_date.to_date, author_id: User.current.id)
+      custom_value.reason = params[:reason]
 
+      if custom_value.save
+        flash[:notice] = "Revised End Date updated successfully!"
+      else
+        flash[:error] = "Failed to update Revised End Date: #{custom_value.errors.full_messages.join(', ')}"
+      end
+    end
+  end
+  
   # Lists visible projects
   def index
     # try to redirect to the requested menu item
@@ -149,16 +164,29 @@ class ProjectsController < ApplicationController
       custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
       custom_value.update(value: (User.current.id).to_s)
     end
+    pmo = Role.find_by(name: "PMO")
+    if Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: pmo.id }).empty?
+    # Assuming user_id for PMO is known, you can replace this with the actual user_id
+    pmo_user = User.find_by(login: 'pmo_user_login') # Replace with actual PMO user login or ID
+    if pmo_user
+      member = Member.create!(project_id: @project.id, user_id: pmo_user.id)
+      MemberRole.create!(member_id: member.id, role_id: pmo.id)
+
+      flash[:notice] = "PMO member has been automatically created for this project."
+    else
+      flash[:error] = "PMO user not found. Please add a member for the PMO role manually."
+    end
+  end
     # @project.author_id = User.current.id
-    @parent = Project.where(id: @project.parent_id).first
-    if @project.id.nil? && !@project.parent_id.nil? && !@parent.nil?
+    @parent = Project.where(id: @project&.parent_id)&.first
+    if @project&.id&.nil? && !@project&.parent_id&.nil? && !@parent&.nil?
       new_identifier = "#{Project.where(parent_id: @project.parent_id).count + 1}"
       @project.identifier = "#{@parent.identifier}_#{new_identifier}"
     elsif @project.id.nil? && !@project.parent_id.nil?
       new_identifier = "#{@project.parent_id}_#{Project.where(parent_id: @project.parent_id).count + 1}"
-      @project.identifier = "hdbfs_#{new_identifier}"
+      @project.identifier = "neo_#{new_identifier}"
     else
-      @project.identifier = "hdbfs_#{Project.where(parent_id: @project.parent_id).last.id + 1
+      @project.identifier = "neo_#{Project.where(parent_id: @project.parent_id).last.id + 1
       }"
     end
     if @project.save
@@ -168,7 +196,7 @@ class ProjectsController < ApplicationController
       end
       respond_to do |format|
         format.html do
-          flash[:notice] = "Please add a member for Program Manager, Project Manager, and PMO roles."
+          flash[:error] = "Please add a member for Program Manager, Project Manager, and PMO roles."
           if params[:continue]
             attrs = {:parent_id => @project.parent_id}.reject {|k,v| v.nil?}
             redirect_to new_project_path(attrs)
@@ -223,11 +251,27 @@ class ProjectsController < ApplicationController
 
   # Show @project
   def show
+    @project = Project.find(params[:id])
+    pmo = Role.find_by(name: "PMO")
+    project_manager = Role.find_by(name: "Project Manager")
+    program_manager = Role.find_by(name: "Program Manager")
+
+    # Fetch all user_ids of members for the project
+    user_ids = Member.where(project_id: @project.id).pluck(:user_id)
+
+    # Check if any of the required roles are missing members
+    if [project_manager, program_manager].any? do |role|
+      Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: role.id }).empty?
+    end
+      flash[:error] = "Please add a member for Program Manager, Project Manager roles."
+      return redirect_to "/projects/#{@project.identifier}/settings/members"
+    end
+    
     # try to redirect to the requested menu item
     if params[:jump] && redirect_to_project_menu_item(@project, params[:jump])
       return
     end
-    @project = Project.find(params[:id])
+    
     @revised_end_date_history = @project.revised_end_date_history
     respond_to do |format|
       format.html do
@@ -254,6 +298,19 @@ class ProjectsController < ApplicationController
   end
 
   def settings
+    # pmo = Role.find_by(name: "PMO")
+    # project_manager = Role.find_by(name: "Project Manager")
+    # program_manager = Role.find_by(name: "Program Manager")
+
+    # # Fetch all user_ids of members for the project
+    # user_ids = Member.where(project_id: @project.id).pluck(:user_id)
+
+    # # Check if any of the required roles are missing members
+    # if [project_manager, program_manager].any? do |role|
+    #   Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: role.id }).empty?
+    # end
+    #   flash[:error] = "Please add members for Program Manager, Project Manager roles."
+    # end
     @issue_custom_fields = IssueCustomField.sorted.to_a
     @issue_category ||= IssueCategory.new
     @member ||= @project.members.new
@@ -276,20 +333,6 @@ class ProjectsController < ApplicationController
     # @project.author_id = User.current.id
     parent_id = @project.parent_id
     project_id = @project.id
-    # if project_id.nil? && !parent_id.nil? && (parent_project = Project.find_by(id: parent_id))
-    #   new_identifier = "#{parent_project.identifier}_#{Project.where(parent_id: parent_id).count + 1}"
-    # elsif project_id.nil? && !parent_id.nil?
-    #   new_identifier = "hdbfs_#{parent_id}_#{Project.where(parent_id: parent_id).count + 1}"
-    # elsif !project_id.nil? && !parent_id.nil?
-    #   count = Project.where(parent_id: parent_id).where('id <= ?', project_id).count
-    #   new_identifier = "#{Project.find_by(id: parent_id).identifier}_#{count}"
-    # elsif !project_id.nil?
-    #   new_identifier = "hdbfs_#{project_id}"
-    # else
-    #   new_identifier = "hdbfs_#{Project.where(parent_id: parent_id).last.id + 1}"
-    # end
-    # @project.update_columns(identifier: "#{new_identifier}")
-
     if @project.save
       updated_fields = {}
       @project.previous_changes.each do |key, values|
@@ -334,7 +377,8 @@ class ProjectsController < ApplicationController
     else
       respond_to do |format|
         format.html do
-          settings
+          # flash.now[:error] = @project.errors.full_messages.join(", ")
+          # settings
           render :action => 'settings'
         end
         format.api {render_validation_errors(@project)}
@@ -385,11 +429,19 @@ class ProjectsController < ApplicationController
   end
 
   def close
+    actual_end_date_field = CustomField.find_by(name: "Actual End Date")
+    actual_end_date = @project.custom_value_for(actual_end_date_field).try(:value)
+
+    if actual_end_date.blank?
+      flash[:error] = "Actual End Date must be filled in before closing the project."
+      redirect_to project_path(@project)
+      return
+    end
     old_status = @project.status
   
     # Check if there are any issues in the project that are not closed
-    open_issues = Issue.where(project_id: @project.id).where.not(status_id: 5) # Assuming status_id: 5 means 'closed'
-  
+    open_issues = Issue.where(project_id: @project.id).where.not(status_id: [5,7]) # Assuming status_id: 5 means 'closed'
+
     if open_issues.exists?
       flash[:error] = "Project cannot be closed. Please close the pending activities"
       redirect_to project_path(@project) and return
@@ -423,6 +475,28 @@ class ProjectsController < ApplicationController
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_hold }
+    end
+  end
+
+  def go_live
+    actual_project_go_live_date = @project.custom_value_for(CustomField.find_by(name: "Actual Project Go Live Date")).try(:value)
+    ccb_id = @project.custom_value_for(CustomField.find_by(name: "CCB ID")).try(:value)
+
+    if actual_project_go_live_date.blank? || ccb_id.blank?
+      missing_fields = []
+      missing_fields << "Actual Project Go Live Date" if actual_project_go_live_date.blank?
+      missing_fields << "CCB ID" if ccb_id.blank?
+      flash[:error] = "#{missing_fields.join(' and ')} must be filled in before closing the project."
+      redirect_to project_path(@project)
+      return
+    end
+
+    @old_status = @project.status
+    @project.go_live
+    Mailer.deliver_project_status(User.current, @old_status, @project)
+    respond_to do |format|
+      format.html { redirect_to project_path(@project) }
+      format.api { render_api_go_live }
     end
   end
 

@@ -266,7 +266,12 @@ class Attachment < ActiveRecord::Base
 
   def visible?(user=User.current)
     if container_id
-      container && container.attachments_visible?(user)
+      attachment = Attachment.find_by(container_id: container_id)
+      if attachment.container_type == "Document"
+        container && container.attachments_visible?(user)
+      else
+        container
+      end
     else
       author == user
     end
@@ -274,7 +279,12 @@ class Attachment < ActiveRecord::Base
 
   def editable?(user=User.current)
     if container_id
-      container && container.attachments_editable?(user)
+      attachment = Attachment.find_by(container_id: container_id)
+      if attachment.container_type == "Document"
+        container && container.attachments_editable?(user)
+      else
+        container
+      end
     else
       author == user
     end
@@ -282,7 +292,12 @@ class Attachment < ActiveRecord::Base
 
   def deletable?(user=User.current)
     if container_id
-      container && container.attachments_deletable?(user)
+      attachment = Attachment.find_by(container_id: container_id)
+      if attachment.container_type == "Document"
+        container && container.attachments_deletable?(user)
+      else
+        container
+      end
     else
       author == user
     end

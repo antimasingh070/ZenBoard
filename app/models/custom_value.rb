@@ -22,7 +22,7 @@ class CustomValue < ActiveRecord::Base
   belongs_to :customized, :polymorphic => true
   before_update :log_custom_field_changes
   after_save :custom_field_after_save_custom_value
-
+  validates :reason, length: { maximum: 100, tokenizer: ->(str) { str.scan(/\w+/) }, too_long: "is limited to %{count} words" }
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity

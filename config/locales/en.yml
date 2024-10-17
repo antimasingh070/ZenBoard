@@ -611,6 +611,11 @@ en:
   label_project: Project
   label_project_new: New project
   label_project_plural: Projects
+  label_business_requirement_plural: Business Requirements
+  label_meeting_new: New Meeting
+  label_mom_new: New MOM
+  label_business_requirement_new: New Business Requirement
+  label_business_requirement_edit: Edit Business Requirement
   label_x_projects:
     zero:  no projects
     one:   1 project
@@ -642,7 +647,9 @@ en:
   label_member: Member
   label_member_new: New member
   label_member_plural: Members
+  label_attendee_plural: Attendee
   label_tracker: Tracker
+  label_download_sample_document: Download Sample Workflow
   label_tracker_plural: Trackers
   label_tracker_all: All trackers
   label_tracker_new: New tracker
@@ -721,6 +728,7 @@ en:
   label_news_comment_added: Comment added to a news
   label_settings: Settings
   label_overview: Overview
+  label_business_requirement: Business Requirement
   label_version: Version
   label_version_new: New version
   label_version_plural: Versions
@@ -1315,6 +1323,7 @@ en:
   text_account_destroy_confirmation: "Are you sure you want to proceed?\nYour account will be permanently deleted, with no way to reactivate it."
   text_session_expiration_settings: "Warning: changing these settings may expire the current sessions including yours."
   text_project_closed: This project is closed and read-only.
+  text_project_go_live: This project on live.
   text_turning_multiple_off: "If you disable multiple values, multiple values will be removed in order to preserve only one value per item."
   text_select_apply_tracker: "Select tracker"
   text_select_apply_issue_status: "Select issue status"

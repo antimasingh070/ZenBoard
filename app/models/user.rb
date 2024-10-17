@@ -92,7 +92,12 @@ class User < Principal
   has_one :email_address, lambda {where :is_default => true}, :autosave => true
   has_many :email_addresses, :dependent => :delete_all
   belongs_to :auth_source
-
+  has_many :br_stakeholders
+  has_many :business_requirements, through: :br_stakeholders
+  has_many :meeting_attendees
+  has_many :meetings, through: :meeting_attendees
+  belongs_to :role
+  has_many :meetings_as_attendee, through: :meeting_attendees, source: :meeting
   scope :logged, lambda {where("#{User.table_name}.status <> #{STATUS_ANONYMOUS}")}
   scope :status, lambda {|arg| where(arg.blank? ? nil : {:status => arg.to_i})}
 
@@ -971,7 +976,7 @@ class User < Principal
     user= User.first
 
   #   users.each do |user|
-      Mailer.deliver_send_issue_pdf(user, '/Users/user/ProjectHub/app/issues.pdf')
+      Mailer.deliver_send_issue_pdf(user, '/Users/user/Trackmine/app/issues.pdf')
   #   end
   end
 

@@ -17,7 +17,7 @@ end %>
     custom_value&.value # No need for further processing, return the value directly
 end %>
 
-<%= "A new project has been created in ProjectHUB:" %>
+<%= "A new project has been created in Trackmine:" %>
 <%= "Project Name: #{@project.name}" %>
 <%= "Description:  #{@project.description}" %>
 <%= "Business Need: #{custom_function('Business Need')}" %>
@@ -28,7 +28,7 @@ end %>
 <%= "Portfolio Category: #{custom_function('Portfolio Category')}" %>
 <%= "Priority Level: #{custom_function('Priority Level')}" %>
 
-Please log in to ProjectHUB to view and manage the project details.
-ProjectHUB link: <%= "https://projecthub.hdbfs.com/#{@project.id}" %>
+Please log in to Trackmine to view and manage the project details.
+Trackmine link: <%= "https://Trackmine.neo.com/#{@project.id}" %>
 
 <%= "Best Regards" %>

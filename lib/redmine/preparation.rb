@@ -162,11 +162,14 @@ module Redmine
       end
 
       MenuManager.map :top_menu do |menu|
-        menu.push :home, :home_path
         menu.push :my_page, {:controller => 'my', :action => 'page'},
                   :if => Proc.new {User.current.logged?}
         menu.push :projects, {:controller => 'projects', :action => 'index'},
                   :caption => :label_project_plural
+        menu.push :business_requirements, {:controller => 'business_requirements', :action => 'index'},
+                  :caption => :label_br_plural, :if => Proc.new {User.current.admin?}
+        menu.push :activity_logs, {:controller => 'activity_logs', :action => 'index'},
+                  :caption => "Activity Logs", :if => Proc.new {User.current.admin?}
         menu.push :administration, {:controller => 'admin', :action => 'index'},
                   :if => Proc.new {User.current.admin?}, :last => true
         menu.push :help, Info.help_url, :html => {:target => '_blank', :rel => 'noopener'}, :last => true

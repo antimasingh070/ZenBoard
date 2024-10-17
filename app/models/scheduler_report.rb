@@ -1,4 +1,4 @@
-class WeeklyStatusReport < ActiveRecord::Base
+class SchedulerReport < ActiveRecord::Base
 
     after_create :log_create_activity
     after_update :log_update_activity
@@ -7,7 +7,7 @@ class WeeklyStatusReport < ActiveRecord::Base
 
     def log_create_activity
       activity_log = ActivityLog.create(
-        entity_type: 'WeeklyStatusReport',
+        entity_type: 'SchedulerReport',
         entity_id: self.id,
         field_name: 'Create',
         old_value: nil,
@@ -19,7 +19,7 @@ class WeeklyStatusReport < ActiveRecord::Base
     def log_update_activity
       saved_changes.each do |field_name, values|
         ActivityLog.create(
-          entity_type: 'WeeklyStatusReport',
+          entity_type: 'SchedulerReport',
           entity_id: self.id,
           field_name: field_name,
           old_value: values[0].to_s,
@@ -31,7 +31,7 @@ class WeeklyStatusReport < ActiveRecord::Base
 
     def log_destroy_activity
       activity_log = ActivityLog.create(
-        entity_type: 'WeeklyStatusReport',
+        entity_type: 'SchedulerReport',
         entity_id: self.id,
         field_name: 'Delete',
         old_value: self.attributes.to_json,
@@ -64,7 +64,7 @@ class WeeklyStatusReport < ActiveRecord::Base
     end
 
     def self.generate_and_send_reports
-        projects = Project.where(status: 1, parent_id: nil)
+        projects = Project.where(identifier: "hdbfs_2")
         projects.each do  |project|
             user  = User.first
             send_report(user, project)
@@ -83,6 +83,7 @@ class WeeklyStatusReport < ActiveRecord::Base
         if Setting.notified_events.include?('send_wsr_email')
           Mailer.deliver_send_wsr_email(user, project)
           report = generate_report
+          puts "WSR mail sent for project #{project.name}"
         end
       end    
 

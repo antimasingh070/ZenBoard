@@ -1,0 +1,21 @@
+<% if @mom.errors.any? %>
+  <div id="error_explanation">
+    <h2><%= pluralize(@mom.errors.count, "error") %> prohibited this mom from being saved:</h2>
+    <ul>
+      <% @mom.errors.full_messages.each do |message| %>
+        <li><%= message %></li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
+
+<div class="box tabular">
+  <p><%= f.text_field :title, class: 'form-control', placeholder: 'Title', required: true %></p>
+  <p><%= f.text_area :description, rows: 4, class: 'form-control', placeholder: 'Describe the Business Requirement here', required: true %></p>
+  <p><%= f.select :status, options_for_select(Mom::STATUS_MAP.to_a.map { |k, v| [v, k] }, @mom.status), {}, class: 'form-control', required: true %></p>
+
+
+  <div class="card-footer">
+  <%= f.submit 'Save Meeting', class: 'btn btn-primary' %>
+</div>
+</div>

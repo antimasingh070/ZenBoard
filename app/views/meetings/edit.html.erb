@@ -1,0 +1,5 @@
+<div class="d-flex justify-content-end"><button type="button" class="btn btn-secondary" onclick="location.href='<%= business_requirement_meeting_path(@business_requirement, @meeting) %>'">Back</button></div><br>
+<%= labelled_form_for [@business_requirement, @meeting], :html => {:multipart => true} do |f| %>
+    <%= render :partial => 'form', :locals => { :f => f } %>
+<% end %>
+    

@@ -28,16 +28,26 @@ class WelcomeController < ApplicationController
   # STATUS_HOLD = 11
   # STATUS_CANCELLED = 12
 
+  
   def project_score_card
-    # @projects = Project.where(status: 'closed')
     # Determine the start of the current financial year (April to March)
     if Date.today.month >= 4
       financial_year_start = Date.new(Date.today.year, 4, 1)
     else
       financial_year_start = Date.new(Date.today.year - 1, 4, 1)
     end
+    role = Role.find_by(name: params[:role])
+    firstname, lastname = params[:member_name].to_s.split(' ', 2)
+    user = User.find_by(firstname: firstname, lastname: lastname)
 
-    @projects = Project.all
+    @projects = Project.where(status: 5)
+    @projects = @projects.joins(members: :roles).where(roles: { id: role.id }) if role
+    @projects = @projects.joins(:members).where(members: { user_id: user.id }) if user
+    @projects = @projects.joins(members: :roles).where(roles: { id: role.id }, members: { user_id: user.id }) if role && user
+
+    custom_field = CustomField.find_by(name: "Is IT Project?")
+    customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "1").pluck(:customized_id)
+    @projects = @projects.where(id: customized_ids)
     @average_delay = calculate_average_delay(@projects)
     @top_delayed_projects = get_top_delayed_projects(@projects)
     @total_last_year = calculate_delay_percentage(1.year.ago.change(month: 4, day: 1).to_date, Date.new(Date.today.year, 3, 1))
@@ -57,12 +67,12 @@ class WelcomeController < ApplicationController
     beginning_of_year = financial_year_start.beginning_of_year
     case period
     when 'last_year'
-      redirect_url = "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_3&op%5Bcf_3%5D=%3E%3C&v%5Bcf_3%5D%5B%5D=#{1.year.ago.change(month: 4, day: 1).to_date}&v%5Bcf_3%5D%5B%5D=#{Date.new(Date.today.year, 3, 1).to_date}&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
-      "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_3&op%5Bcf_3%5D=%3E%3C&v%5Bcf_3%5D%5B%5D=2023-04-01&v%5Bcf_3%5D%5B%5D=2024-03-01&f%5B%5D=status&op%5Bstatus%5D=%3D&v%5Bstatus%5D%5B%5D=5&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
+      redirect_url = "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_36&op%5Bcf_36%5D=%3E%3C&v%5Bcf_36%5D%5B%5D=#{1.year.ago.change(month: 4, day: 1).to_date}&v%5Bcf_36%5D%5B%5D=#{Date.new(Date.today.year, 3, 1).to_date}&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
+      "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_36&op%5Bcf_36%5D=%3E%3C&v%5Bcf_36%5D%5B%5D=2023-04-01&v%5Bcf_36%5D%5B%5D=2024-03-01&f%5B%5D=status&op%5Bstatus%5D=%3D&v%5Bstatus%5D%5B%5D=5&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
     when 'year_to_date'
-      redirect_url = "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_3&op%5Bcf_3%5D=%3E%3C&v%5Bcf_3%5D%5B%5D=#{financial_year_start}&v%5Bcf_3%5D%5B%5D=#{Date.today}&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
+      redirect_url = "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_36&op%5Bcf_36%5D=%3E%3C&v%5Bcf_36%5D%5B%5D=#{financial_year_start}&v%5Bcf_36%5D%5B%5D=#{Date.today}&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
     when 'this_month'
-      redirect_url = "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_3&op%5Bcf_3%5D=%3E%3C&v%5Bcf_3%5D%5B%5D=#{Date.today.beginning_of_month.to_date}&v%5Bcf_3%5D%5B%5D=#{Date.today}&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
+      redirect_url = "http://localhost:3000/projects?utf8=%E2%9C%93&set_filter=1&sort=&f%5B%5D=cf_36&op%5Bcf_36%5D=%3E%3C&v%5Bcf_36%5D%5B%5D=#{Date.today.beginning_of_month.to_date}&v%5Bcf_36%5D%5B%5D=#{Date.today}&f%5B%5D=&display_type=board&c%5B%5D=name&c%5B%5D=identifier&c%5B%5D=short_description&group_by="
     else
       redirect_url = nil
     end
@@ -79,18 +89,20 @@ class WelcomeController < ApplicationController
     valid_projects_count = 0
     
     projects.each do |project|
-      scheduled_end_date = fetch_custom_field_date(project, 'Scheduled End Date')
-      actual_end_date = fetch_custom_field_date(project, 'Actual End Date')
+      planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
+
+      cf = CustomField.find_by(name: "Actual End Date")
+      cv = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: cf.id)
+      actual_end_date = cv&.value&.to_date
       
-      next unless scheduled_end_date && actual_end_date
+      next unless planned_project_go_live_date && actual_end_date
       
-      delay = (actual_end_date - scheduled_end_date).to_i
+      delay = (actual_end_date - planned_project_go_live_date).to_i
       next if delay <= 0
       
       total_delay += delay
       valid_projects_count += 1
     end
-    
     return 0 if valid_projects_count.zero?
     total_delay / projects.count
   end
@@ -112,14 +124,17 @@ class WelcomeController < ApplicationController
       Date.new(Date.today.year, 5, 1)
     ]
     delayed_projects = projects.map do |project|
-      scheduled_end_date = fetch_custom_field_date(project, 'Scheduled End Date')
-      actual_end_date = fetch_custom_field_date(project, 'Actual End Date')
+      planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
+
+      cf = CustomField.find_by(name: "Actual End Date")
+      cv = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: cf.id)
+      actual_end_date = cv&.value&.to_date
       
-      next unless scheduled_end_date && actual_end_date
+      next unless planned_project_go_live_date && actual_end_date
       # delay = (actual_end_date - scheduled_end_date).to_i
 
       working_days = 0
-      current_date = scheduled_end_date
+      current_date = planned_project_go_live_date
 
       while current_date <= actual_end_date
 
@@ -135,21 +150,47 @@ class WelcomeController < ApplicationController
   end
 
   def calculate_delay_percentage(start_date, end_date)
-    total_projects = @projects.count
-    @delayed_projects = 0.0
+    holidays = [
+      Date.new(Date.today.year, 1, 26),
+      Date.new(Date.today.year, 8, 15),
+      Date.new(Date.today.year, 10, 2),
+      Date.new(Date.today.year, 12, 25),
+      Date.new(Date.today.year, 5, 1)
+    ]
+    @total_projects = 0.0
     @projects.select do |project|
-      scheduled_end_date = fetch_custom_field_date(project, 'Scheduled End Date')
-      actual_end_date = fetch_custom_field_date(project, 'Actual End Date')
-      
-      next unless scheduled_end_date && actual_end_date
-      next unless scheduled_end_date >= start_date && scheduled_end_date <= end_date
-      delay = (actual_end_date - scheduled_end_date).to_i
-      next unless delay > 0
-      @delayed_projects += 1
+       planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
+       next unless planned_project_go_live_date
+       next unless planned_project_go_live_date >= start_date && planned_project_go_live_date <= end_date
+       @total_projects += 1
     end
 
-    return 0 if total_projects.zero?
- 70 -  ((@delayed_projects / total_projects * 100).round(2) )
+    @delayed_projects = 0.0
+    @projects.select do |project|
+      planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
+
+      cf = CustomField.find_by(name: "Actual End Date")
+      cv = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: cf.id)
+      actual_end_date = cv&.value&.to_date
+      
+      next unless planned_project_go_live_date && actual_end_date
+      next unless planned_project_go_live_date >= start_date && planned_project_go_live_date <= end_date
+      # delay = (actual_end_date - planned_project_go_live_date).to_i
+      working_days = 0
+      current_date = planned_project_go_live_date
+      while current_date < actual_end_date
+        
+        unless current_date.sunday? | holidays.include?(current_date)
+          working_days += 1
+        end
+        current_date = current_date.next_day
+      end
+      next unless working_days > 0
+ 
+      @delayed_projects += 1
+    end
+    return 0 if @total_projects.zero?
+    100 -  ((@delayed_projects / @total_projects * 100).round(2) )
   end
 
   def date_value(project, field_name)
@@ -159,84 +200,109 @@ class WelcomeController < ApplicationController
   end
 
   def it_project_dashboard 
-
-    @project_status_text = {
-      Project::STATUS_ACTIVE => 'Active',
-      Project::STATUS_CLOSED => 'Closed',
-      Project::STATUS_ARCHIVED => 'Archived',
-      Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion',
-      Project::STATUS_HOLD => "Hold",
-      Project::STATUS_CANCELLED => "Cancelled"
-    }
-  
-    # Optimize the subproject filter
-
-    current_user_id = User.current.id
-    name_filter = Array(params[:name_filter]).reject(&:blank?)
-    if name_filter.any? && !name_filter.include?('all')
-      @projects = Project.where(name: name_filter)
-    else
-      @projects = Project.where(parent_id: nil)
-    end
-
-    if params[:show_subprojects] == 'true'
-      selected_project_ids = @projects.pluck(:id)
-      subprojects = Project.where(parent_id: selected_project_ids)
-      @projects = @projects.or(subprojects)
-    else
-      @projects = @projects.where(parent_id: nil)
-    end
+    cache_key = cache_key_for_dashboard
+    cached_data = REDIS.get(cache_key)
+    # if cached_data
+    #   @projects, @categories, @functions, @statuses, @managers, @names, @subprojects, @next_week_go_live_projects = Marshal.load(cached_data)
+    # else
+      @project_status_text = {
+        Project::STATUS_ACTIVE => 'Active',
+        Project::STATUS_CLOSED => 'Closed',
+        Project::STATUS_ARCHIVED => 'Archived',
+        Project::STATUS_SCHEDULED_FOR_DELETION => 'Scheduled for Deletion',
+        Project::STATUS_HOLD => "Hold",
+        Project::STATUS_CANCELLED => "Cancelled"
+      }
     
-    @projects = @projects.joins("LEFT JOIN custom_values ON custom_values.customized_id = projects.id AND custom_values.customized_type = 'Project'")
-    .joins("LEFT JOIN custom_fields ON custom_fields.id = custom_values.custom_field_id")
-    .where("custom_fields.name = ?", 'Planned Project Go Live Date')
-    .order("custom_values.value DESC")
-    custom_field = CustomField.find_by(name: "Is It Project")
-    customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "1").pluck(:customized_id)
-    @projects = @projects.where.not(name: "Master Project").where(id: customized_ids)
+      # Optimize the subproject filter
 
-    @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
-    @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
-    @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
+      current_user_id = User.current.id
+      name_filter = Array(params[:name_filter]).reject(&:blank?)
+      if name_filter.any? && !name_filter.include?('all')
+        @projects = Project.where(name: name_filter)
+      else
+        @projects = Project.where(parent_id: nil)
+      end
 
-    @projects = @projects.select { |project| member_names(project, 'Project Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
+      if params[:show_subprojects] == 'true'
+        selected_project_ids = @projects.pluck(:id)
+        subprojects = Project.where(parent_id: selected_project_ids)
+        @projects = @projects.or(subprojects)
+      else
+        @projects = @projects.where(parent_id: nil)
+      end
+      
+      @projects = @projects.joins("LEFT JOIN custom_values ON custom_values.customized_id = projects.id AND custom_values.customized_type = 'Project'")
+      .joins("LEFT JOIN custom_fields ON custom_fields.id = custom_values.custom_field_id")
+      .where("custom_fields.name = ?", 'Planned Project Go Live Date')
+      .order("custom_values.value DESC")
+      custom_field = CustomField.find_by(name: "Is It Project?")
+      customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "1").pluck(:customized_id)
+      @projects = @projects.where.not(name: "Master Project").where(id: customized_ids)
 
-    if params[:start_date_from].present? && params[:start_date_to].present?
-      start_date_range = Date.parse(params[:start_date_from])..Date.parse(params[:start_date_to])
-      @projects = @projects.select { |project| start_date_range.cover?(Date.parse(date_value(project, 'Scheduled Start Date'))) }
-    end
+      @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
+      @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
+      @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
 
-    if params[:end_date_from].present? && params[:end_date_to].present?
-      end_date_range = Date.parse(params[:end_date_from])..Date.parse(params[:end_date_to])
-      @projects = @projects.select { |project| end_date_range.cover?(Date.parse(date_value(project, 'Scheduled End Date'))) }
-    end
-    @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }
-  
-    @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
-    @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq.sort
-    @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq.sort
-    @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
-    @names = @projects.select { |project| project.parent_id.nil? }.map(&:name).uniq.sort
-    @subprojects = @projects.select { |project| !project.parent_id.nil? }.map(&:name).uniq.sort
+      @projects = @projects.select { |project| member_names(project, 'Project Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
+
+      if params[:start_date_from].present? && params[:start_date_to].present?
+        start_date_range = Date.parse(params[:start_date_from])..Date.parse(params[:start_date_to])
+        @projects = @projects.select { |project| start_date_range.cover?(Date.parse(date_value(project, 'Scheduled Start Date'))) }
+      end
+
+      if params[:end_date_from].present? && params[:end_date_to].present?
+        end_date_range = Date.parse(params[:end_date_from])..Date.parse(params[:end_date_to])
+        @projects = @projects.select { |project| end_date_range.cover?(Date.parse(date_value(project, 'Scheduled End Date'))) }
+      end
+      if User.current.admin?
+        @projects# Show all projects if the user is an admin
+      else
+        @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }  # Show only projects the user is a member of
+      end
+      
+      
+      @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
+      @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq.sort
+      @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq.sort
+      @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
+      @names = @projects.select { |project| project.parent_id.nil? }.map(&:name).uniq.sort
+      @subprojects = @projects.select { |project| !project.parent_id.nil? }.map(&:name).uniq.sort
 
 
-    # binding.pry
-    # Projects going live next week
-    start_date_next_week = Date.today.next_week.beginning_of_week
-    end_date_next_week = Date.today.next_week.end_of_week
-    @next_week_go_live_projects = @projects.select { |project| 
-   begin
-      go_live_date = Date.parse(date_value(project, 'Planned Project Go Live Date'))
-      go_live_date >= start_date_next_week && go_live_date <= end_date_next_week
-    rescue ArgumentError
-      false
-    end
-    }
-
-    # Remove this line if you don't want to limit to the first 3 projects
-    @next_week_go_live_projects = @next_week_go_live_projects[0..2]
-
- 
+      # Projects going live next week
+      start_date_next_week = Date.today.next_week.beginning_of_week
+      end_date_next_week = Date.today.next_week.end_of_week
+      @next_week_go_live_projects = @projects.select { |project| 
+        begin
+          # Fetch the 'Revised End Date' value
+          revised_end_date_str = date_value(project, 'Revised End Date')
+          
+          if revised_end_date_str.present?
+            revised_end_date = Date.parse(revised_end_date_str)
+            revised_end_date >= start_date_next_week && revised_end_date <= end_date_next_week
+          else
+            # If 'Revised End Date' is not present, check 'Planned Project Go Live Date'
+            go_live_date_str = date_value(project, 'Planned Project Go Live Date')
+            
+            if go_live_date_str.present?
+              go_live_date = Date.parse(go_live_date_str)
+              go_live_date >= start_date_next_week && go_live_date <= end_date_next_week
+            else
+              false
+            end
+          end
+        rescue ArgumentError, TypeError
+          # Return false if parsing fails due to invalid date format or nil
+          false
+        end
+      }
+    
+      # Remove this line if you don't want to limit to the first 3 projects
+      @next_week_go_live_projects = @next_week_go_live_projects[0..2]
+      # Cache the data
+      REDIS.set(cache_key, Marshal.dump([@projects, @categories, @functions, @statuses, @managers, @names, @subprojects, @next_week_go_live_projects]), ex: 5.minutes.to_i)
+    # end
   end
 
   def non_it_project_dashboard
@@ -258,7 +324,7 @@ class WelcomeController < ApplicationController
     .joins("LEFT JOIN custom_fields ON custom_fields.id = custom_values.custom_field_id")
     .where("custom_fields.name = ?", 'Planned Project Go Live Date')
     .order("custom_values.value DESC")
-    custom_field = CustomField.find_by(name: "Is IT Project")
+    custom_field = CustomField.find_by(name: "Is IT Project?")
     customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "0").pluck(:customized_id)
     @projects = @projects.where(id: customized_ids)
     @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
@@ -351,6 +417,10 @@ class WelcomeController < ApplicationController
 
   private
 
+  def cache_key_for_dashboard
+    "dashboard/#{params[:name_filter].to_s}/#{params[:show_subprojects]}/#{params[:category_filter]}/#{params[:function_filter]}/#{params[:status_filter]}/#{params[:manager_filter]}/#{params[:start_date_from]}/#{params[:start_date_to]}/#{params[:end_date_from]}/#{params[:end_date_to]}/#{Date.today.to_s}"
+  end
+  
   def generate_report_data
     # Logic to fetch data for the weekly status report
     # This could involve querying the database or any other data source

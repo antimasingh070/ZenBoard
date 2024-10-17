@@ -15,10 +15,10 @@
       <% @project.identifier = "#{@parent.identifier}_#{new_identifier}" %>
     <% else %>
       <% new_identifier = "#{@project.parent_id}_#{Project.where(parent_id: @project.parent_id).count + 1}" %>
-      <% @project.identifier = "hdbfs_#{new_identifier}" %>
+      <% @project.identifier = "neo_#{new_identifier}" %>
     <% end %>
   <% else %>
-    <% @project.identifier = "hdbfs_#{Project.where(parent_id: @project.parent_id).last.id + 1}" %>
+    <% @project.identifier = "neo_#{Project.where(parent_id: @project.parent_id).last.id + 1}" %>
   <% end %>
 
   <%= f.text_field :identifier, :required => true, :size => 60, :maxlength => Project::IDENTIFIER_MAX_LENGTH %>
@@ -47,12 +47,18 @@
 <%= wikitoolbar_for 'project_description' %>
 
 <% if !@project.id.nil? %>
+<div>
+<%= hidden_field_tag :authenticity_token, form_authenticity_token %>
 <p>
   <label for="revised_end_date">Revised End Date</label>
-  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
   <input type="date" id="revised_end_date" name="revised_end_date" class="form-control">
-  <button type="button" id="update-revised-end-date" class="btn btn-primary">Update</button>
 </p>
+<p>
+  <label for="revised_end_date">Reason - Revised End Date<sup style="color: red;">*</sup></label>
+  <input type="text" id="reason" name="reason" class="form-control" >
+  <button type="button" id="update-button" class="btn btn-primary">Update</button>
+</p>
+</div>
 <div class="row">
   <div class="col-md-6 offset-md-6">
     <% if @revised_end_date_history&.any? %>
@@ -68,6 +74,7 @@
    </div>
 </div>
 <% end %>
+
 <% if @project.id.nil? %>
   <% @project.visible_custom_field_values.each do |value| %>
       <p><%= custom_field_tag_with_label :project, value %></p>
@@ -119,18 +126,18 @@
 <script>
  <% if !@project.id.nil? %>
   $(document).ready(function() {
-    $('#update-revised-end-date').click(function() {
+    $('#update-button').click(function() {
      
       var revisedEndDate = $('#revised_end_date').val();
+      var reason = $('#reason').val();
       $.ajax({
         url: '<%= update_revised_end_date_project_path(@project) %>',
         method: 'POST',
         headers: {
           'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content')
         },
-        data: { revised_end_date: revisedEndDate },
+        data: { revised_end_date: revisedEndDate, reason: reason },
         success: function(response) {
-          alert('Revised End Date updated successfully!');
           // You can redirect or perform any other action here after successful update
           location.reload();
         },
@@ -145,3 +152,8 @@
      <% end %>
 </script>
 
+<style>
+  #reason:required:invalid {
+    border-color: #ff0000; /* Red color */
+  }
+</style>

@@ -28,7 +28,23 @@ class DocumentsController < ApplicationController
   helper :attachments
   helper :custom_fields
   
+
   def index
+    @project = Project.find(params[:project_id])
+    pmo = Role.find_by(name: "PMO")
+    project_manager = Role.find_by(name: "Project Manager")
+    program_manager = Role.find_by(name: "Program Manager")
+
+    # Fetch all user_ids of members for the project
+    user_ids = Member.where(project_id: @project.id).pluck(:user_id)
+
+    # Check if any of the required roles are missing members
+    if [project_manager, program_manager].any? do |role|
+      Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: role.id }).empty?
+    end
+      flash[:error] = "Please add a member for Program Manager, Project Manager roles."
+      return redirect_to "/projects/#{@project.identifier}/settings/members"
+    end
     @sort_by = %w(category date title author).include?(params[:sort_by]) ? params[:sort_by] : 'category'
     documents = @project.documents.includes(:attachments, :category).to_a
     case @sort_by

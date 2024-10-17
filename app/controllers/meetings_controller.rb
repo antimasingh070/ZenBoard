@@ -1,0 +1,68 @@
+# app/controllers/meetings_controller.rb
+class MeetingsController < ApplicationController
+    before_action :set_business_requirement, only: [:new, :create, :show, :edit, :update, :destroy]
+    before_action :set_meeting, only: [:show, :edit, :update, :destroy]
+  
+    def new
+        @meeting = @business_requirement.meetings.build
+        @meeting.meeting_attendees.build
+        @function_name = fetch_custom_field_names('Function')
+      end
+  
+    def create
+      @meeting = @business_requirement.meetings.build(meeting_params)
+      @function_name = fetch_custom_field_names('Function')
+      if @meeting.save
+        redirect_to edit_business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Meeting was successfully created. Please add attendee'
+      else
+        render :new
+      end
+    end
+  
+    def edit
+        @function_name = fetch_custom_field_names('Function')
+        @meeting = @business_requirement.meetings.find(params[:id])
+    end
+    
+    def show
+        @meeting = @business_requirement.meetings.find(params[:id])
+        @function_name = fetch_custom_field_names('Function')
+        @mom = @meeting.mom
+        @points = @mom&.points&.where&.not(id: nil)
+    end
+    
+  
+    def update
+      if @meeting.update(meeting_params)
+        redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Meeting was successfully updated.'
+      else
+        render :edit
+      end
+    end
+  
+    def destroy
+      @meeting.destroy
+      redirect_to business_requirement_path(@business_requirement), notice: 'Meeting was successfully deleted.'
+    end
+  
+    private
+
+    def fetch_custom_field_names(name)
+      custom_field = CustomField.find_by(name: name)
+      CustomFieldEnumeration.where(custom_field_id: custom_field.id).pluck(:name) if custom_field
+    end
+
+    def set_business_requirement
+      @business_requirement = BusinessRequirement.find(params[:business_requirement_id])
+    end
+  
+    def set_meeting
+      @meeting = @business_requirement.meetings.find(params[:id])
+    end
+  
+    def meeting_params
+        params.require(:meeting).permit(:title, :scheduled_at, :status, :function_name, :note,
+          meeting_attendees_attributes: [:id, :user_id, :_destroy])
+    end
+  end
+  
