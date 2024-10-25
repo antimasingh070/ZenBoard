@@ -151,7 +151,9 @@ end
       <tr>
         <td style= "font-weight: bold">OVERALL PROJECT STATUS</td>
         <% scheduled_end_date = Date.parse(custom_field_value_date(@project, "Scheduled End Date")) rescue nil %>
-        <% revised_due_date = Date.parse(custom_field_value_date(@project, "Revised Due Date")) rescue nil %>
+        <% revised_end_date_custom_field = CustomField.find_by(name: "Revised End Date") rescue nil %>
+        <% revised_end_date_record = @project&.custom_values&.where(custom_field: revised_end_date_custom_field)&.order(created_at: :desc)&.first %>
+        <% revised_due_date = revised_end_date_record&.value&.to_date %>
         <% if @project.closed? || @project.hold? || @project.cancelled?  || @project.go_live? %>
           <td style="background-color: white; readonly size="5" ><%= @project_status %></td>
         <% elsif (scheduled_end_date.present? && scheduled_end_date < Date.today) || revised_due_date.blank?  %>
