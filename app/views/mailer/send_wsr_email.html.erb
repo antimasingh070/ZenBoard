@@ -60,7 +60,7 @@ end
 
 def custom_field_value_issue_date(issue, field_name) 
   custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name) 
-  custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: project&.id, custom_field_id: custom_field&.id) 
+  custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id) 
   custom_field_date = custom_value&.value 
   if !custom_field_date.blank? 
     date = Date.parse(custom_field_date) 
@@ -91,10 +91,9 @@ end
 
 start_date_previous_week = Date.today.prev_week.beginning_of_week
 end_date_previous_week = Date.today.prev_week.end_of_week
-closed_working_days = (start_date..end_date).select { |date| working_day?(date, holidays) }
+closed_working_days = (start_date_previous_week..end_date_previous_week).select { |date| working_day?(date, holidays) }
 # Fetch closed issues
-closed_issues = @project.issues.where(tracker_id: 2, status_id: 5)
-
+closed_issues = @project.issues.includes(:project).where(tracker_id: 2, status_id: 5).or(Issue.where(project_id: @project.self_and_descendants, tracker_id: 2, status_id: 5))
 # Collect closed issues from the previous week
 closed_issues_previous_week = closed_issues.select do |issue|
   begin
@@ -117,7 +116,7 @@ start_date = Date.today
 end_date = Date.today + 7.days
 upcoming_working_days = (start_date..end_date).select { |date| working_day?(date, holidays) }
 # Fetch upcoming issues
-upcoming_issues = @project.issues.where(tracker_id: 2).where.not(status_id: 5)
+upcoming_issues = @project.issues.includes(:project).where(tracker_id: 2).where.not(status_id: 5).or(Issue.where(project_id: @project.self_and_descendants, tracker_id: 2).where.not(status_id: 5))
 
 # Collect upcoming issues with actual end dates within the next week
 upcoming_actual_end_date_issues = upcoming_issues.select do |issue|
@@ -214,8 +213,8 @@ end
                 <td><%= @count %></td>
                 <td><%= risk.subject %></td>
                 <td><%= risk.description %></td>
-                <td><%= custom_field_issue_date(risk, "Identifier date") %></td>
-                <td><%= custom_field_issue_date(risk, "Risk Owner") %></td>
+                <td><%= custom_field_value_issue_date(risk, "Identifier date") %></td>
+                <td><%= custom_field_value_issue_date(risk, "Risk Owner") %></td>
               </tr>
               <% @count=@count+1 %>
             <% end %>
@@ -244,9 +243,9 @@ end
               <td><%= closed_issue.description %></td>
               <td><%= closed_issue.start_date&.strftime("%d/%m/%y") %></td>
               <td><%= closed_issue.due_date&.strftime("%d/%m/%y") %></td>
-              <td><%= custom_field_issue_date(closed_issue, "Actual Start Date") %></td>
-              <td><%= custom_field_issue_date(closed_issue, "Actual End Date") %></td>
-              <td><%= custom_field_issue_date(closed_issue, "Revised Planned Due Date") %></td>
+              <td><%= custom_field_value_issue_date(closed_issue, "Actual Start Date") %></td>
+              <td><%= custom_field_value_issue_date(closed_issue, "Actual End Date") %></td>
+              <td><%= custom_field_value_issue_date(closed_issue, "Revised Planned Due Date") %></td>
             </tr>
           <% end %>
         <% end %>
@@ -276,9 +275,9 @@ end
               <td><%= IssueStatus.find(opened_issues.status_id).name %></td>
               <td><%= opened_issues.start_date&.strftime("%d/%m/%y") %></td>
               <td><%= opened_issues.due_date&.strftime("%d/%m/%y") %></td>
-              <td><%= custom_field_issue_date(opened_issues, "Actual Start Date") %></td>
-              <td><%= custom_field_issue_date(opened_issues, "Actual End Date") %></td>
-              <td><%= custom_field_issue_date(opened_issues, "Revised Planned Due Date") %></td>
+              <td><%= custom_field_value_issue_date(opened_issues, "Actual Start Date") %></td>
+              <td><%= custom_field_value_issue_date(opened_issues, "Actual End Date") %></td>
+              <td><%= custom_field_value_issue_date(opened_issues, "Revised Planned Due Date") %></td>
             </tr>
           <% end %>
         <% end %>

@@ -81,7 +81,7 @@ class IssuesController < ApplicationController
     update_custom_field("Approval Date", Date.today)
     
     if @issue.send_back?
-      add_journal_entry(@issue, User.current, "")
+      # add_journal_entry(@issue, User.current, "")
       @auther = User.find_by(id: @issue.author_id)
       Mailer.deliver_issue_send_back(User.current, @issue, @auther)
       Mailer.deliver_issue_send_back_to_approver(User.current, @issue, @auther)
@@ -127,21 +127,6 @@ class IssuesController < ApplicationController
   end
 
   def index
-    @project = Project.find(params[:project_id])
-    pmo = Role.find_by(name: "PMO")
-    project_manager = Role.find_by(name: "Project Manager")
-    program_manager = Role.find_by(name: "Program Manager")
-
-    # Fetch all user_ids of members for the project
-    user_ids = Member.where(project_id: @project.id).pluck(:user_id)
-
-    # Check if any of the required roles are missing members
-    if [project_manager, program_manager].any? do |role|
-      Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: role.id }).empty?
-    end
-      flash[:error] = "Please add a member for Program Manager, Project Manager roles."
-      return redirect_to "/projects/#{@project.identifier}/settings/members"
-    end
     use_session = !request.format.csv?
     retrieve_default_query(use_session)
     retrieve_query(IssueQuery, use_session)

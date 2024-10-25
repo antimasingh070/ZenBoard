@@ -36,6 +36,15 @@ class WelcomeController < ApplicationController
     else
       financial_year_start = Date.new(Date.today.year - 1, 4, 1)
     end
+      # Filter Roles by matching name starting with param
+    if params[:role].present?
+      @roles = Role.where("name LIKE ?", "#{params[:role]}%")
+    end
+
+    # Filter Users by matching firstname starting with param
+    if params[:member_name].present?
+      @users = User.where("firstname LIKE ?", "#{params[:member_name]}%")
+    end
     role = Role.find_by(name: params[:role])
     firstname, lastname = params[:member_name].to_s.split(' ', 2)
     user = User.find_by(firstname: firstname, lastname: lastname)
