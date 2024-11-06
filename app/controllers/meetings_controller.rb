@@ -4,10 +4,10 @@ class MeetingsController < ApplicationController
     before_action :set_meeting, only: [:show, :edit, :update, :destroy]
   
     def new
-        @meeting = @business_requirement.meetings.build
-        @meeting.meeting_attendees.build
-        @function_name = fetch_custom_field_names('Function')
-      end
+      @meeting = @business_requirement.meetings.build
+      @meeting.meeting_attendees.build
+      @function_name = fetch_custom_field_names('Function')
+    end
   
     def create
       @meeting = @business_requirement.meetings.build(meeting_params)
@@ -27,6 +27,7 @@ class MeetingsController < ApplicationController
     def show
         @meeting = @business_requirement.meetings.find(params[:id])
         @function_name = fetch_custom_field_names('Function')
+        @br_stakeholders = @business_requirement.br_stakeholders
         @mom = @meeting.mom
         @points = @mom&.points&.where&.not(id: nil)
     end

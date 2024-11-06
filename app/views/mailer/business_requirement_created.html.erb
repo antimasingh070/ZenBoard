@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      /* Basic styling for email */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8f9fa;
+        color: #333;
+      }
+      .container {
+        width: 80%;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 20px;
+        border: 1px solid #e9ecef;
+        border-radius: 5px;
+      }
+      h2 {
+        color: #007bff;
+      }
+      .details-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .details-table th, .details-table td {
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        text-align: left;
+      }
+      .footer {
+        margin-top: 20px;
+        font-size: 0.9em;
+        color: #6c757d;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>New Business Requirement Created</h2>
+      <p>Hello <%= @user.name %>,</p>
+      <p>A new business requirement has been successfully created by <%= @business_requirement.created_by.name %>. Here are the details:</p>
+
+      <table class="details-table">
+        <tr>
+          <th>Identifier</th>
+          <td><%= @business_requirement.identifier %></td>
+        </tr>
+        <tr>
+          <th>Description</th>
+          <td><%= @business_requirement.description %></td>
+        </tr>
+        <tr>
+          <th>Cost Benefits</th>
+          <td><%= @business_requirement.cost_benefits %></td>
+        </tr>
+        <tr>
+          <th>Status</th>
+          <td><%= @business_requirement.status %></td>
+        </tr>
+        <tr>
+          <th>Project Sponsor</th>
+          <td><%= @business_requirement.project_sponsor %></td>
+        </tr>
+        <tr>
+          <th>Scheduled Start Date</th>
+          <td><%= @business_requirement.scheduled_start_date %></td>
+        </tr>
+        <tr>
+          <th>Scheduled End Date</th>
+          <td><%= @business_requirement.scheduled_end_date %></td>
+        </tr>
+        <tr>
+          <th>Priority Level</th>
+          <td><%= @business_requirement.priority_level %></td>
+        </tr>
+        <!-- Add more rows as needed for additional attributes -->
+      </table>
+
+      <p>For more details, please visit your project management dashboard.</p>
+      <div class="footer">
+        <p>Best regards,</p>
+        <p>Your Project Team</p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -21,10 +21,12 @@ class UsersController < ApplicationController
   layout 'admin'
   self.main_menu = false
 
-  before_action :require_admin, :except => :show
+  # before_action :require_admin, :except => :show
+  before_action :require_admin, unless: Proc.new { User.current.groups.include?(Group.find_by_lastname('UAM')) }
   before_action lambda {find_user(false)}, :only => :show
   before_action :find_user, :only => [:edit, :update, :destroy]
   accept_api_auth :index, :show, :create, :update, :destroy
+  # before_action :authorize_pmo_user_creation, only: [:new, :create]
 
   helper :sort
   include SortHelper
@@ -40,6 +42,12 @@ class UsersController < ApplicationController
   include UserQueriesHelper
 
   require_sudo_mode :create, :update, :destroy
+
+  def authorize_pmo_user_creation
+    unless User.current.allowed_to?(:create_users, nil, global: true)
+      render_403
+    end
+  end
 
   def index
     use_session = !request.format.csv?

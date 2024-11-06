@@ -5,10 +5,14 @@ class PointsController < ApplicationController
   
     def new
       @point = @mom.points.build
+      @business_requirement = BusinessRequirement.find_by(id: params[:business_requirement_id])
+      @br_stakeholders = @business_requirement.br_stakeholders
     end
   
     def create
       @point = @mom.points.build(point_params)
+      @business_requirement = BusinessRequirement.find_by(id: params[:business_requirement_id])
+      @br_stakeholders = @business_requirement.br_stakeholders
       if @point.save
         redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement_id, @mom.meeting), notice: 'Point was successfully created.'
       else
@@ -17,9 +21,13 @@ class PointsController < ApplicationController
     end
   
     def edit
+      @business_requirement = BusinessRequirement.find_by(id: params[:business_requirement_id])
+      @br_stakeholders = @business_requirement.br_stakeholders
     end
   
     def update
+      @business_requirement = BusinessRequirement.find_by(id: params[:business_requirement_id])
+      @br_stakeholders = @business_requirement.br_stakeholders
       if @point.update(point_params)
         redirect_to @mom.meeting, notice: 'Point was successfully updated.'
       else
@@ -55,7 +63,7 @@ class PointsController < ApplicationController
     end
   
     def point_params
-      params.require(:point).permit(:description, :status)
+      params.require(:point).permit(:description, :status, :assignee)
     end
 end
   

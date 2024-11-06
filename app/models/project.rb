@@ -247,9 +247,14 @@ class Project < ActiveRecord::Base
     end
   end
 
+  def status_reason_history
+    custom_field = CustomField.find_by(name: "Status Reason")
+    CustomValue.where(custom_field: custom_field, customized: self).order(created_at: :desc).where.not(value: [nil, ""])
+  end
+
   def revised_end_date_history
     custom_field = CustomField.find_by(name: "Revised End Date")
-    CustomValue.where(custom_field: custom_field, customized: self).order(created_at: :desc)
+    CustomValue.where(custom_field: custom_field, customized: self).order(created_at: :desc).where.not(value: [nil, ""])
   end
 
   def auto_create_records(template_value)
@@ -666,6 +671,10 @@ class Project < ActiveRecord::Base
 
   def go_live
     self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_CLOSED, Project::STATUS_CANCELLED, Project::STATUS_ACTIVE]).update_all(status: Project::STATUS_GO_LIVE)
+  end
+
+  def readonly?
+    status == Project::STATUS_CLOSED || super
   end
 
   def close

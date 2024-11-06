@@ -999,6 +999,18 @@ class Mailer < ActionMailer::Base
     end
     mails
   end
+   
+  def business_requirement_created(user, business_requirement)
+    @user = user
+    @business_requirement = business_requirement
+    mail :to => user.mail, :subject => "Business Requirement Created"
+  end 
+
+  def deliver_business_requirement_created(user, business_requirement)
+      if Setting.notified_events.include?('business_requirement_created')
+        business_requirement_created(user, business_requirement).deliver_later
+      end
+  end 
 
   def project_created(user, member_role, role, project)
     @project = project

@@ -42,8 +42,14 @@
           <% end %>
         </ul>
         <% if  @business_requirement.status != 7 &&  @business_requirement.status != 8 %>
-          <%= link_to 'Edit', edit_business_requirement_path(@business_requirement), class: 'btn btn-warning btn-sm', title: 'Edit business_requirementD' %> |
+          <%= link_to 'Edit', edit_business_requirement_path(@business_requirement), class: 'btn btn-warning btn-sm', title: 'Edit business_requirementD' %> 
+          <% user_stakeholders = @business_requirement.br_stakeholders.where(user_id: User.current.id) %>
+            <% pmo_role_present = user_stakeholders.any? { |stakeholder| stakeholder.role.name == 'PMO' } %>
+
+            <% if pmo_role_present %>
+          |
           <%= link_to 'Delete', business_requirement_path(@business_requirement), method: :delete, class: 'btn btn-warning btn-sm', title: 'Delete business_requirementD' %>  |
+          <% end %>
         <% end %>
         <%= link_to 'Dashboard', business_requirements_path, class: 'btn btn-secondary' %>
 

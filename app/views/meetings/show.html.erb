@@ -67,6 +67,7 @@
                 <h3>Add New Point</h3>
                 <p>
                   <%= form.text_field :description, required: true, class: 'form-control', placeholder: 'Point Description' %>
+                  <p><%= form.select :assignee, options_for_select([['', '']] + @br_stakeholders.map { |stakeholder| ["#{stakeholder.user.firstname} #{stakeholder.user.lastname}", stakeholder.user_id] }, @point&.assignee), {}, class: 'form-control' %></p>
                   <%= form.submit 'Add Point', class: 'btn btn-primary' %>
                 </p>
               <% end %>
@@ -81,7 +82,9 @@
             <% @points.each do |point| %>
               <li class="point-item">
                 <div class="point-details" style="display: flex; align-items: center;">
-                  <strong>Description:</strong> <%= point.description %>
+                 <p> <strong>Description:</strong> <%= point.description %></p>
+                  <% user = User.find_by(id: point.assignee) %>
+                  <p><strong>Assignee:</strong> <%= "#{user&.firstname} #{user&.lastname}" %></p>
                   <% if point.rejected? %>
                     <%= content_tag(:span, 'Rejected', class: 'badge badge-success ml-2') %>
                     <% if @business_requirement.status != 7 && @business_requirement.status != 8 && point.present? %>

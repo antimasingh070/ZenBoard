@@ -209,6 +209,7 @@ class BusinessRequirementsController < ApplicationController
           @business_requirement.template = "IT Enhancement"
         end
         if @business_requirement.save
+          Mailer.deliver_business_requirement_created(User.current, @business_requirement)
           attach_files(@business_requirement)
           redirect_to edit_business_requirement_path(@business_requirement), notice: 'Business Requirement was successfully created. Please add Stackholders'
         else

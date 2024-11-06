@@ -167,7 +167,10 @@ module Redmine
         menu.push :projects, {:controller => 'projects', :action => 'index'},
                   :caption => :label_project_plural
         menu.push :business_requirements, {:controller => 'business_requirements', :action => 'index'},
-                  :caption => :label_br_plural, :if => Proc.new {User.current.admin?}
+                  :caption => :label_br_plural,  :if => Proc.new {User.current.logged?}
+                  menu.push :users, {:controller => 'users', :action => 'index'}, :caption => :label_user_plural, :if => Proc.new {
+                    User.current.groups.include?(Group.find_by_lastname('UAM'))
+                  }
         menu.push :activity_logs, {:controller => 'activity_logs', :action => 'index'},
                   :caption => "Activity Logs", :if => Proc.new {User.current.admin?}
         menu.push :administration, {:controller => 'admin', :action => 'index'},

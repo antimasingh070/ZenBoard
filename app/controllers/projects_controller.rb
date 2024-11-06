@@ -71,6 +71,7 @@ class ProjectsController < ApplicationController
   
     new_revised_end_date = params[:revised_end_date]
     custom_field = CustomField.find_by(name: "Revised End Date")
+
     if new_revised_end_date.present?
       custom_value = CustomValue.find_or_create_by(custom_field: custom_field, customized: @project, value: new_revised_end_date.to_date, author_id: User.current.id)
       custom_value.reason = params[:reason]
@@ -251,28 +252,13 @@ class ProjectsController < ApplicationController
 
   # Show @project
   def show
-    @project = Project.find(params[:id])
-    pmo = Role.find_by(name: "PMO")
-    project_manager = Role.find_by(name: "Project Manager")
-    program_manager = Role.find_by(name: "Program Manager")
-
-    # Fetch all user_ids of members for the project
-    user_ids = Member.where(project_id: @project.id).pluck(:user_id)
-
-    # Check if any of the required roles are missing members
-    if [project_manager, program_manager].any? do |role|
-      Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: role.id }).empty?
-    end
-      flash[:error] = "Please add a member for Program Manager, Project Manager roles."
-      return redirect_to "/projects/#{@project.identifier}/settings/members"
-    end
-    
     # try to redirect to the requested menu item
     if params[:jump] && redirect_to_project_menu_item(@project, params[:jump])
       return
     end
     
     @revised_end_date_history = @project.revised_end_date_history
+    @status_reason_history = @project.status_reason_history
     respond_to do |format|
       format.html do
         @principals_by_role = @project.principals_by_role
@@ -298,25 +284,13 @@ class ProjectsController < ApplicationController
   end
 
   def settings
-    # pmo = Role.find_by(name: "PMO")
-    # project_manager = Role.find_by(name: "Project Manager")
-    # program_manager = Role.find_by(name: "Program Manager")
-
-    # # Fetch all user_ids of members for the project
-    # user_ids = Member.where(project_id: @project.id).pluck(:user_id)
-
-    # # Check if any of the required roles are missing members
-    # if [project_manager, program_manager].any? do |role|
-    #   Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: role.id }).empty?
-    # end
-    #   flash[:error] = "Please add members for Program Manager, Project Manager roles."
-    # end
     @issue_custom_fields = IssueCustomField.sorted.to_a
     @issue_category ||= IssueCategory.new
     @member ||= @project.members.new
     @trackers = Tracker.sorted.to_a
     @project = Project.find(params[:id])
     @revised_end_date_history = @project.revised_end_date_history
+    @status_reason_history = @project.status_reason_history
     @version_status = params[:version_status] || 'open'
     @version_name = params[:version_name]
     @versions = @project.shared_versions.status(@version_status).like(@version_name).sorted
@@ -460,6 +434,8 @@ class ProjectsController < ApplicationController
   def reopen
     old_status = @project.status
     @project.reopen
+    custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Reason", reason: params[:remarks])
     new_status = @project.status
     Mailer.deliver_project_status(User.current, old_status, @project)
     respond_to do |format|
@@ -471,6 +447,9 @@ class ProjectsController < ApplicationController
   def hold
     @old_status = @project.status
     @project.hold
+    custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Hold", reason: params[:remarks])
+    
     Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
@@ -493,6 +472,8 @@ class ProjectsController < ApplicationController
 
     @old_status = @project.status
     @project.go_live
+    custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Gone Live", reason: params[:remarks])
     Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
@@ -503,6 +484,9 @@ class ProjectsController < ApplicationController
   def cancelled
     @old_status = @project.status
     @project.cancelled
+    custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id,  author_id: User.current.id, custom_field_id: custom_field&.id, value: "Cancelled", reason: params[:remarks])
+    
     Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }

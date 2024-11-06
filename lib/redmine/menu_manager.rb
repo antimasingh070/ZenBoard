@@ -131,7 +131,7 @@ module Redmine
               non_it_project_present = custom_values.any? { |cv| cv.value == "0" }
       
               if User.current.logged?
-                links << content_tag('li', link_to('IT Project Dashboard', it_project_dashboard_path)) if it_project_present
+                links << content_tag('li', link_to('IT Project Dashboard', it_project_dashboard_path(status_filter: 1))) if it_project_present
                 links << content_tag('li', link_to('Non IT Project Dashboard', non_it_project_dashboard_path)) if non_it_project_present
               end
             end

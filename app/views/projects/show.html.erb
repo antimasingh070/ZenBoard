@@ -50,6 +50,12 @@
   <% end %>
   <li class=""><span class="label">Created at: </span><%= @project.updated_on.strftime("%-d %b %Y") %></li>
   <li class=""><span class="label">Updated at: </span><%= @project.updated_on.strftime("%-d %b %Y") %></li>
+  <% tracker = Tracker.find_by(name: 'Project Plan- Activity List') %>
+  <% latest_issue = @project.issues.where(tracker_id: tracker.id).order(due_date: :desc).first %>
+  <% due_date = latest_issue&.due_date %>
+  <% if due_date %>
+    <li class=""><span class="label">Last Activity Due Date: </span><%= due_date&.strftime("%-d %b %Y") %></li>
+  <% end %>
   <% render_custom_field_values(@project) do |custom_field, formatted| %>
     <% if custom_field.name == "Revised End Date" %>
       <% revised_end_date_custom_field = CustomField.find_by(name: "Revised End Date") %>
@@ -153,30 +159,56 @@
   </div>
   <% end %>
 
-   <% if @revised_end_date_history&.any? %>
-  <div class="news box">
-    <h3>Revised End Dates</h3>
-    <table>
-      <thead>
-        <tr>
-          <th>Revised End Date</th>
-          <th>Reason</th>
-          <th>Author</th>
-          <th>Updated At</th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @revised_end_date_history.each do |revised_end_date| %>
+  <% if @revised_end_date_history&.any? %>
+    <div class="news box">
+      <h3>Revised End Dates</h3>
+      <table>
+        <thead>
           <tr>
-            <td style="width: 50px;"><%= revised_end_date&.value&.to_date&.strftime("%-d %b %y") %></td>
-            <td style="width: 100px;"><%= revised_end_date&.reason %></td>
-            <td style="width: 50px;"><%= User.find_by(id: (revised_end_date&.author_id)).try(:name) %></td>
-            <td style="width: 50px;"><%= revised_end_date&.created_at&.in_time_zone("Asia/Kolkata")&.strftime("%-d %b %y %H:%M") %></td>
+            <th>Revised End Date</th>
+            <th>Reason</th>
+            <th>Author</th>
+            <th>Updated At</th>
           </tr>
-        <% end %> 
-      </tbody>
-    </table>
-  </div>
+        </thead>
+        <tbody>
+          <% @revised_end_date_history.each do |revised_end_date| %>
+            <tr>
+              <td style="width: 50px;"><%= revised_end_date&.value&.to_date&.strftime("%-d %b %y") %></td>
+              <td style="width: 100px;"><%= revised_end_date&.reason %></td>
+              <td style="width: 50px;"><%= User.find_by(id: (revised_end_date&.author_id)).try(:name) %></td>
+              <td style="width: 50px;"><%= revised_end_date&.created_at&.in_time_zone("Asia/Kolkata")&.strftime("%-d %b %y %H:%M") %></td>
+            </tr>
+          <% end %> 
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+    <% if @status_reason_history&.any? %>
+    <div class="news box">
+      <h3>Project Status Log</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Reason</th>
+            <th>Author</th>
+            <th>Updated At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @status_reason_history.each do |status_reason| %>
+            <tr>
+              <td style="width: 50px;"><%= status_reason&.value %></td>
+              <td style="width: 50px;"><%= status_reason&.reason %></td>
+              <td style="width: 50px;"><%= User.find_by(id: (status_reason&.author_id)).try(:name) %></td>
+              <td style="width: 50px;"><%= status_reason&.created_at&.in_time_zone("Asia/Kolkata")&.strftime("%-d %b %y %H:%M") %></td>
+            </tr>
+          <% end %> 
+        </tbody>
+      </table>
+    </div>
   <% end %>
 
   <%= call_hook(:view_projects_show_right, :project => @project) %>

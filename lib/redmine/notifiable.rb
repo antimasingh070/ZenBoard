@@ -36,6 +36,7 @@ module Redmine
       notifications << Notifiable.new('membership_added_email')
       notifications << Notifiable.new('membership_deleted_email')
       notifications << Notifiable.new('send_dashboard_email')
+      notifications << Notifiable.new('business_requirement_created')
       notifications << Notifiable.new('meeting_invitation')
       notifications
     end

@@ -50,8 +50,13 @@
             <% elsif business_requirement.status == 8 %>
               <%= content_tag(:span, 'Declined', class: 'badge badge-danger') %>
             <% else %>
+            <% user_stakeholders = business_requirement.br_stakeholders.where(user_id: User.current.id) %>
+            <% pmo_role_present = user_stakeholders.any? { |stakeholder| stakeholder.role.name == 'PMO' } %>
+
+            <% if pmo_role_present %>
               <%= link_to 'Accept', '#', class: 'btn btn-success btn-sm', title: 'Accept Business Requirement', data: { toggle: 'modal', target: "#acceptModal-#{business_requirement.id}" } %>
               <%= link_to 'Decline', decline_business_requirement_path(business_requirement), method: :patch, class: 'btn btn-danger btn-sm', title: 'Decline Business Requirement' %>
+            <% end %>
             <% end %>
           </td>
         </tr>
