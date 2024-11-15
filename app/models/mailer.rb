@@ -1144,15 +1144,17 @@ class Mailer < ActionMailer::Base
   end
  
   def send_wsr_email(user, project)
-        @project = project
+    @project = project
     @members = Member.where(project_id: @project.id)
-    if @members.any?
-      @members.each do |member|
-        @member_role = MemberRole.find_by(member_id: member.id)
-        @role = Role.find_by(id: @member_role.role_id)
-        @user = User.find(member.user_id) 
+    @members.each do |member|
+      if (member_role = MemberRole.find_by(member_id: member.id)) &&
+          (role = Role.find_by(id: member_role.role_id)) &&
+          (user = User.find_by(id: member.user_id))
+        
+        # Use member, member_role, role, and user here as they all exist
       end
     end
+        
     @project_status = STATUS_MAP[project.status] || ""
     mail_data = user_mails(@project)
     mail_to = mail_data[:mail_to].uniq

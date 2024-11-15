@@ -41,69 +41,61 @@
             </ul>
       </div>
     <% end %>
-    <!-- MOM Details Section -->
-    <div id="mom-details" class="mom-details">
-      <% if @meeting.mom.present? %>
-        <h3><strong>MOM</strong></h3>
-        <div class="detail-item">
-          <strong>Function:</strong> <%= @meeting.mom.function_name %>
-        </div>
-        <div class="detail-item">
-          <strong>Status:</strong> <%= Mom::STATUS_MAP[@meeting.mom.status] || 'Unknown' %>
-        </div>
-        <div class="detail-item">
-          <strong>Summary:</strong> <%= @meeting.mom.summary %>
-        </div>
-        <div class="detail-item">
-          <strong>Target Date:</strong> <%= @meeting.mom.target_date %>
-        </div>
+  </div>
+</div>
 
-        <hr/>
+<!-- MOM Form Section (initially hidden) -->
+<div id="mom-form" class="card" style="border: 0.5px solid #ccc; padding: 1rem; border-radius: 8px;">
+    <h3 class="form-title"><%= @meeting.mom.id.present? ? 'MOM' : 'Create MOM' %></h3>
+    
+    <table class="table table-bordered table-striped">
 
-        <% if @meeting.mom.id.present? %>
-            <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
-              <!-- Points Form Section -->
-              <%= labelled_form_for([@meeting.mom, @meeting.mom.points.build], url: business_requirement_meeting_mom_points_path(@business_requirement, @meeting, @meeting.mom), local: true) do |form| %>
-                <h3>Add New Point</h3>
-                <p>
-                  <%= form.text_field :description, required: true, class: 'form-control', placeholder: 'Point Description' %>
-                  <p><%= form.select :assignee, options_for_select([['', '']] + @br_stakeholders.map { |stakeholder| ["#{stakeholder.user.firstname} #{stakeholder.user.lastname}", stakeholder.user_id] }, @point&.assignee), {}, class: 'form-control' %></p>
-                  <%= form.submit 'Add Point', class: 'btn btn-primary' %>
-                </p>
-              <% end %>
+  
+      <thead>
+        <tr>
+          <th>Sr. No.</th>
+          <th>Action Item</th>
+          <th>Status</th>
+          <th>Owner</th>
+          <th>Timeline</th>
+          <th>Action</th>
+          <th style="width: 300px;">Remarks</th> 
+        </tr>
+      </thead>
+      <tbody>
+        <% @points.each_with_index do |point, index| %>
+          <tr>
+            <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), local: true, html: { class: 'edit-form', style: 'display: none;' }) do |f| %>
+              <!-- Sr. No. Column -->
+              <td><%= index + 1 %></td>
+
+              <!-- Action Item (Description) Column -->
+              <td>
+                  <%= f.text_area :description, class: 'form-control  auto-resize', rows: 4, value: point.description %>
+              </td>
+
+              <td>
+                  <%= f.select :status, options_for_select(Point::STATUS_MAP.map { |k, v| [v, k] }, point.status), {}, class: 'form-control' %>
+              </td>
+
+              <!-- Owner Column -->
+              <td>
+                <% user = User.find_by(id: point.owner) %>
+                <%= f.select :owner, options_for_select([['', '']] + @br_stakeholders.map { |s| ["#{s.user.firstname} #{s.user.lastname}", s.user_id] }, point.owner), {}, class: 'form-control' %>
+              </td>
+
+              <!-- Timeline Column -->
+              <td>
+                  <%= f.date_field :timeline, value: point.timeline&.strftime("%Y-%m-%d"), class: 'form-control' %>
+              </td>
+
+              <!-- Action Column -->
+              <td>                <button type="button" class="btn btn-primary toggle-edit">Edit</button>
+                <%= f.submit point.id.present? ? 'save' : 'Create', class: 'btn btn-primary edit-form', style: 'display: none;' %>
+              </td>
             <% end %>
-
-            <% end %>
-
-          <!-- Points Section -->
-          <div class="points-list">
-            <h4>Points</h4>
-            <ul>
-            <% @points.each do |point| %>
-              <li class="point-item">
-                <div class="point-details" style="display: flex; align-items: center;">
-                 <p> <strong>Description:</strong> <%= point.description %></p>
-                  <% user = User.find_by(id: point.assignee) %>
-                  <p><strong>Assignee:</strong> <%= "#{user&.firstname} #{user&.lastname}" %></p>
-                  <% if point.rejected? %>
-                    <%= content_tag(:span, 'Rejected', class: 'badge badge-success ml-2') %>
-                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 && point.present? %>
-                      <%= button_to 'Accept', accept_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-success btn-sm ml-2' %>
-                    <% end %>
-                  <% elsif point.approved? %>
-                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 && point.present? %>
-                      <%= content_tag(:span, 'Accepted', class: 'badge badge-success ml-2') %>
-                      <%= button_to 'Reject', reject_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-danger btn-sm ml-2' %>
-                    <% end %>
-                  <% else %>
-                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 && point.present? %>
-                      <%= button_to 'Accept', accept_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-success btn-sm ml-2' %>
-                      <%= button_to 'Reject', reject_business_requirement_meeting_mom_point_path(@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point), method: :post, class: 'btn btn-danger btn-sm ml-2' %>
-                    <% end %>
-                  <% end %>
-                </div>
-            
-                <!-- Remarks Section -->
+              <!-- Remarks Section in Table Cell -->
+              <td>
                 <div class="remarks-section">
                   <button class="toggle-remarks-btn" onclick="toggleRemarks(<%= point.id %>)">
                     <%= point.remarks.any? ? 'Show Remarks' : 'Add Remarks' %>
@@ -112,12 +104,12 @@
                   <div id="remarks-<%= point.id %>" class="remarks-container" style="display: none;">
                     <% point.remarks.each do |remark| %>
                       <div class="remark-item">
-                        <p><strong>Remark by <%= User.find_by(id: remark.author_id).firstname %>:</strong> <%= remark.content %></p>
+                        <p><strong><%= User.find_by(id: remark.author_id)&.firstname %>:</strong> <%= remark.content %></p>
                       </div>
                     <% end %>
             
                     <!-- Add new remark form -->
-                    <% if !point.approved? && !point.rejected? %>
+                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
                       <%= form_with(model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, Remark.new], local: true, html: { class: 'remark-form' }) do |form| %>
                         <div class="form-group">
                           <%= form.label :content, "Add a Remark:" %>
@@ -129,136 +121,187 @@
                     <% end %>
                   </div>
                 </div>
-              </li>
-            <% end %>
-            
-            </ul>
-          </div>
-        <% else %>
-          <p>No MOM available for this meeting.</p>
+              </td>
+          </tr>
         <% end %>
-    </div>
-  </div>
+          <tr>
+            <%= form_with(model: Point.new, url: business_requirement_meeting_mom_points_path(@business_requirement, @meeting, @mom), local: true) do |f| %>
+              <td></td>
+
+              <td>
+                <%= f.text_area :description, required: true, class: 'form-control' %> 
+              </td>
+              <td>
+                <%= f.select :status, options_for_select(Point::STATUS_MAP.map { |k, v| [v, k] }), {}, class: 'form-control' %>
+              </td>
+
+              <!-- Owner Column -->
+              <td>
+                <%= f.select :owner, options_for_select([['', '']] + @br_stakeholders.map { |s| ["#{s.user.firstname} #{s.user.lastname}", s.user_id] }), {}, class: 'form-control' %>
+              </td>
+
+              <!-- Timeline Column -->
+              <td>
+                <%= f.date_field :timeline, class: 'form-control' %>
+              </td>
+              <td>
+                <%= f.submit 'Add', class: 'btn btn-primary' %>
+              </td>
+            <% end %>
+          </tr>
+
+      </tbody>
+    </table>
+
 </div>
 
-<!-- MOM Form Section (initially hidden) -->
-<div id="mom-form" class="box tabular" style="display: none;">
-
-  <%=  labelled_form_for [@business_requirement, @meeting, @meeting.mom || @meeting.build_mom ], :html => {:multipart => true} do |form| %>
-    <h3><%= @meeting.mom.id.present? ? 'Edit MOM' : 'Create MOM' %></h3>
-    <p>
-        <%= form.select :function_name, options_for_select([['', '']] + @function_name.map { |fn| [fn, fn] }, @meeting.mom.function_name), {}, class: 'form-control' %>
-    </p>
-    <p><%= form.select :status, options_for_select(Mom::STATUS_MAP.map { |k, v| [v, k] }, @meeting.mom.status), {}, class: 'form-control', required: true %></p>
- 
-    <p><%= form.text_area :summary, rows: 3, class: 'form-control' %></p>
+<!-- JavaScript to Toggle View/Edit Mode -->
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    const editButtons = document.querySelectorAll('.toggle-edit');
     
-    <p><%= form.date_field :target_date, class: 'form-control' %></p>
-    <p><%= form.submit @meeting.mom.id.present? ? 'Update MOM' : 'Create MOM', class: 'btn btn-primary' %></p>
-  <% end %>
-</div>
+    editButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const row = button.closest('tr');
+        const viewElements = row.querySelectorAll('.view-mode');
+        const editForms = row.querySelectorAll('.edit-form');
+        
+        // Toggle visibility of view and edit elements
+        viewElements.forEach(el => el.style.display = (el.style.display === 'none') ? '' : 'none');
+        editForms.forEach(form => form.style.display = (form.style.display === 'none') ? '' : 'none');
+        
+        // Toggle button text between 'Edit' and 'Cancel'
+        button.textContent = (button.textContent === 'Edit') ? 'Cancel' : 'Edit';
+      });
+    });
+  });
+</script>
 
 <!-- JavaScript for toggling MOM form -->
 <script>
-// JavaScript to toggle the visibility of the MOM form
-function toggleMomForm() {
-  var formContainer = document.getElementById('mom-form');
-  formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
-}
-
-// JavaScript to handle form submission
-document.addEventListener('DOMContentLoaded', function() {
-  var momFormToggleButton = document.getElementById('mom-form-toggle');
-  if (momFormToggleButton) {
-    momFormToggleButton.addEventListener('click', toggleMomForm);
-  }
-});
-
+  // JavaScript to toggle the visibility of the MOM form
   function toggleMomForm() {
     var formContainer = document.getElementById('mom-form');
-    var momDetails = document.getElementById('mom-details');
-    
-    if (formContainer.style.display === 'none') {
-      formContainer.style.display = 'block';
-      momDetails.style.display = 'none';
-    } else {
-      formContainer.style.display = 'none';
-      momDetails.style.display = 'block';
-    }
+    formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
   }
 
-  function toggleRemarks(pointId) {
-    var remarksContainer = document.getElementById('remarks-' + pointId);
-    remarksContainer.style.display = remarksContainer.style.display === 'none' ? 'block' : 'none';
-  }
+  // JavaScript to handle form submission
+  document.addEventListener('DOMContentLoaded', function() {
+    var momFormToggleButton = document.getElementById('mom-form-toggle');
+    if (momFormToggleButton) {
+      momFormToggleButton.addEventListener('click', toggleMomForm);
+    }
+  });
+
+    function toggleMomForm() {
+      var formContainer = document.getElementById('mom-form');
+      var momDetails = document.getElementById('mom-details');
+      
+      if (formContainer.style.display === 'none') {
+        formContainer.style.display = 'block';
+        momDetails.style.display = 'none';
+      } else {
+        formContainer.style.display = 'none';
+        momDetails.style.display = 'block';
+      }
+    }
+
+    function toggleRemarks(pointId) {
+      var remarksContainer = document.getElementById('remarks-' + pointId);
+      remarksContainer.style.display = remarksContainer.style.display === 'none' ? 'block' : 'none';
+    }
 </script>
 
 <!-- Styles for improved UI/UX -->
 <style>
-/* app/assets/stylesheets/application.css */
+  /* app/assets/stylesheets/application.css */
+  textarea.auto-resize {
+    word-wrap: break-word; /* Ensures long words are wrapped to the next line */
+    white-space: pre-wrap;  /* You can adjust this max-height as per your needs */
+  }
+  .splitcontent {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
 
-.splitcontent {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
+  .splitcontentleft,
+  .splitcontentright {
+    width: 48%;
+  }
 
-.splitcontentleft,
-.splitcontentright {
-  width: 48%;
-}
+  .detail-item,
+  .point-item,
+  .attendees-list ul {
+    margin-bottom: 8px;
+  }
 
-.detail-item,
-.point-item,
-.attendees-list ul {
-  margin-bottom: 8px;
-}
+  .ml-2 {
+    margin-left: 0.5rem; /* Adjust as needed */
+  }
 
-.ml-2 {
-  margin-left: 0.5rem; /* Adjust as needed */
-}
+  .meeting-actions,
+  .remarks-section {
+    margin-top: 10px;
+  }
 
-.meeting-actions,
-.remarks-section {
-  margin-top: 10px;
-}
+  .points-list ul {
+    list-style-type: none;
+    padding: 0;
+  }
 
-.points-list ul {
-  list-style-type: none;
-  padding: 0;
-}
+  .point-item {
+    padding: 5px;
+    border-bottom: 1px solid #ddd;
+  }
 
-.point-item {
-  padding: 5px;
-  border-bottom: 1px solid #ddd;
-}
+  .point-actions {
+    margin-bottom: 5px;
+  }
 
-.point-actions {
-  margin-bottom: 5px;
-}
+  .remarks-container {
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 5px;
+    background-color: #fff;
+  }
 
-.remarks-container {
-  margin-top: 5px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  padding: 5px;
-  background-color: #fff;
-}
+  .toggle-remarks-btn {
+    cursor: pointer;
+  }
 
-.toggle-remarks-btn {
-  cursor: pointer;
-}
+  .form-container {
+    margin-top: 20px;
+  }
 
-.form-container {
-  margin-top: 20px;
-}
+  .btn-link {
+    color: #007bff;
+    text-decoration: none;
+  }
 
-.btn-link {
-  color: #007bff;
-  text-decoration: none;
-}
+  .btn-link:hover {
+    text-decoration: underline;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: Arial, sans-serif;
+  }
 
-.btn-link:hover {
-  text-decoration: underline;
-}
+  th, td {
+    border: 1px solid #dddddd;
+    padding: 8px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
 </style>

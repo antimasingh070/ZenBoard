@@ -64,7 +64,7 @@ class SchedulerReport < ActiveRecord::Base
     end
 
     def self.generate_and_send_reports
-        projects = Project.where(identifier: "hdbfs_2")
+        projects = Project.all
         projects.each do  |project|
             user  = User.first
             send_report(user, project)

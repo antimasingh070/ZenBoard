@@ -437,7 +437,7 @@ button:hover {
 
   <img class="print-only-image" src="/images/../images/neo.png" width="200" height="50">
   <h2>Average Delay: <%= @average_delay.nil? || @average_delay < 0 ? 'N/A' : "#{@average_delay} days" %></h2>
-
+<h1><%= @projects.count %><h1>
 <table>
   <thead>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -477,6 +477,7 @@ button:hover {
   <% end %>
 </tbody>
 </table>
+<%= will_paginate @projects %>
 </body>
 
 

@@ -58,6 +58,29 @@ def custom_field_value_date(project, field_name)
   end 
 end
 
+def custom_field_due_dates_with_strike(project, field_name)
+  # Find the custom field by name
+  custom_field = CustomField.find_by(name: field_name)
+  
+  # Get all custom values ordered by `created_at` in descending order
+  custom_values = CustomValue.where(
+    customized_type: "Project", 
+    customized_id: project&.id, 
+    custom_field_id: custom_field&.id
+  ).order(created_at: :desc).pluck(:value)
+  
+  # Format the dates
+  formatted_dates = custom_values.map.with_index do |value, index|
+    next if value.blank?
+    
+    date = Date.parse(value) rescue nil
+    formatted_date = date ? date.strftime('%d/%m/%y') : ""
+
+    # Apply strikethrough to all but the first date
+    index == 0 ? formatted_date : "<s>#{formatted_date}</s>"
+  end.compact.join(", ").html_safe
+end
+
 def custom_field_value_issue_date(issue, field_name) 
   custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name) 
   custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id) 
@@ -76,7 +99,7 @@ def member_name(project, field_name)
   member_ids_with_lead_role = MemberRole.where(role_id: project_lead_role&.id).pluck(:member_id) 
   project_lead_user_ids = Member.where(project_id: project.id, id: member_ids_with_lead_role).pluck(:user_id) 
   if project_lead_user_ids.present? 
-    project_lead_users = User.where(id: project_lead_user_ids) 
+    project_lead_users = User.where(id: project_lead_user_ids.compact) 
     project_lead_names = project_lead_users.pluck(:firstname, :lastname) 
     if project_lead_names.size == 1 
       firstname, lastname = project_lead_names.first 
@@ -93,27 +116,42 @@ start_date_previous_week = Date.today.prev_week.beginning_of_week
 end_date_previous_week = Date.today.prev_week.end_of_week
 closed_working_days = (start_date_previous_week..end_date_previous_week).select { |date| working_day?(date, holidays) }
 # Fetch closed issues
-closed_issues = @project.issues.includes(:project).where(tracker_id: 2, status_id: 5).or(Issue.where(project_id: @project.self_and_descendants, tracker_id: 2, status_id: 5))
-# Collect closed issues from the previous week
-closed_issues_previous_week = closed_issues.select do |issue|
-  begin
-    issue_range = issue.custom_field_values.find { |cfv| cfv.custom_field_id == CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")&.id }&.value
-    if issue_range.present?
-      issue_to_date = Date.parse(issue_range)
-      (closed_working_days).include?(issue_to_date)
-    else
-      puts "Actual End Date is not set for Issue ##{issue.id}"
-      false
-    end
-  rescue ArgumentError => e
-    puts "Error parsing date for Issue ##{issue.id}: #{e.message}"
-    false
+# Helper method to parse dates from custom fields
+def fetch_custom_date(issue, field_name)
+  field_id = CustomField.find_by(type: "IssueCustomField", name: field_name)&.id
+  date_value = issue.custom_field_values.find { |cfv| cfv.custom_field_id == field_id }&.value
+  Date.parse(date_value) rescue nil if date_value.present?
+end
+
+# Combine closed/resolved and in-progress/need further details issues
+closed_issues_previous_week = @project.issues
+                                      .includes(:project)
+                                      .where(tracker_id: 2)
+                                      .or(Issue.where(project_id: @project.self_and_descendants)) # Apply self_and_descendants scope
+                                      .select do |issue|
+  status_id = issue.status_id
+  
+  case status_id
+  when 5, 3 # Closed or Resolved status
+    # Fetch Actual End Date for closed/resolved issues
+    actual_end_date = fetch_custom_date(issue, "Actual End Date")
+    actual_end_date && closed_working_days.include?(actual_end_date)
+
+  when 2, 4 # In Progress or Need Further Details status
+    # Check Revised Planned Due Date or fall back to Due Date
+    revised_due_date = fetch_custom_date(issue, "Revised Planned Due Date")
+    issue_due_date = issue.due_date
+    target_date = revised_due_date || issue_due_date
+    target_date && closed_working_days.include?(target_date)
+
+  else
+    false # Exclude issues not matching specified status IDs
   end
 end
 
 # Similar logic for upcoming issues
-start_date = Date.today
-end_date = Date.today + 7.days
+start_date = Date.today.beginning_of_week
+end_date = Date.today.end_of_week
 upcoming_working_days = (start_date..end_date).select { |date| working_day?(date, holidays) }
 # Fetch upcoming issues
 upcoming_issues = @project.issues.includes(:project).where(tracker_id: 2).where.not(status_id: 5).or(Issue.where(project_id: @project.self_and_descendants, tracker_id: 2).where.not(status_id: 5))
@@ -121,9 +159,13 @@ upcoming_issues = @project.issues.includes(:project).where(tracker_id: 2).where.
 # Collect upcoming issues with actual end dates within the next week
 upcoming_actual_end_date_issues = upcoming_issues.select do |issue|
   begin
-    issue_range = issue.custom_field_values.find { |cfv| cfv.custom_field_id == CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")&.id }&.value
+    issue_range = issue.custom_field_values.find { |cfv| cfv.custom_field_id == CustomField.find_by(type: "IssueCustomField", name: "Revised Planned Due Date")&.id }&.value
+    issue_due_date = issue.due_date
     if issue_range.present?
       issue_to_date = Date.parse(issue_range)
+      (upcoming_working_days).include?(issue_to_date)
+    elsif issue_due_date.present?
+      issue_to_date = issue.due_date
       (upcoming_working_days).include?(issue_to_date)
     else
       puts "Actual End Date is not set for Issue ##{issue.id}"
@@ -167,7 +209,7 @@ end
       <tr>
         <td style= "font-weight: bold">Project Name</td>
         <td><%= @project.name %></td>
-        <td style= "font-weight: bold">Project Code</td>
+        <td style= "font-weight: bold">Project ID</td>
         <td><%= @project.identifier %></td>
       </tr>
       <tr>
@@ -189,10 +231,46 @@ end
         <td><%= member_name(@project, "Project Sponsor") %></td>
       </tr>
       <tr>
-        <td style= "font-weight: bold">Reason - Revised Due Date</td>
-        <td colspan="3"><%= custom_field_value_date(@project, "Reason Revised Due Date") %></td>
+      <td style="font-weight: bold">Revised End Date</td>
+      <td olspan='3'><%= custom_field_due_dates_with_strike(@project, "Revised End Date") %></td>
+      
       </tr>
     </table>
+  </div>
+
+  <% @trackers = Tracker.all %>
+  <div style= "height: 10px; width: 500px; float: right;">
+    <h1 style="padding-top: 40px; ">TRACKERS</h1>
+    <% if @trackers.present? %>
+      <table class="list issue-report">
+        <thead>
+          <tr>
+            <th>Trackers</th>
+            <th>Open</th>
+            <th>Closed</th>
+            <th><%=l(:label_total)%></th>
+          </tr>
+        </thead>
+        <tbody>
+        <% @trackers.each do |tracker| %>
+          <tr>
+            <td class="name" style="width: 200px;">
+              <%= tracker.name %>
+            </td>
+            <td style="width: 50px;">
+              <%= Issue.where(project_id: @project.id, tracker_id: tracker.id , status_id: 1).count %>
+            </td>
+            <td style="width: 50px;">
+              <%= Issue.where(project_id: @project.id, tracker_id: tracker.id).where.not(status_id: 1).count %>
+            </td>
+            <td class="total" style="width: 50px;">
+              <%= Issue.where(project_id: @project.id, tracker_id: tracker.id).count %>
+            </td>
+          </tr>
+        <% end %>
+        </tbody>
+      </table>
+    <% end %>
   </div>
   <div style="clear: both"></div>
     <h1 style="padding-top: 100px">RISKS AND ROADBLOCKS/HELP REQUIRED</h1>
@@ -205,12 +283,12 @@ end
           <th class= "side_status">Identified Date</th>
           <th class= "side_status" style= "background-color: #ba0b11; color: white">Risk Owner</th>
         </tr>
-        <% @count =1 %>
-        <% @risks.each do |risk| %>
-          <% if risk.blank? %>
-            <td> colspan="5" style="text-align: center;">No recorods to display.</td>
+        <% @count = 1 %>
+          <% if @risks.blank? %>
+            <td colspan="5" style="text-align: center;">No recorods to display.</td>
           <% else %>
             <% risks.each do |risk| %>
+               <% binding.pry %>
               <tr>
                 <td><%= @count %></td>
                 <td><%= risk.subject %></td>
@@ -221,7 +299,6 @@ end
               <% @count=@count+1 %>
             <% end %>
           <% end %>
-        <% end %>
       </table>
     </div>
     <h1 style="padding-top: 40px">ACTIVITY COMPLETED THIS WEEK</h1>
@@ -237,11 +314,21 @@ end
           <th class="side_status">Revised Planned Due Date</th>
         </tr>
         <% if closed_issues_previous_week.blank? %>
-          <td colspan="7" style="text-align: center;">No records to display.</td>
+          <td colspan="9" style="text-align: center;">No records to display.</td>
         <% else %>
           <% closed_issues_previous_week.each do |closed_issue| %>
             <tr>
-              <td><%= closed_issue.subject %></td>
+              <% 
+                # Check if the closed issue has a parent issue, and retrieve the parent's subject if it exists
+                parent_issue = closed_issue.parent_id.present? ? Issue.find_by(id: closed_issue.parent_id) : nil 
+              %>
+              <td>
+                <% if parent_issue %>
+                  <%= "#{parent_issue.subject} -> #{closed_issue.subject}" %>
+                <% else %>
+                  <%= closed_issue.subject %>
+                <% end %>
+              </td>
               <td><%= closed_issue.description %></td>
               <td><%= closed_issue.start_date&.strftime("%d/%m/%y") %></td>
               <td><%= closed_issue.due_date&.strftime("%d/%m/%y") %></td>
@@ -271,6 +358,17 @@ end
         <% else %>
           <% upcoming_actual_end_date_issues.each do |opened_issues| %>
             <tr>
+              <% 
+                # Check if the closed issue has a parent issue, and retrieve the parent's subject if it exists
+                parent_issue = opened_issues.parent_id.present? ? Issue.find_by(id: opened_issues.parent_id) : nil 
+              %>
+              <td>
+                <% if parent_issue %>
+                  <%= "<strong>#{parent_issue.subject} -> </strong>#{opened_issues.subject}" %>
+                <% else %>
+                  <%= opened_issues.subject %>
+                <% end %>
+              </td>
               <td><%= opened_issues.subject %></td>
               <% user = User.find_by(id: opened_issues.assigned_to_id) %>
               <td><%= user ? "#{user.firstname} #{user.lastname}" : "" %></td>
@@ -285,6 +383,7 @@ end
         <% end %>
       </table>
     </div>
+
   </div>
   <p style="padding-top: 10px; padding-bottom: 0px; margin-bottom: 0px">Regards,</p>
   <p style="padding-top: 0px; padding-bottom: 0px; margin-bottom: 0px; margin-top: 0px">PMO</p>

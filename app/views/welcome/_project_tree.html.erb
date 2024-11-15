@@ -31,7 +31,7 @@
   <% if due_date %>
   <td style="font-size: 10px;"><%= due_date&.strftime("%-d %b %Y") %></td>
   <% end %>
-  <td style="font-size: 10px;"><%= custom_field_value(project, "User function") %></td>
+  <td style="font-size: 10px;"><%= custom_field_value(project, "Function") %></td>
   <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
   <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
   <% id = project.identifier %>

@@ -166,9 +166,14 @@ module Redmine
                   :if => Proc.new {User.current.logged?}
         menu.push :projects, {:controller => 'projects', :action => 'index'},
                   :caption => :label_project_plural
-        menu.push :business_requirements, {:controller => 'business_requirements', :action => 'index'},
-                  :caption => :label_br_plural,  :if => Proc.new {User.current.logged?}
-                  menu.push :users, {:controller => 'users', :action => 'index'}, :caption => :label_user_plural, :if => Proc.new {
+        menu.push :business_requirements, 
+                  { controller: 'business_requirements', action: 'index' }, 
+                  caption: :label_br_plural,
+                  if: Proc.new { 
+                    User.current.admin? ||
+                    BusinessRequirement.joins(:br_stakeholders).exists?(br_stakeholders: { user_id: User.current.id })
+                  }    
+        menu.push :users, {:controller => 'users', :action => 'index'}, :caption => :label_user_plural, :if => Proc.new {
                     User.current.groups.include?(Group.find_by_lastname('UAM'))
                   }
         menu.push :activity_logs, {:controller => 'activity_logs', :action => 'index'},

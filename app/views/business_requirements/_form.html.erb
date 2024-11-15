@@ -18,7 +18,11 @@
         <p><%= f.text_field :identifier, size: 30, class: 'form-control', placeholder: 'the identifier generate automatically', required: true, disabled: true %></p>
         <p><%= f.text_area :description, rows: 4, class: 'form-control', placeholder: 'Describe the Business Requirement here', required: true  %></p>
         <p><%= f.text_area :cost_benefits, rows: 1, class: 'form-control', placeholder: 'Enter the cost benefits here' %></p>
-        <p><%= f.select :status, options_for_select(BusinessRequirement::STATUS_MAP.map { |k, v| [v, k] }, @business_requirement.status), {}, class: 'form-control' %></p>
+        <% excluded_statuses = [BusinessRequirement::STATUS_ACCEPTED, BusinessRequirement::STATUS_CANCELLED, BusinessRequirement::STATUS_CLOSED] %>
+        <p>
+          <%= f.select :status, options_for_select(BusinessRequirement::STATUS_MAP.reject { |k, _| excluded_statuses.include?(k) }.map { |k, v| [v, k] }, @business_requirement.status), {}, class: 'form-control' %>
+        </p>
+
         <p><%= f.select :project_sponsor, options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, @business_requirement.project_sponsor), {}, class: 'form-control' %></p>
         <p><%= f.select :project_category, options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, @business_requirement.project_category), {}, class: 'form-control' %></p>
         <p><%= f.select :priority_level, options_for_select([['', '']] + @priority_level.map { |level| [level, level] }, @business_requirement.priority_level), {}, class: 'form-control' %></p>
@@ -72,16 +76,18 @@
           <p>
             <label for="stakeholder_user_id_${stakeholderIndex}">stakeholder</label><br>
             <select name="business_requirement[br_stakeholders_attributes][${stakeholderIndex}][user_id]" id="stakeholder_user_id_${stakeholderIndex}" class="form-control">
-             <% @users = User.order(firstname: :asc) %>
+             <% @users = User.where(status: 1).order(firstname: :asc) %>
+              <option value="">Please select a user</option>
               <% @users.each do |user| %>
                 <option value="<%= user.id %>"><%= user.name %></option>
               <% end %>
+
             </select>
           </p>
           <p>
             <label for="stakeholder_role_id_${stakeholderIndex}">Role</label><br>
             <select name="business_requirement[br_stakeholders_attributes][${stakeholderIndex}][role_id]" id="stakeholder_role_id_${stakeholderIndex}" class="form-control">
-            <% @roles = Role.order(name: :asc) %>
+            <% @roles = Role.where.not(name: ["Non member", "Anonymous"]).order(name: :asc) %>
               <% @roles.each do |role| %>
                 <option value="<%= role.id %>"><%= role.name %></option>
               <% end %>

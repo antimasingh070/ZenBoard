@@ -4,14 +4,14 @@ class BusinessRequirement< ActiveRecord::Base
     serialize :requirement_received_from
     serialize :application_name
     # Project statuses
-    STATUS_IN_DISCUSSION     = 1
-    STATUS_REQUIREMENT_FINILIZED     = 2
+    STATUS_IN_DISCUSSION = 1
+    STATUS_REQUIREMENT_FINILIZED = 2
     STATUS_AWAITING_DETAILS = 3
     STATUS_AWATING_BUSINESS_CASE = 4
     STATUS_REQUIREMENT_NOT_APPROVED = 5
     STATUS_REQUIREMENT_ON_HOLD = 6
     STATUS_ACCEPTED = 7
-    STATUS_CANCELLED   = 8
+    STATUS_CANCELLED = 8
     STATUS_CLOSED = 9
     
     STATUS_MAP = {
@@ -25,6 +25,7 @@ class BusinessRequirement< ActiveRecord::Base
         STATUS_CANCELLED   => 'Cancelled',
         STATUS_CLOSED => 'Closed'
     }.freeze
+
     IDENTIFIER_MAX_LENGTH = 50
     has_many :br_stakeholders, dependent: :destroy
 
@@ -50,9 +51,51 @@ class BusinessRequirement< ActiveRecord::Base
                     'business_need', 'planned_project_go_live_date', 'is_it_project', 
                     'project_category', 'vendor_name', 'priority_level', 'project_enhancement',
                      'template','portfolio_category', 'requirement_received_from', 'application_name'
+    
+    after_create :log_create_activity
+    after_update :log_update_activity
+    after_destroy :log_destroy_activity
+
+
+    def log_create_activity
+        activity_log = ActivityLog.create(
+        entity_type: 'BusinessRequirement',
+        entity_id: self.id,
+        field_name: 'Create',
+        old_value: nil,
+        new_value: self.attributes.to_json,
+        author_id: User.current.id
+        )
+    end
+    
+    # changes_hash
+    def log_update_activity
+        saved_changes.each do |field_name, values|
+        ActivityLog.create(
+            entity_type: 'BusinessRequirement',
+            entity_id: self.id,
+            field_name: field_name,
+            old_value: values[0].to_s,
+            new_value: values[1].to_s,
+            author_id: User.current.id
+        )
+        end
+    end
+
+    def log_destroy_activity
+        activity_log = ActivityLog.create(
+        entity_type: 'BusinessRequirement',
+        entity_id: self.id,
+        field_name: 'Delete',
+        old_value: self.attributes.to_json,
+        new_value: nil,
+        author_id: User.current.id
+        )
+    end
 
     def attributes_editable?(user=User.current)
     end
+
     def attachments_editable?(user=User.current)
         attributes_editable?(user)
     end
@@ -66,8 +109,6 @@ class BusinessRequirement< ActiveRecord::Base
     end
 
     def set_unique_identifier
-        # return if self.identifier.present? && !self.identifier_changed?
-
         # Generate a unique identifier for new records
         max_id = BusinessRequirement&.last&.id || 0
         self.identifier = "BR_#{max_id + 1}"

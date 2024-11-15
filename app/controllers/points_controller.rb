@@ -14,7 +14,7 @@ class PointsController < ApplicationController
       @business_requirement = BusinessRequirement.find_by(id: params[:business_requirement_id])
       @br_stakeholders = @business_requirement.br_stakeholders
       if @point.save
-        redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement_id, @mom.meeting), notice: 'Point was successfully created.'
+        redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement_id, @mom.meeting), notice: 'Successfully Added.'
       else
         render :new
       end
@@ -28,8 +28,9 @@ class PointsController < ApplicationController
     def update
       @business_requirement = BusinessRequirement.find_by(id: params[:business_requirement_id])
       @br_stakeholders = @business_requirement.br_stakeholders
+      @meeting = @mom.meeting
       if @point.update(point_params)
-        redirect_to @mom.meeting, notice: 'Point was successfully updated.'
+        redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), notice: 'Successfully updated.'
       else
         render :edit
       end
@@ -37,12 +38,12 @@ class PointsController < ApplicationController
   
     def destroy
       @point.destroy
-      redirect_to @mom.meeting, notice: 'Point was successfully destroyed.'
+      redirect_to @mom.meeting, notice: 'Successfully destroyed.'
     end
   
     def accept
       @point.update(status: 1)
-      redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), notice: 'Point was successfully accepted.'
+      redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), notice: 'Successfully accepted.'
 
     end
   
@@ -63,7 +64,7 @@ class PointsController < ApplicationController
     end
   
     def point_params
-      params.require(:point).permit(:description, :status, :assignee)
+      params.require(:point).permit(:description, :status, :owner, :timeline)
     end
 end
   

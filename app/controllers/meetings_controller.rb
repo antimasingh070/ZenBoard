@@ -13,6 +13,7 @@ class MeetingsController < ApplicationController
       @meeting = @business_requirement.meetings.build(meeting_params)
       @function_name = fetch_custom_field_names('Function')
       if @meeting.save
+        @mom = Mom.find_or_create_by(meeting_id: @meeting.id)
         redirect_to edit_business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Meeting was successfully created. Please add attendee'
       else
         render :new
@@ -28,13 +29,15 @@ class MeetingsController < ApplicationController
         @meeting = @business_requirement.meetings.find(params[:id])
         @function_name = fetch_custom_field_names('Function')
         @br_stakeholders = @business_requirement.br_stakeholders
-        @mom = @meeting.mom
+        @mom = @meeting.mom || @meeting.build_mom
         @points = @mom&.points&.where&.not(id: nil)
+        @point = @mom.points.build if @mom.points.empty?
     end
     
   
     def update
       if @meeting.update(meeting_params)
+        @mom = Mom.find_or_create_by(meeting_id: @meeting.id)
         redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Meeting was successfully updated.'
       else
         render :edit

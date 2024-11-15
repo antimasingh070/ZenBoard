@@ -70,8 +70,6 @@
 <% end %>
       <% if @issue.safe_attribute? 'start_date' %>
       <p id="start_date_area">
-          <% @members = Member.where(project_id: @project.id) %>
-          <% @pmo_present = @members.any? { |member| member.user_id == User.current.id && member.roles.pluck(:name).include?("PMO") } %>
           <% tracker = Tracker.find_by(name: "Risk Register" ) %>
           <% if  tracker.id  == @issue.tracker_id %>
             <%= f.date_field(:start_date, :size => 10, disabled: true) %>
@@ -84,8 +82,7 @@
       <% end %>
       <% if @issue.safe_attribute? 'due_date' %>
       <p id="due_date_area">
-          <% @members = Member.where(project_id: @project.id) %>
-          <% @pmo_present = @members.any? { |member| member.user_id == User.current.id && member.roles.pluck(:name).include?("PMO") } %>
+
           <% tracker = Tracker.find_by(name: "Risk Register" ) %>
           <% if  tracker.id  == @issue.tracker_id %>
             <%= f.date_field(:due_date, :size => 10) %>

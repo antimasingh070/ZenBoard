@@ -1,0 +1,10 @@
+<% @projects.reject { |entry| entry.name == "Master Project" }.each do |project| %>
+    $('#load-more-trigger').before("<%= j(render partial: 'project_tree', locals: { project: project, indent: 0 }) %>");
+  <% end %>
+  
+  <% if @more_projects %>
+    $('#load-more-trigger').after('<div id="load-more-trigger"></div>');
+  <% else %>
+    $('#load-more-trigger').remove();
+  <% end %>
+  

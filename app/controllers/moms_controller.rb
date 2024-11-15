@@ -19,7 +19,7 @@ class MomsController < ApplicationController
     @mom = @meeting.build_mom(mom_params)
     if @mom.save
       
-      redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'MOM was successfully created.'
+      redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Successfully created.'
     else
       render :new
     end
@@ -36,7 +36,7 @@ class MomsController < ApplicationController
     @meeting = @business_requirement.meetings.find(params[:meeting_id])
     @mom = @meeting.mom
     if @mom.update(mom_params)
-      redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'MOM was successfully updated.'
+      redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Successfully updated.'
     else
       render :edit
     end

@@ -269,10 +269,9 @@ class WelcomeController < ApplicationController
       else
         @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }  # Show only projects the user is a member of
       end
-      
-      
+
       @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
-      @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq.sort
+      @functions = @projects.map { |project| custom_field_value(project, 'Function') }.compact.uniq.sort
       @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq.sort
       @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
       @names = @projects.select { |project| project.parent_id.nil? }.map(&:name).uniq.sort
@@ -307,9 +306,8 @@ class WelcomeController < ApplicationController
         end
       }
     
-      # Remove this line if you don't want to limit to the first 3 projects
-      @next_week_go_live_projects = @next_week_go_live_projects[0..2]
-      # Cache the data
+      # Paginate through the existing projects
+      @projects = @projects.paginate(page: params[:page], per_page: 20)
       REDIS.set(cache_key, Marshal.dump([@projects, @categories, @functions, @statuses, @managers, @names, @subprojects, @next_week_go_live_projects]), ex: 5.minutes.to_i)
     # end
   end

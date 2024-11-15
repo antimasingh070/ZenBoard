@@ -33,6 +33,7 @@
           <td><%= business_requirement.identifier %></td>
           <td><%= business_requirement.requirement_case %></td>
           <td><%= business_requirement.description %></td>
+          <td><%= business_requirement.requirement_received_from.reject(&:blank?).join(", ") %></td>
           <td><%= BusinessRequirement::STATUS_MAP[business_requirement.status] %></td>
           <td><% grouped_stakeholders = business_requirement.br_stakeholders.group_by { |stakeholder| stakeholder.role.name } %>
 
@@ -105,15 +106,6 @@
                   <p><%= f.date_field :scheduled_end_date, class: 'form-control' if business_requirement.scheduled_end_date.blank? %></p>
                 </div>
               </div>
-      
-              <div class="row">
-                <div class="col-md-6">
-                  <p><%= f.date_field :actual_start_date, class: 'form-control' if business_requirement.actual_start_date.blank? %></p>
-                  <p><%= f.date_field :actual_end_date, class: 'form-control' if business_requirement.actual_end_date.blank? %></p>
-                </div>
-              </div>
-      
-              <p><%= f.date_field :revised_end_date, class: 'form-control' if business_requirement.revised_end_date.blank? %></p>
               <p><%= f.text_area(:business_need_as_per_business_case, rows: 2, required: true, class: 'form-control', placeholder: 'State the business need here') if business_requirement.business_need_as_per_business_case.blank? %></p>
               <p><%= f.date_field :planned_project_go_live_date, required: true, class: 'form-control' if business_requirement.planned_project_go_live_date.blank? %></p>
               <p><%= f.check_box :is_it_project, label: "Is IT Project?", required: true, class: 'form-check-input' if business_requirement.is_it_project.blank? %></p>
@@ -132,90 +124,90 @@
 </table>
 
 <style>
-table {
-    border-collapse: collapse;
-    width: 100%;
-    font-family: Arial, sans-serif;
-}
+  table {
+      border-collapse: collapse;
+      width: 100%;
+      font-family: Arial, sans-serif;
+  }
 
-th, td {
-    border: 1px solid #dddddd;
-    padding: 8px;
-    text-align: left;
-    font-size: 14px;
-}
+  th, td {
+      border: 1px solid #dddddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 14px;
+  }
 
-th {
-    background-color: #f9f9f9;
-    font-weight: bold;
-}
+  th {
+      background-color: #f9f9f9;
+      font-weight: bold;
+  }
 
-tr:nth-child(even) {
-    background-color: #f2f2f2;
-}
+  tr:nth-child(even) {
+      background-color: #f2f2f2;
+  }
 
-.btn {
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    text-decoration: none;
-    margin: 2px;
-}
+  .btn {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      text-decoration: none;
+      margin: 2px;
+  }
 
-.btn-custom-success {
-    background-color: #28a745; /* Bootstrap green color */
-    border-color: #28a745;
-}
+  .btn-custom-success {
+      background-color: #28a745; /* Bootstrap green color */
+      border-color: #28a745;
+  }
 
-.btn-primary {
-    background-color: #007bff;
-    color: white;
-}
+  .btn-primary {
+      background-color: #007bff;
+      color: white;
+  }
 
-.btn-info {
-    background-color: #17a2b8;
-    color: white;
-}
+  .btn-info {
+      background-color: #17a2b8;
+      color: white;
+  }
 
-.btn-warning {
-    background-color: #ffc107;
-    color: black;
-}
+  .btn-warning {
+      background-color: #ffc107;
+      color: black;
+  }
 
-.btn-danger {
-    background-color: #dc3545;
-    color: white;
-}
+  .btn-danger {
+      background-color: #dc3545;
+      color: white;
+  }
 
-.btn-sm {
-    font-size: 12px;
-}
+  .btn-sm {
+      font-size: 12px;
+  }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Attach event listener to the form's submit button
-  document.querySelectorAll('form[id^="acceptForm-"]').forEach(function(form) {
-    form.addEventListener('submit', function(event) {
-      let isValid = true;
-      let fields = ['priority_level', 'scheduled_start_date', 'planned_project_go_live_date', 'function', 'portfolio_category', 'project_category'];
-      
-      fields.forEach(function(fieldId) {
-        let field = form.querySelector(`#${fieldId}`);
-        if (field && !field.value.trim()) {
-          isValid = false;
-          field.classList.add('is-invalid'); // Add error styling (you need to define this class in your CSS)
-        } else {
-          field.classList.remove('is-invalid');
+  document.addEventListener('DOMContentLoaded', function() {
+    // Attach event listener to the form's submit button
+    document.querySelectorAll('form[id^="acceptForm-"]').forEach(function(form) {
+      form.addEventListener('submit', function(event) {
+        let isValid = true;
+        let fields = ['priority_level', 'scheduled_start_date', 'planned_project_go_live_date', 'function', 'portfolio_category', 'project_category'];
+        
+        fields.forEach(function(fieldId) {
+          let field = form.querySelector(`#${fieldId}`);
+          if (field && !field.value.trim()) {
+            isValid = false;
+            field.classList.add('is-invalid'); // Add error styling (you need to define this class in your CSS)
+          } else {
+            field.classList.remove('is-invalid');
+          }
+        });
+
+        if (!isValid) {
+          event.preventDefault(); // Prevent form submission
+          alert('Please fill in all required fields.');
         }
       });
-
-      if (!isValid) {
-        event.preventDefault(); // Prevent form submission
-        alert('Please fill in all required fields.');
-      }
     });
   });
-});
 
 </script>

@@ -9,7 +9,7 @@ class RemarksController < ApplicationController
       @remark.author = User.current  # Assuming you have a current_user method
   
       if @remark.save
-        redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), notice: 'Remark was successfully added.'
+        redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), notice: 'Successfully Updated.'
       else
         redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), alert: 'Failed to add remark.'
       end      

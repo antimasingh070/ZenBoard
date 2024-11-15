@@ -2,7 +2,12 @@ class BusinessRequirementsController < ApplicationController
     before_action :set_business_requirement, only: %i[show edit update destroy accept decline]
     helper :attachments
     def index
-      @business_requirements = BusinessRequirement.all
+      @business_requirements =  if User.current.admin?
+                                      BusinessRequirement.all
+                                else
+                                  BusinessRequirement.joins(:br_stakeholders)
+                                              .where(br_stakeholders: { user_id: User.current.id }).uniq
+                                end
       @project_categories = fetch_custom_field_names('Project Category')
       @vendor_name = fetch_custom_field_names('Vendor Name')
       @portfolio_categories = fetch_custom_field_names('Portfolio Category')
@@ -62,8 +67,8 @@ class BusinessRequirementsController < ApplicationController
     end
     
     def accept
-        @business_requirement =BusinessRequirement.find(params[:id])
-        if @business_requirement.update(business_requirement_params)
+        @business_requirement = BusinessRequirement.find(params[:id])
+        if params[:business_requirement].nil? || @business_requirement.update(business_requirement_params)
             mandatory_fields = [:is_it_project, :business_need_as_per_business_case, :priority_level, :requirement_submitted_date, :planned_project_go_live_date, :requirement_received_from, :portfolio_category, :project_category]
             mandatory_fields.each do |field|
               value = @business_requirement.send(field)
@@ -106,74 +111,81 @@ class BusinessRequirementsController < ApplicationController
               'Scheduled End Date' => @business_requirement.scheduled_end_date,
               'Actual Start Date' => @business_requirement.actual_start_date,
               'Actual End Date' => @business_requirement.actual_end_date,
-              'Template' => @business_requirement.template
+              'Template' => @business_requirement.template   
             }
+            # 'SMT Report' => @business_requirement.smt_report    
+              custom_fields.each do  |field_name, value|
+                begin
+                  custom_field = CustomField.find_by(type: "ProjectCustomField", name: field_name)
+                  next unless custom_field
+                  if field_name == "Portfolio Category" || field_name == "Application Name" || field_name == "Function"
+                    # Delete existing custom values for this field
+                    CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
 
-            custom_fields.each do  |field_name, value|
-              custom_field = CustomField.find_by(type: "ProjectCustomField", name: field_name)
-              next unless custom_field
-              if field_name == "Portfolio Category" || field_name == "Application Name" || field_name == "Function"
-                # Delete existing custom values for this field
-                CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
+                    # Initialize an empty array to store custom values
+                    custom_values = []
+                    value.each do |enumeration_name|
+                      enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: enumeration_name)
+                      if enumeration
+                        custom_value = CustomValue.find_or_create_by(
+                          customized_type: "Project",
+                          customized_id: @project.id,
+                          custom_field_id: custom_field.id,
+                          value: enumeration.id
+                        )
 
-                # Initialize an empty array to store custom values
-                custom_values = []
-                value.each do |enumeration_name|
-                  enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: enumeration_name)
-                  if enumeration
-                    custom_value = CustomValue.find_or_create_by(
-                      customized_type: "Project",
-                      customized_id: @project.id,
-                      custom_field_id: custom_field.id,
-                      value: enumeration.id
-                    )
+                        custom_values << custom_value
+                        custom_value.update(value: "") if custom_value.value.nil?
+                      
+                        @project.custom_field_values = { custom_field.id => custom_values.map(&:value) }
+                      end
+                    end
 
-                    custom_values << custom_value
+                  elsif field_name == "Project Category" || field_name == "Priority Level" || field_name == "Vendor Name" || field_name == "Project/Enhancement" 
+                    # Delete existing custom values for this field
+                    CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
+                    enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
+                    if enumeration
+                      custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: enumeration.id)
+                      custom_value.update(value: "") if custom_value.value.nil?
+                      @project.custom_field_values = { custom_field.id => custom_value }
+                    end
+                  elsif field_name == "Is IT Project?"
+                    CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
+                
+                    if value == true
+                      custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: "1")
+                      custom_value.update(value: "") if custom_value.value.nil?
+                      @project.custom_field_values = { custom_field.id => custom_value }
+                    else
+                      custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: "0")
+                      custom_value.update(value: "") if custom_value.value.nil?
+                    end
+                  elsif field_name == "Template"
+                    auto_create_records(@project, value)
+                    enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
+                    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: enumeration.id)
                     custom_value.update(value: "") if custom_value.value.nil?
-                   
-                    @project.custom_field_values = { custom_field.id => custom_values.map(&:value) }
+                    @project.custom_field_values = { custom_field.id => custom_value }
+                  else
+                    custom_value = CustomValue.find_or_initialize_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id)
+                    if custom_field.field_format == 'list' && custom_field.multiple
+                      custom_value.value = value.reject(&:blank?) # Remove any blank values
+                      custom_value.save
+                      @project.custom_field_values = { custom_field.id => custom_value }
+                    else
+                      custom_value.value = value
+                      custom_value.save
+                      @project.custom_field_values = { custom_field.id => custom_value }
+                    end
                   end
-                end
-
-              elsif field_name == "Project Category" || field_name == "Priority Level" || field_name == "Vendor Name" || field_name == "Project/Enhancement" 
-                # Delete existing custom values for this field
-                CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
-                enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
-                if enumeration
-                  custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: enumeration.id)
-                  custom_value.update(value: "") if custom_value.value.nil?
-                  @project.custom_field_values = { custom_field.id => custom_value }
-                end
-              elsif field_name == "Is IT Project?"
-                CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
-             
-                if value == true
-                  custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: "1")
-                  custom_value.update(value: "") if custom_value.value.nil?
-                  @project.custom_field_values = { custom_field.id => custom_value }
-                else
-                  custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: "0")
-                  custom_value.update(value: "") if custom_value.value.nil?
-                end
-              elsif field_name == "Template"
-                auto_create_records(@project, value)
-                enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
-                custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: enumeration.id)
-                custom_value.update(value: "") if custom_value.value.nil?
-                @project.custom_field_values = { custom_field.id => custom_value }
-              else
-                custom_value = CustomValue.find_or_initialize_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id)
-                if custom_field.field_format == 'list' && custom_field.multiple
-                  custom_value.value = value.reject(&:blank?) # Remove any blank values
-                  custom_value.save
-                  @project.custom_field_values = { custom_field.id => custom_value }
-                else
-                  custom_value.value = value
-                  custom_value.save
-                  @project.custom_field_values = { custom_field.id => custom_value }
+                rescue => e
+                  # Handle the error and display the message
+                  flash[:error] = "Failed to create or update project. Error: #{field_name} #{value}#{e.message}"
+                  redirect_to business_requirements_path
                 end
               end
-            end
+            
             if @project.save
                 @business_requirement.update(status: 7)
                 @business_requirement.update(project_identifier: @project.identifier)

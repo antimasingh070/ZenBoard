@@ -12,11 +12,11 @@ class Point < ActiveRecord::Base
     STATUS_CLOSE = 6
 
     STATUS_MAP = {
-        STATUS_APPROVED => 'Approved',
-        STATUS_REJECTED => 'Declined',
+        STATUS_IN_PROGRESS => 'In Progress',
         STATUS_PENDING => 'Pending',
         STATUS_OPEN => 'Open',
-        STATUS_IN_PROGRESS => 'In Progress',
+        STATUS_APPROVED => 'Approved',
+        STATUS_REJECTED => 'Declined',
         STATUS_CLOSE => 'Close'
     }.freeze
 
