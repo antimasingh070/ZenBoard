@@ -38,7 +38,7 @@ class PointsController < ApplicationController
   
     def destroy
       @point.destroy
-      redirect_to @mom.meeting, notice: 'Successfully destroyed.'
+      redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), notice: 'Successfully deleted.'
     end
   
     def accept

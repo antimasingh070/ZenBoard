@@ -162,12 +162,12 @@ mount DelayedJobWeb => '/delayed_job'
     resources :meetings do
       resources :meeting_attendees, only: [:new, :create, :edit, :update, :destroy]
       resources :moms do
-        resources :points, only: [:create, :update] do
+        resources :points, only: [:create, :update, :destroy] do
           member do
             post 'accept'
             post 'reject'
           end
-          resources :remarks, only: [:create]  
+          resources :remarks, only: [:create, :update, :destroy]  
         end
       end
     end

@@ -8,7 +8,7 @@
       <strong>Title:</strong> <%= @meeting.title %>
     </div>
     <div class="detail-item">
-      <strong>Scheduled:</strong> <%= @meeting.scheduled_at.strftime("%d %b %Y %H:%M") %>
+      <strong>Scheduled:</strong> <%= @meeting.scheduled_at.strftime("%d/%m/%Y %H:%M") %>
     </div>
     <div class="detail-item">
       <strong>Function:</strong> <%= @meeting.function_name %>
@@ -92,6 +92,10 @@
               <!-- Action Column -->
               <td>                <button type="button" class="btn btn-primary toggle-edit">Edit</button>
                 <%= f.submit point.id.present? ? 'save' : 'Create', class: 'btn btn-primary edit-form', style: 'display: none;' %>
+                <!-- Delete Button - Separate form for delete action -->
+                <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), method: :delete, local: true, html: { class: 'delete-form', style: 'display: inline;' }) do |delete_form| %>
+                  <%= delete_form.submit "Delete", class: 'btn btn-danger', data: { confirm: 'Are you sure you want to delete this point?' } %>
+                <% end %>
               </td>
             <% end %>
               <!-- Remarks Section in Table Cell -->
@@ -100,17 +104,41 @@
                   <button class="toggle-remarks-btn" onclick="toggleRemarks(<%= point.id %>)">
                     <%= point.remarks.any? ? 'Show Remarks' : 'Add Remarks' %>
                   </button>
-            
+
                   <div id="remarks-<%= point.id %>" class="remarks-container" style="display: none;">
                     <% point.remarks.each do |remark| %>
                       <div class="remark-item">
-                        <p><strong><%= User.find_by(id: remark.author_id)&.firstname %>:</strong> <%= remark.content %></p>
+                        <p>
+                          <strong><%= User.find_by(id: remark.author_id)&.firstname %>:</strong> 
+                          <%= remark.content %>
+                        </p>
+
+                        <!-- Edit and Delete Buttons for each remark -->
+                        <div class="remark-actions">
+                          <!-- Edit button shows the edit form -->
+                          <button class="btn btn-secondary btn-sm" onclick="toggleEditForm(<%= remark.id %>)">Edit</button>
+                          
+                          <!-- Delete form triggers remark deletion -->
+                          <%= form_with model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, remark], method: :delete, local: true do |delete_form| %>
+                            <%= delete_form.submit "Delete", class: "btn btn-danger btn-sm", data: { confirm: "Are you sure you want to delete this remark?" } %>
+                          <% end %>
+                        </div>
+
+                        <!-- Edit form, initially hidden, toggled by Edit button -->
+                        <div id="edit-form-<%= remark.id %>" class="edit-remark-form" style="display: none;">
+                          <%= form_with model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, remark], local: true, method: :patch do |edit_form| %>
+                            <div class="form-group">
+                              <%= edit_form.text_area :content, value: remark.content, required: true, rows: 2 %>
+                            </div>
+                            <%= edit_form.submit "Update", class: "btn btn-primary btn-sm" %>
+                          <% end %>
+                        </div>
                       </div>
                     <% end %>
-            
+
                     <!-- Add new remark form -->
                     <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
-                      <%= form_with(model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, Remark.new], local: true, html: { class: 'remark-form' }) do |form| %>
+                      <%= form_with model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, Remark.new], local: true, html: { class: 'remark-form' } do |form| %>
                         <div class="form-group">
                           <%= form.label :content, "Add a Remark:" %>
                           <%= form.text_area :content, required: true, rows: 2 %>
@@ -122,6 +150,7 @@
                   </div>
                 </div>
               </td>
+
           </tr>
         <% end %>
           <tr>
@@ -157,6 +186,15 @@
 
 <!-- JavaScript to Toggle View/Edit Mode -->
 <script>
+  function toggleEditForm(remarkId) {
+    const editForm = document.getElementById(`edit-form-${remarkId}`);
+    if (editForm.style.display === "none") {
+      editForm.style.display = "block";
+    } else {
+      editForm.style.display = "none";
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", function() {
     const editButtons = document.querySelectorAll('.toggle-edit');
     

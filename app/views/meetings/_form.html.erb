@@ -12,7 +12,7 @@
 <div class="box tabular">
   <p><%= f.text_field :title, class: 'form-control', placeholder: 'Title', required: true %></p>
   <p><%= f.select :status, options_for_select(Meeting::STATUS_MAP.map { |k, v| [v, k] }, @meeting.status), {}, class: 'form-control', required: true %></p>
-  <p><%= f.date_field :scheduled_at, class: 'form-control', placeholder: 'Scheduled Date', required: true %></p>
+  <p><%= f.datetime_local_field :scheduled_at, class: 'form-control', placeholder: 'Scheduled Date', required: true %></p>
    <p><%= f.select :function_name, options_for_select([['', '']] + @function_name.map { |function_name| [function_name, function_name] }, @meeting.function_name), {}, class: 'form-control' %></p>
   <p><%= f.text_area :note, rows: 2, class: 'form-control', placeholder: 'Note', required: true %></p>
   <% if !@meeting.id.nil? %>

@@ -3,7 +3,8 @@ class RemarksController < ApplicationController
     before_action :set_meeting
     before_action :set_mom
     before_action :set_point
-  
+    before_action :set_remark, only: [:update, :destroy]
+    
     def create
       @remark = @point.remarks.build(remark_params)
       @remark.author = User.current  # Assuming you have a current_user method
@@ -15,8 +16,25 @@ class RemarksController < ApplicationController
       end      
     end
   
+    def update
+      if @remark.update(remark_params)
+        redirect_to request.referrer, notice: 'Successfully updated.'
+      else
+        redirect_to request.referrer, alert: 'Failed to update remark.'
+      end
+    end
+  
+    def destroy
+      @remark.destroy
+      redirect_to request.referrer, notice: 'Successfully deleted.'
+    end
+
     private
   
+    def set_remark
+      @remark = Remark.find(params[:id])
+    end
+
     def set_meeting
       @meeting = Meeting.find(params[:meeting_id])
     end
