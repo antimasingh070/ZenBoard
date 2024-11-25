@@ -102,11 +102,11 @@ module WelcomeHelper
       custom_field = CustomField.find_by(name: field_name)
       return "" unless custom_field
     
-      custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
-      return "" unless custom_value
-    
-      custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
-      custom_field_enumeration&.name || ''
+      custom_values = CustomValue.where(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
+      custom_field_enumerations = custom_values.map do |cv|
+        CustomFieldEnumeration.find_by(id: cv.value.to_i)
+      end.compact
+      custom_field_enumerations.map(&:name).join(', ') # Or handle the names as needed
     end
   end
 

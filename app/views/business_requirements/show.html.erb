@@ -3,6 +3,7 @@
     <div class="splitcontentleft">
       <h2><strong><%=l(:label_business_requirement)%></strong></h2>
         <% fields = {
+            "Created At" => @business_requirement.created_at.strftime("%d %b %Y"),
             "Requirement Case" => @business_requirement.requirement_case,
             "Identifier" => @business_requirement.identifier,
             "Project Identifier" => @business_requirement.project_identifier,

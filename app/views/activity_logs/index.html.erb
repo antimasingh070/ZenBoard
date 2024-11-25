@@ -3,6 +3,10 @@
     <h5>Filter Activity Logs</h5>
     <%= form_with url: activity_logs_path, method: :get, local: true do %>
       <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+        <div style="flex: 2;">
+          <label for="search">Search Anywhere:</label>
+          <%= text_field_tag :search, params[:search], placeholder: "Search in any field", style: 'width: 100%;' %>
+        </div>
         <div style="flex: 1;">
           <label for="entity_type">Entity Type:</label>
           <%= select_tag :entity_type, options_for_select(@entity_types, params[:entity_type]), include_blank: "All", style: 'width: 100%;' %>

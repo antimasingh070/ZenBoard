@@ -217,7 +217,7 @@ class BusinessRequirementsController < ApplicationController
         @business_requirement.is_it_project = true
         if @business_requirement.project_enhancement == "Project"
           @business_requirement.template = "IT"
-        else
+        elsif @business_requirement.project_enhancement == "Enhancement"
           @business_requirement.template = "IT Enhancement"
         end
         if @business_requirement.save
@@ -237,6 +237,13 @@ class BusinessRequirementsController < ApplicationController
   
     def update
       if @business_requirement.update(business_requirement_params)
+        if @business_requirement.project_enhancement == "Project"
+          @business_requirement.update(template: "IT")
+        elsif @business_requirement.project_enhancement == "Enhancement"
+          @business_requirement.update(template: "IT Enhancement")
+        else
+          @business_requirement.update(template: "")
+        end
         attach_files(@business_requirement)
         redirect_to @business_requirement, notice: 'Business Requirement was successfully updated.'
       end

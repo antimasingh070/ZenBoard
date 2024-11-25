@@ -366,16 +366,6 @@ button:hover {
           <input type="date" name="end_date_to" id="end_date_to" value="<%= params[:end_date_to] %>">
         </div>
       </div>
-      
-      <div class="filter-group">
-      <label for="manager_filter">Project Manager:</label>
-      <select name="manager_filter" id="manager_filter">
-        <option value="">All</option>
-        <% @managers.each do |manager| %>
-          <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
-        <% end %>
-      </select>
-    </div>
     
     <div class="filter-group">
       <label for="status_filter">Status:</label>
@@ -538,6 +528,8 @@ button:hover {
   var showSubprojectsTrue = document.getElementById('show_subprojects_true');
   var showSubprojectsFalse = document.getElementById('show_subprojects_false');
   var status = document.getElementById('status_filter');
+  var manager = document.getElementById('manager_filter');
+  var function = document.getElementById('function_filter');
   var formGroup = document.getElementById('form-group');
   
   if (daysInput) daysInput.value = '30';
@@ -546,6 +538,8 @@ button:hover {
   if (endDateFrom) endDateFrom.value = '';
   if (endDateTo) endDateTo.value = '';
   if (status) status.value = '';
+  if (manager) manager.value = '';
+  if (function) function.value = '';
 
   if (showSubprojectsTrue) showSubprojectsTrue.checked = false;
   if (showSubprojectsFalse) showSubprojectsFalse.checked = true;

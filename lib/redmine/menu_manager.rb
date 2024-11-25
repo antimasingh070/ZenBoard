@@ -134,6 +134,7 @@ module Redmine
                 links << content_tag('li', link_to('IT Project Dashboard', it_project_dashboard_path(status_filter: 1))) if it_project_present
                 links << content_tag('li', link_to('Non IT Project Dashboard', non_it_project_dashboard_path)) if non_it_project_present
               end
+              links << content_tag('li', link_to('Project Score Card', project_score_card_path)) if User.current.admin?
             end
           end
         end

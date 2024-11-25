@@ -240,7 +240,7 @@ class WelcomeController < ApplicationController
       else
         @projects = @projects.where(parent_id: nil)
       end
-      
+
       @projects = @projects.joins("LEFT JOIN custom_values ON custom_values.customized_id = projects.id AND custom_values.customized_type = 'Project'")
       .joins("LEFT JOIN custom_fields ON custom_fields.id = custom_values.custom_field_id")
       .where("custom_fields.name = ?", 'Planned Project Go Live Date')
@@ -249,11 +249,21 @@ class WelcomeController < ApplicationController
       customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "1").pluck(:customized_id)
       @projects = @projects.where.not(name: "Master Project").where(id: customized_ids)
 
-      @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
-      @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
       @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
 
       @projects = @projects.select { |project| member_names(project, 'Project Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
+      @projects = @projects.select { |project| member_names(project, 'Program Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
+      @projects = @projects.select{|project| custom_field_value(project, 'Project Category')&.include?(params[:category_filter])} if params[:category_filter].present?
+
+      @projects = @projects.select do |project|
+        function_values = custom_field_value(project, 'Function')
+        if function_values.is_a?(Array)
+          function_values.any? { |value| value.casecmp?(params[:function_filter]) }
+        else
+          function_values&.casecmp?(params[:function_filter])
+        end
+      end if params[:function_filter].present?
+      
 
       if params[:start_date_from].present? && params[:start_date_to].present?
         start_date_range = Date.parse(params[:start_date_from])..Date.parse(params[:start_date_to])
@@ -269,9 +279,9 @@ class WelcomeController < ApplicationController
       else
         @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }  # Show only projects the user is a member of
       end
-
+# binding.pry
       @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
-      @functions = @projects.map { |project| custom_field_value(project, 'Function') }.compact.uniq.sort
+      @functions = @projects.flat_map { |project| custom_field_value(project, 'Function') }.compact.uniq
       @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq.sort
       @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
       @names = @projects.select { |project| project.parent_id.nil? }.map(&:name).uniq.sort
@@ -335,7 +345,8 @@ class WelcomeController < ApplicationController
     customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "0").pluck(:customized_id)
     @projects = @projects.where(id: customized_ids)
     @projects = @projects.where("custom_field_value(project, 'Project Category') = ?", params[:category_filter]) if params[:category_filter].present?
-    @projects = @projects.where("custom_field_value(project, 'User Function') = ?", params[:function_filter]) if params[:function_filter].present?
+
+    @projects = @projects.where("custom_field_value(project, 'Function') = ?", params[:function_filter]) if params[:function_filter].present?
     @projects = @projects.where("custom_field_value(project, 'Template') = ?", params[:template_filter]) if params[:template_filter].present?
     @projects = @projects.where(status: params[:status_filter].to_i) if params[:status_filter].present?
     @projects = @projects.where("project.name = ?", params[:name_filter]) if params[:name_filter].present?
@@ -353,7 +364,8 @@ class WelcomeController < ApplicationController
 
     @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }
     @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
-    @functions = @projects.map { |project| custom_field_value(project, 'User Function') }.compact.uniq
+ 
+    @functions = @projects.map { |project| custom_field_value(project, 'Function') }.compact.uniq
     @templates = @projects.map { |project| custom_field_value(project, 'Template') }.compact.uniq
     @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq
     @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq
@@ -390,10 +402,15 @@ class WelcomeController < ApplicationController
   end  
 
   def custom_field_value(project, field_name)
+    if field_name = "Function"
     custom_field = CustomField.find_by(name: field_name)
-    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
-    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
-    custom_field_enumeration&.name
+    custom_values = CustomValue.where(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
+    custom_field_enumerations = custom_values.map do |cv|
+      CustomFieldEnumeration.find_by(id: cv.value.to_i)
+    end.compact
+    custom_field_enumerations.map(&:name) # Or handle the names as needed
+  end
+
   end
 
   def index

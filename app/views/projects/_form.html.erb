@@ -7,34 +7,8 @@
   <p><%= f.select :status, options_for_select(Project::STATUS_MAP.map { |k, v| [v, k] }) %></p>
 <% end %>
 <p><%= f.text_area :description, :rows => 8, :class => 'wiki-edit' %></p>
-<p>
-  <% if @project.id.nil? && !@project.parent_id.nil? %>
-    <% @parent = Project.where(id: @project.parent_id).first %>
-    <% if !@parent.nil? %>
-      <% new_identifier = "#{Project.where(parent_id: @project.parent_id).count + 1}" %>
-      <% @project.identifier = "#{@parent.identifier}_#{new_identifier}" %>
-    <% else %>
-      <% new_identifier = "#{@project.parent_id}_#{Project.where(parent_id: @project.parent_id).count + 1}" %>
-      <% @project.identifier = "neo_#{new_identifier}" %>
-    <% end %>
-  <% else %>
-    <% @project.identifier = "neo_#{Project.where(parent_id: @project.parent_id).last.id + 1}" %>
-  <% end %>
+<div class="custom-fields-grid">
 
-  <%= f.text_field :identifier, :required => true, :size => 60, :maxlength => Project::IDENTIFIER_MAX_LENGTH %>
-
-  <% unless @project.identifier_frozen? %>
-    <em class="info">
-      <%= l(:text_length_between, :min => 1, :max => Project::IDENTIFIER_MAX_LENGTH) %>
-      <%= l(:text_project_identifier_info).html_safe %>
-    </em>
-  <% end %>
-</p>
-
-<p>
-  <%= f.check_box :is_public, :disabled => !@project.safe_attribute?(:is_public) %>
-  <em class="info"><%= Setting.login_required? ? l(:text_project_is_public_non_member) : l(:text_project_is_public_anonymous) %></em>
-</p>
 
 <% unless @project.allowed_parents.compact.empty? %>
     <p><%= label(:project, :parent_id, l(:field_parent)) %><%= parent_project_select_tag(@project) %></p>
@@ -46,46 +20,59 @@
 
 <%= wikitoolbar_for 'project_description' %>
 
-<% if !@project.id.nil? %>
-<div>
-<%= hidden_field_tag :authenticity_token, form_authenticity_token %>
-<p>
-  <label for="revised_end_date">Revised End Date</label>
-  <input type="date" id="revised_end_date" name="revised_end_date" class="form-control">
-</p>
-<p>
-  <label for="revised_end_date">Reason - Revised End Date<sup style="color: red;">*</sup></label>
-  <input type="text" id="reason" name="reason" class="form-control" >
-  <button type="button" id="update-button" class="btn btn-primary">Update</button>
-</p>
 </div>
-<div class="row">
-  <div class="col-md-6 offset-md-6">
-    <% if @revised_end_date_history&.any? %>
-      <div class="border p-3 mb-3 text-right">
-        <h3 class="text-right">Revised End Date History</h3>
-        <% @revised_end_date_history.each do |history| %>
-          <div class="text-right">
-            <%= history&.value&.to_date&.strftime("%d/%m/%Y") %>
-          </div>
-        <% end %>
-      </div>
+<% if @project.id.nil? %>
+  <div class="custom-fields-grid">
+    <% @project.visible_custom_field_values.each do |value| %>
+      <p>
+        <%= custom_field_tag_with_label :project, value %>
+      </p>
     <% end %>
-   </div>
+  </div>
+<% else %>
+  <div class="custom-fields-grid">
+  <% @project.visible_custom_field_values.each do |value| %>
+    <% if value.custom_field.name == "Revised End Date" %>
+      <% if !@project.id.nil? %>
+        <div>
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <p>
+            <label for="revised_end_date">Revised End Date</label>
+            <input type="date" id="revised_end_date" name="revised_end_date" class="form-control">
+          </p>
+          <p>
+            <label for="revised_end_date">Reason - Revised End Date<sup style="color: red;">*</sup></label>
+            <input type="text" id="reason" name="reason" class="form-control">
+            <button type="button" id="update-button" class="btn btn-primary">Update</button>
+          </p>
+        </div>
+        <div class="col">
+          <div class="col-md-6 offset-md-6">
+            <% if @revised_end_date_history&.any? %>
+              <div class="border p-3 mb-3 text-right">
+                <h3 class="text-right">Revised End Date History</h3>
+                <% @revised_end_date_history.each do |history| %>
+                  <div class="text-right">
+                    <%= history&.value&.to_date&.strftime("%d/%m/%Y") %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <% unless value.custom_field.name == "Revised End Date" %>
+        <p>
+          <%= custom_field_tag_with_label :project, value %>
+        </p>
+      <% end %>
+    <% end %>
+  <% end %>
 </div>
+
 <% end %>
 
-<% if @project.id.nil? %>
-  <% @project.visible_custom_field_values.each do |value| %>
-      <p><%= custom_field_tag_with_label :project, value %></p>
-  <% end %>
-<% else %>
-  <% @project.visible_custom_field_values.each do |value| %>
-    <% unless value.custom_field.name == "Revised End Date" %>
-      <p><%= custom_field_tag_with_label :project, value %></p>
-    <% end %>
-  <% end %>
-<% end %>
 <%= call_hook(:view_projects_form, :project => @project, :form => f) %>
 </div>
 
@@ -156,4 +143,12 @@
   #reason:required:invalid {
     border-color: #ff0000; /* Red color */
   }
+    .custom-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px; /* Space between items */
+  margin: 20px 0;
+}
+
+
 </style>

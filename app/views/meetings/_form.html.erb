@@ -39,8 +39,35 @@
             <%= link_to 'Back to Meetings', business_requirement_path(@business_requirement), class: 'btn btn-secondary' %><business_requirement>
   </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
 <script type="text/javascript">
+
+
+function exportToCsv() {
+  const rows = [];
+  const table = document.querySelector('table');
+  table.querySelectorAll('tr').forEach(row => {
+      const rowData = [];
+      row.querySelectorAll('th, td').forEach(cell => {
+          if (cell.classList.contains('multiple-values')) {
+              const values = [];
+              cell.querySelectorAll('.value').forEach(value => {
+                  values.push(value.innerText);
+              });
+              rowData.push(values.join(', ')); // Concatenate multiple values into a single string
+          } else {
+              rowData.push(cell.innerText);
+          }
+      });
+      rows.push('"' + rowData.join('","') + '"');
+  });
+  const csv = rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  saveAs(blob, 'mom.csv');
+}
   document.addEventListener("DOMContentLoaded", function() {
     let attendeeIndex = <%= @meeting.meeting_attendees.size %>;
 

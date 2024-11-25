@@ -32,7 +32,7 @@ mount DelayedJobWeb => '/delayed_job'
 
 
 
-  root :to => 'welcome#index', :as => 'home'
+root to: 'my#page', as: 'home'
   get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
   get 'project_score_card', to: 'welcome#project_score_card'
