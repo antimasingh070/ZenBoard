@@ -57,6 +57,10 @@ class BusinessRequirement< ActiveRecord::Base
     after_destroy :log_destroy_activity
 
 
+    def has_stakeholders?
+        br_stakeholders.any?
+    end
+
     def log_create_activity
         activity_log = ActivityLog.create(
         entity_type: 'BusinessRequirement',

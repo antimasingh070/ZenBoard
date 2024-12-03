@@ -36,7 +36,7 @@
           <h3 class="icon icon-group"><%= l(:label_attendee_plural) %></h3>
             <ul>
               <% @meeting.meeting_attendees.each do |attendee| %>
-                <li><%= attendee.user.name %></li>
+                <li><%= attendee&.user&.name %></li>
               <% end %>
             </ul>
       </div>
@@ -79,8 +79,11 @@
                 <%= Point::STATUS_MAP[point.status] %>
               </td>
               <td class='export-csv' style="display: none;">
-                <% user = User.find_by(id: point.owner) %>
-                <%= "#{user.firstname} #{user.lastname}" %>
+                <% owner_ids = point.owner.reject(&:blank?) %>
+                <% users = User.where(id: owner_ids) %>
+                <%= users.any? ? users.map { |user| "#{user.firstname} #{user.lastname}" }.join(', ') : 'Unknown User(s)' %>
+              </td>
+
               </td>
               <td class='export-csv' style="display: none;">
                 <%= point.timeline&.strftime("%d/%m/%Y") %>
@@ -104,8 +107,7 @@
 
               <!-- Owner Column -->
               <td>
-                <% user = User.find_by(id: point.owner) %>
-                <%= f.select :owner, options_for_select([['', '']] + @br_stakeholders.map { |s| ["#{s.user.firstname} #{s.user.lastname}", s.user_id] }, point.owner), {}, class: 'form-control' %>
+                <%= f.select :owner, options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, @point&.owner), {}, multiple: true, class: 'form-control', prompt: '' %>
               </td>
 
               <!-- Timeline Column -->
@@ -115,7 +117,9 @@
 
               <!-- Action Column -->
               <td>                <button type="button" class="btn btn-primary toggle-edit">Edit</button>
-                <%= f.submit point.id.present? ? 'save' : 'Create', class: 'btn btn-primary edit-form', style: 'display: none;' %>
+              <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), method: point.id.present? ? :patch : :post, local: true, html: { class: 'edit-form', style: 'display: none;' }) do |f| %>
+                <%= f.submit point.id.present? ? 'Save' : 'Create', class: 'btn btn-primary' %>
+              <% end %>
                 <!-- Delete Button - Separate form for delete action -->
                 <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), method: :delete, local: true, html: { class: 'delete-form', style: 'display: inline;' }) do |delete_form| %>
                   <%= delete_form.submit "Delete", class: 'btn btn-danger', data: { confirm: 'Are you sure you want to delete this point?' } %>
@@ -190,8 +194,8 @@
 
               <!-- Owner Column -->
               <td>
-                <%= f.select :owner, options_for_select([['', '']] + @br_stakeholders.map { |s| ["#{s.user.firstname} #{s.user.lastname}", s.user_id] }), {}, class: 'form-control' %>
-              </td>
+              <%= f.select :owner, options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, @point&.owner), {}, multiple: true, class: 'form-control', prompt: '' %>
+            </td>
 
               <!-- Timeline Column -->
               <td>
@@ -207,7 +211,12 @@
     </table>
 
 </div>
+
+<div class="d-flex justify-content-end mt-3">
 <button onclick="exportToCsv()">Export as CSV</button>
+<%= button_to 'Send Mom', send_mom_email_business_requirement_meeting_mom_path(@business_requirement.id, @meeting.id, @mom.id), method: :post, class: 'btn btn-secondary' %>
+
+</div>
 <!-- JavaScript to Toggle View/Edit Mode -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>

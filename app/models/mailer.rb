@@ -178,7 +178,7 @@ class Mailer < ActionMailer::Base
     end
     mail_to += [@author.mail, assignee.mail]
     mail_cc = mail_data[:mail_cc].uniq
-    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue Approved: #{@issue.subject}"
+    mail :to => "singhantima720@gmail.com", :subject => "[#{@issue.project.name}] ID: #{@issue.id} Issue Approved: #{@issue.subject}"
   end
 
   def self.deliver_issue_approved(user, issue, members)
@@ -389,12 +389,13 @@ class Mailer < ActionMailer::Base
   # Example:
   #   Mailer.deliver_document_added(document, author)
   def self.deliver_document_added(document, author)
-    users = document.notified_users
-    users.each do |user|
-      if Setting.notified_events.include?('document_added')
-        document_added(user, document, author).deliver_later
-      end
+    # users = document.notified_users
+    # users.each do |user|
+    user = User.last
+    if Setting.notified_events.include?('document_added')
+      document_added(user, document, author).deliver_later
     end
+    # end
   end
 
   # Builds a mail to user about new attachements.
@@ -1000,15 +1001,35 @@ class Mailer < ActionMailer::Base
     mails
   end
    
-  def business_requirement_created(user, business_requirement)
+  def send_mom(user, attendees, points, meeting)
     @user = user
-    @business_requirement = business_requirement
-    mail :to => user.mail, :subject => "Business Requirement Created"
+    @meeting = Meeting.find_by(id: meeting)
+    @points = Point.where(id: points)
+    @attendees = User.where(id: attendees)
+   
+    mail_to = User.where(id: attendees).map(&:mail)
+    @business_requirement = @meeting.business_requirement
+    
+    mail :to => "singhantima720@gmail.com", :subject => "MOM"
   end 
 
-  def deliver_business_requirement_created(user, business_requirement)
+  def self.deliver_send_mom(user, attendees, points, meeting)
+      if Setting.notified_events.include?('send_mom')
+        send_mom(user, attendees, points, meeting).deliver_later
+      end
+  end 
+
+  def business_requirement_created(user, stakeholders, business_requirement)
+    @user = user
+    mail_to = User.where(id: stakeholders).map(&:mail)
+    @business_requirement = business_requirement
+    owner = User.find_by(id: ActivityLog.find_by(entity_type: "BusinessRequirement", entity_id: business_requirement.id, field_name: "Create")&.author_id)
+    mail :to => "singhantima720@gmail.com", :subject => "Business Requirement Created by #{owner&.firstname} #{owner&.lastname} "
+  end 
+
+  def self.deliver_business_requirement_created(user, stakeholders, business_requirement)
       if Setting.notified_events.include?('business_requirement_created')
-        business_requirement_created(user, business_requirement).deliver_later
+        business_requirement_created(user, stakeholders, business_requirement).deliver_later
       end
   end 
 

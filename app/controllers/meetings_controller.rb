@@ -1,8 +1,22 @@
 # app/controllers/meetings_controller.rb
 class MeetingsController < ApplicationController
-    before_action :set_business_requirement, only: [:new, :create, :show, :edit, :update, :destroy]
-    before_action :set_meeting, only: [:show, :edit, :update, :destroy]
+    before_action :set_business_requirement, only: [:new, :create, :show, :edit, :update, :destroy, :send_meeting_invitation]
+    before_action :set_meeting, only: [:show, :edit, :update, :destroy , :send_meeting_invitation]
   
+    def send_meeting_invitation
+    
+      @business_requirement = BusinessRequirement.find(params[:business_requirement_id])
+      @meeting =  Meeting.find(params[:id])
+      if @meeting.meeting_attendees.any?
+        # Send email to all stakeholders in a single email
+        meeting_attendees = @meeting.meeting_attendees
+        Mailer.deliver_meeting_invitation(User.current, @meeting)
+        redirect_to edit_business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Email sent successfully to all attendess.'
+      else
+        redirect_to edit_business_requirement_meeting_path(@business_requirement, @meeting), alert: 'Cannot send email: No attendess are associated with this meeting.'
+      end
+    end
+
     def new
       @meeting = @business_requirement.meetings.build
       @meeting.meeting_attendees.build

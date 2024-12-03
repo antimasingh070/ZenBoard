@@ -346,7 +346,13 @@ class Journal < ActiveRecord::Base
 
   def send_notification
     issue = Issue.find_by(id: self.journalized_id)
-
+    cf_ids = CustomField.where(name: ["Approved Dy", "Approval Date", "Workflow", "Remarks"]).pluck(:id).map(&:to_s)
+  
+    # Check if any JournalDetail has been updated with a property matching the cf_ids
+    cf_journal_updated = details.any? { |detail| detail.property == "cf" && cf_ids.include?(detail.prop_key) }
+    
+    # Skip notification if the specific custom field IDs are updated
+    return if cf_journal_updated
     if notify? && issue.tracker_id  == 2 &&
         (
           Setting.notified_events.include?('issue_updated') ||

@@ -1,0 +1,31 @@
+<div class="help-section">
+  <h1>Welcome to the Project Hub User Manual</h1>
+  <p>
+    This manual provides an overview of ProjectHub's features, focusing on how the Project Hub integrates 
+    and streamlines your workflow. Whether you're new to the platform or need a refresher, this guide 
+    will walk you through the essential functionalities step by step.
+  </p>
+
+  <% @document = Document.find_by(title: "Project Hub User Manual") %>
+
+  <% if @document && @document.attachments.any? %>
+    <div class="download-section">
+      <p>
+        To get a detailed understanding of the Project Hub, download the official 
+        <strong>Project Hub User Manual</strong>. Click the button below:
+      </p>
+      <%= link_to 'Download User Manual', 
+                  download_tra_user_module_path(@document.id), 
+                  class: 'btn btn-primary icon icon-download' %>
+    </div>
+  <% else %>
+    <div class="no-document-section">
+      <p>
+        The <strong>Project Hub User Manual</strong> is currently unavailable for download. Please 
+        check back later or contact the support team if you need immediate assistance.
+      </p>
+    </div>
+  <% end %>
+</div>
+
+

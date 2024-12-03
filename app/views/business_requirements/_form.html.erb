@@ -12,34 +12,138 @@
 <% end %>
   
     <div class="box tabular">
-        <p>
-          <%= f.text_field :requirement_case, size: 60, class: 'form-control', placeholder: 'Enter the requirement case here', required: true %>
-        </p>
-        <p><%= f.text_field :identifier, size: 30, class: 'form-control', placeholder: 'the identifier generate automatically', required: true, disabled: true %></p>
-        <p><%= f.text_area :description, rows: 4, class: 'form-control', placeholder: 'Describe the Business Requirement here', required: true  %></p>
-        <p><%= f.text_area :cost_benefits, rows: 1, class: 'form-control', placeholder: 'Enter the cost benefits here' %></p>
-        <% excluded_statuses = [BusinessRequirement::STATUS_ACCEPTED, BusinessRequirement::STATUS_CANCELLED, BusinessRequirement::STATUS_CLOSED] %>
-        <p>
-          <%= f.select :status, options_for_select(BusinessRequirement::STATUS_MAP.reject { |k, _| excluded_statuses.include?(k) }.map { |k, v| [v, k] }, @business_requirement.status), {}, class: 'form-control' %>
-        </p>
+    <p>
+    <%= f.label :requirement_case, "Requirement Case" %><sup style="color: red;">*</sup>
+    <%= f.text_field :requirement_case, 
+                     size: 60, 
+                     class: 'form-control', 
+                     placeholder: 'Enter the requirement case here', 
+                     required: true %>
+  </p>
+  
+  <p>
+    <%= f.label :identifier, "Identifier" %><sup style="color: red;">*</sup>
+    <%= f.text_field :identifier, 
+                     size: 30, 
+                     class: 'form-control', 
+                     placeholder: 'The identifier generates automatically', 
+                     required: true, 
+                     disabled: true %>
+  </p>
+  
+  <p>
+    <%= f.label :description, "Description" %><sup style="color: red;">*</sup>
+    <%= f.text_area :description, 
+                    rows: 4, 
+                    class: 'form-control', 
+                    placeholder: 'Describe the Business Requirement here', 
+                    required: true %>
+  </p>
+  
+  <p>
+    <%= f.label :cost_benefits, "Cost Benefits" %>
+    <%= f.text_area :cost_benefits, 
+                    rows: 1, 
+                    class: 'form-control', 
+                    placeholder: 'Enter the cost benefits here' %>
+  </p>
+  
+  <% excluded_statuses = [BusinessRequirement::STATUS_ACCEPTED, BusinessRequirement::STATUS_CANCELLED, BusinessRequirement::STATUS_CLOSED] %>
+  <p>
+    <%= f.label :cost_benefits, "Status" %>
+    <%= f.select :status, 
+                 options_for_select(
+                   BusinessRequirement::STATUS_MAP.reject { |k, _| excluded_statuses.include?(k) }
+                                                 .map { |k, v| [v, k] }, 
+                   @business_requirement.status
+                 ), 
+                 {}, 
+                 class: 'form-control' %>
+  </p>
+  
+  <p>
+    <%= f.label :cost_benefits, "Project Sponsor" %>
+    <%= f.select :project_sponsor, 
+                 options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, 
+                                    @business_requirement.project_sponsor), 
+                 {}, 
+                 class: 'form-control' %>
+  </p>
+  
+  <p>
+    <%= f.label :cost_benefits, "Project Category" %>
+    <%= f.select :project_category, 
+                 options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, 
+                                    @business_requirement.project_category), 
+                 {}, 
+                 class: 'form-control' %>
+  </p>
+  
+  <p>
+    <%= f.label :cost_benefits, "Priority Level" %>
+    <%= f.select :priority_level, 
+                 options_for_select([['', '']] + @priority_level.map { |level| [level, level] }, 
+                                    @business_requirement.priority_level), 
+                 {}, 
+                 class: 'form-control' %>
+  </p>
+  
+  <p>
+    <%= f.label :cost_benefits, "Project/Enhancement" %>
+    <%= f.select :project_enhancement, 
+                 options_for_select([['', '']] + @project_enhancement.map { |enhancement| [enhancement, enhancement] }, 
+                                    @business_requirement.project_enhancement), 
+                 {} %>
+  </p>
+  
+  <p>
+    <%= f.label :cost_benefits, "Portfolio Category" %>
+    <%= f.select :portfolio_category, 
+                 options_for_select(@portfolio_categories, 
+                                    @business_requirement.portfolio_category), 
+                 {}, 
+                 { multiple: true, 
+                   class: 'form-control', 
+                   prompt: '' } %>
+  </p>
+  
+  <p>
+  <%= f.label :cost_benefits, "Requirement Received From" %> <sup style="color: red;">*</sup>
 
-        <p><%= f.select :project_sponsor, options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, @business_requirement.project_sponsor), {}, class: 'form-control' %></p>
-        <p><%= f.select :project_category, options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, @business_requirement.project_category), {}, class: 'form-control' %></p>
-        <p><%= f.select :priority_level, options_for_select([['', '']] + @priority_level.map { |level| [level, level] }, @business_requirement.priority_level), {}, class: 'form-control' %></p>
-        <p><%= f.select :project_enhancement, options_for_select([['', '']] + @project_enhancement.map { |enhancement| [enhancement, enhancement] }, @business_requirement.project_enhancement), {} %></p>
-        <p><%= f.select :portfolio_category, options_for_select(@portfolio_categories, @business_requirement.portfolio_category), {}, { multiple: true, class: 'form-control', prompt: '' } %></p>
-        <p><%= f.select :requirement_received_from, options_for_select(@requirement_received_from, @business_requirement.requirement_received_from), {}, { multiple: true, class: 'form-control', prompt: '' } %></p>
-        <p><%= f.select :application_name, options_for_select(@application_name, @business_requirement.application_name), {}, { multiple: true, class: 'form-control', prompt: '' } %></p>
+    <%= f.select :requirement_received_from, 
+                 options_for_select(@requirement_received_from, 
+                                    @business_requirement.requirement_received_from), 
+                 {}, 
+                 { multiple: true, 
+                   class: 'form-control', 
+                   prompt: '' } %>
+  </p>
+  
+  <p>
+    <%= f.label :cost_benefits, "Application Name" %>
+    <%= f.select :application_name, 
+                 options_for_select(@application_name, 
+                                    @business_requirement.application_name), 
+                 {}, 
+                 { multiple: true, 
+                   class: 'form-control', 
+                   prompt: '' } %>
+  </p>
+  
 
         <div class="row">
           <div class="col-md-6">
             <p><%= f.date_field :requirement_submitted_date, class: 'form-control' %></p>
           </div>
           </div>
-          <p><%= f.text_area :business_need_as_per_business_case, rows: 2, class: 'form-control', placeholder: 'State the business need here' %></p>
-          <p><%= f.date_field :planned_project_go_live_date, class: 'form-control' %></p>
           <p>
-            <%= f.file_field :attachments, multiple: true,required: true %>
+          <%= f.label :business_need_as_per_business_case, "Business Need As Per Business Case" %><sup style="color: red;">*</sup>
+          <%= f.text_area :business_need_as_per_business_case, rows: 2, class: 'form-control', placeholder: 'State the business need here' %></p>
+          <p><%= f.label :planned_project_go_live_date, "Planned Project Go Live Date" %>
+          <%= f.date_field :planned_project_go_live_date, class: 'form-control' %></p>
+          <p>
+          <%= f.label :attachments, "Attachments" %><sup style="color: red;">*</sup>
+            <%= f.file_field :attachments, multiple: true %>
           </p> 
           <% if !@business_requirement.id.nil? %>
             <p> <%= f.label :user_id, "stakeholders" %> <%= link_to "Add stakeholder", '#', id: 'add_stakeholder', class: 'btn btn-primary' %></p>
@@ -116,6 +220,12 @@
 
 
           <style>
+          .required {
+  color: red;
+  font-weight: bold;
+   font-size: 0.02em;
+}
+
             .stakeholders-list {
               padding: 0; /* Remove any default padding */
             }

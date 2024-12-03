@@ -121,6 +121,8 @@ module Redmine
               # links << content_tag('li', link_to('Business Requirement', business_requirements_path))
               # links << content_tag('li', link_to('Activity Logs', activity_logs_path)) if User.current.admin?
               links << content_tag('li', link_to('Project Score Card', project_score_card_path))
+              
+
               custom_field = CustomField.find_by(name: "Is IT Project?")
               next unless custom_field
       

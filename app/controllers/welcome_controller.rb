@@ -28,6 +28,22 @@ class WelcomeController < ApplicationController
   # STATUS_HOLD = 11
   # STATUS_CANCELLED = 12
 
+  def download_tra_user_module
+    document = Document.find(params[:id]) # Fetch the document by ID
+    # Check if the document has an associated attachment (or file)
+    if document && document.attachments.any?
+      # Send the file for download
+      attachment = document.attachments.first
+      
+      send_file attachment.diskfile,
+                filename: attachment.filename,
+                type: attachment.content_type,
+                disposition: 'attachment' # Forces download
+    else
+      # If the document or attachment doesn't exist, respond with a 404
+      head :not_found
+    end
+  end
   
   def project_score_card
     # Determine the start of the current financial year (April to March)
@@ -279,7 +295,6 @@ class WelcomeController < ApplicationController
       else
         @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }  # Show only projects the user is a member of
       end
-# binding.pry
       @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
       @functions = @projects.flat_map { |project| custom_field_value(project, 'Function') }.compact.uniq
       @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq.sort
@@ -317,7 +332,7 @@ class WelcomeController < ApplicationController
       }
     
       # Paginate through the existing projects
-      @projects = @projects.paginate(page: params[:page], per_page: 20)
+      @projects = @projects.paginate(page: params[:page], per_page: 5)
       REDIS.set(cache_key, Marshal.dump([@projects, @categories, @functions, @statuses, @managers, @names, @subprojects, @next_week_go_live_projects]), ex: 5.minutes.to_i)
     # end
   end

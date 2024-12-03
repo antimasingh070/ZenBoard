@@ -1,47 +1,30 @@
-<!DOCTYPE html>
+
+ <!DOCTYPE html>
 <html>
   <head>
     <style>
-      /* Basic styling for email */
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f8f9fa;
-        color: #333;
-      }
-      .container {
-        width: 80%;
-        margin: 0 auto;
-        background-color: #ffffff;
-        padding: 20px;
-        border: 1px solid #e9ecef;
-        border-radius: 5px;
-      }
-      h2 {
-        color: #007bff;
-      }
-      .details-table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      .details-table th, .details-table td {
-        border: 1px solid #dee2e6;
-        padding: 8px;
-        text-align: left;
-      }
-      .footer {
-        margin-top: 20px;
-        font-size: 0.9em;
-        color: #6c757d;
-      }
+
+      *{
+    font-size: 15px;
+  }
+  table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+  }
+  td, th {
+    text-align: left;
+    padding: 8px;
+  }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h2>New Business Requirement Created</h2>
-      <p>Hello <%= @user.name %>,</p>
-      <p>A new business requirement has been successfully created by <%= @business_requirement.created_by.name %>. Here are the details:</p>
+    <div >
+      <p>Hello Team,</p>
+     <% owner = User.find_by(id: ActivityLog.find_by(entity_type: "BusinessRequirement", entity_id: @business_requirement.id, field_name: "Create")&.author_id)%>
+      
+      <p>A new business requirementhas has been successfully created by <%= " #{owner&.firstname} #{owner&.lastname} " %>. PLease find the details below:</p>
 
-      <table class="details-table">
+      <table>
         <tr>
           <th>Identifier</th>
           <td><%= @business_requirement.identifier %></td>
@@ -51,24 +34,28 @@
           <td><%= @business_requirement.description %></td>
         </tr>
         <tr>
+          <th>Requirement Case</th>
+          <td><%= @business_requirement.requirement_case %></td>
+        </tr>
+        <tr>
+          <th>Requirement Received From</th>
+          <td><%= @business_requirement.requirement_received_from.reject(&:blank?).join(", ") %></td>
+        </tr>
+        <tr>
+          <th>Project/Enhancement</th>
+           <td><%= @business_requirement.project_enhancement %></td>
+        </tr>
+        <tr>
           <th>Cost Benefits</th>
           <td><%= @business_requirement.cost_benefits %></td>
         </tr>
         <tr>
           <th>Status</th>
-          <td><%= @business_requirement.status %></td>
+          <td><%= BusinessRequirement::STATUS_MAP[@business_requirement.status] %></td>
         </tr>
         <tr>
-          <th>Project Sponsor</th>
-          <td><%= @business_requirement.project_sponsor %></td>
-        </tr>
-        <tr>
-          <th>Scheduled Start Date</th>
-          <td><%= @business_requirement.scheduled_start_date %></td>
-        </tr>
-        <tr>
-          <th>Scheduled End Date</th>
-          <td><%= @business_requirement.scheduled_end_date %></td>
+          <th>Requirement Submitted Date</th>
+          <td><%= @business_requirement.requirement_submitted_date&.strftime("%d %b %Y") %></td>
         </tr>
         <tr>
           <th>Priority Level</th>
@@ -77,11 +64,14 @@
         <!-- Add more rows as needed for additional attributes -->
       </table>
 
-      <p>For more details, please visit your project management dashboard.</p>
-      <div class="footer">
-        <p>Best regards,</p>
-        <p>Your Project Team</p>
-      </div>
+      <p>Stakeholder list with role: </p>
+      <% stakeholders = @business_requirement.br_stakeholders %>
+      <% stakeholders.each do |stakeholder| %>
+      <li><strong><%= "#{stakeholder.user.name} (#{stakeholder.role.name})" %></strong></li>
+      <% end %>
+
+      <p>For more details, please visit your business requirement <%= http://localhost:3000/business_requirements>dashboard.</p>
+
     </div>
   </body>
 </html>

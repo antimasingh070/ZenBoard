@@ -1,6 +1,33 @@
-<%= link_to(@document.title, @document_url) %> (<%= @document.category.name %>)<br />
-<br />
-<%= textilizable(@document, :description, :only_path => false) %>
+<table style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif;">
+  <thead>
+    <tr>
+      <th style="text-align: left; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">Project</th>
+      <th style="text-align: left; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">Document Title</th>
+      <th style="text-align: left; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">Category</th>
+      <th style="text-align: left; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">Description</th>
+      <th style="text-align: left; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">Author</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border: 1px solid #ddd; padding: 8px;">
+        <%= @document.project.name %>
+      </td>
+      <td style="border: 1px solid #ddd; padding: 8px;">
+        <%= link_to(@document.title, @document_url) %>
+      </td>
+      <td style="border: 1px solid #ddd; padding: 8px;">
+        <%= @document.category.name %>
+      </td>
+      <td style="border: 1px solid #ddd; padding: 8px;">
+        <%= textilizable(@document, :description, :only_path => false) %>
+      </td>
+      <td style="border: 1px solid #ddd; padding: 8px;">
+        <%= @author %>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
-<p>Please log in to Trackmine to view and manage the issue details.</p>
-<p>Best Regards</p>
+<p style="font-family: Arial, sans-serif;">Please log in to Trackmine to view and manage the issue details.</p>
+<p style="font-family: Arial, sans-serif;">Best Regards</p>

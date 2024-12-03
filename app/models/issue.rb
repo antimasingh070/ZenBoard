@@ -2292,13 +2292,15 @@ class Issue < ActiveRecord::Base
   end
 
   def send_notification
-    approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
-    approval_required_custom = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: approval_required_custom_field.id)
-    if notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2 && approval_required_custom.value == 1
-      Mailer.deliver_issue_pending_approval(self)
-      Mailer.deliver_issue_add(self)
-    elsif notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2
-      Mailer.deliver_issue_add(self)
+    if self.project.updated_on.strftime("%d %b %m") != self.created_on.strftime("%d %b %m")
+      approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
+      approval_required_custom = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: approval_required_custom_field.id)
+      if notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2 && approval_required_custom.value == 1
+        Mailer.deliver_issue_pending_approval(self)
+        Mailer.deliver_issue_add(self)
+      elsif notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2
+        Mailer.deliver_issue_add(self)
+      end
     end
   end
 

@@ -180,7 +180,7 @@ module Redmine
                   :caption => "Activity Logs", :if => Proc.new {User.current.admin?}
         menu.push :administration, {:controller => 'admin', :action => 'index'},
                   :if => Proc.new {User.current.admin?}, :last => true
-        menu.push :help, Info.help_url, :html => {:target => '_blank', :rel => 'noopener'}, :last => true
+        menu.push :help, {:controller => 'welcome', :action => 'help'}, :caption => "HElp"
       end
 
       MenuManager.map :account_menu do |menu|

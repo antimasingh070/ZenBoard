@@ -2,37 +2,101 @@
   <div class="splitcontent">
     <div class="splitcontentleft">
       <h2><strong><%=l(:label_business_requirement)%></strong></h2>
-        <% fields = {
-            "Created At" => @business_requirement.created_at.strftime("%d %b %Y"),
-            "Requirement Case" => @business_requirement.requirement_case,
-            "Identifier" => @business_requirement.identifier,
-            "Project Identifier" => @business_requirement.project_identifier,
-            "Description" => @business_requirement.description,
-            "Cost Benefits" => @business_requirement.cost_benefits,
-            "Status" => BusinessRequirement::STATUS_MAP[@business_requirement.status],
-            "Project Sponsor" => @business_requirement.project_sponsor,
-            "Requirement Submitted Date" => @business_requirement.requirement_submitted_date&.strftime("%d %b %Y"),
-            "Scheduled End Date" => @business_requirement.scheduled_end_date&.strftime("%d %b %Y"),
-            "Actual Start Date" => @business_requirement.actual_start_date&.strftime("%d %b %Y"),
-            "Actual End Date" => @business_requirement.actual_end_date&.strftime("%d %b %Y"),
-            "Revised End Date" => @business_requirement.revised_end_date&.strftime("%d %b %Y"),
-            "Business Need As Per Business Case" => @business_requirement.business_need_as_per_business_case,
-            "Planned Project Go-Live Date" => @business_requirement.planned_project_go_live_date&.strftime("%d %b %Y"),
-            "Project Category" => @business_requirement.project_category,
-            "Priority Level" => @business_requirement.priority_level,
-            "Vendor Name" => @business_requirement.vendor_name,
-            "Project?Enhancement" => @business_requirement.project_enhancement,
-            "Template" => @business_requirement.template,
-            "Portfolio Category" => @business_requirement.portfolio_category.is_a?(Array) ? @business_requirement.portfolio_category.reject(&:blank?).join(', ') : @business_requirement.portfolio_category,
-            "Requirement Received From" => @business_requirement.requirement_received_from.is_a?(Array) ? @business_requirement.requirement_received_from.reject(&:blank?).join(', ') : @business_requirement.requirement_received_from,
-            "Application Name" => @business_requirement.application_name.is_a?(Array) ? @business_requirement.application_name.reject(&:blank?).join(', ') : @business_requirement.application_name
-        } %>
-        
-        <% fields.each do |label, value| %>
-            <% if value.present? %>
-              <li><span class="label"><%= label %>: <%= value %></span></li>
-            <% end %>
-        <% end %>
+      <% if @business_requirement.created_at.present? %>
+      <li><span class="label">Created At: <%= @business_requirement.created_at.strftime("%d %b %Y") %></span></li>
+    <% end %>
+    <% owner = User.find_by(id: ActivityLog.find_by(entity_type: "BusinessRequirement", entity_id: @business_requirement.id, field_name: "Create")&.author_id) %>
+    <% if owner.present? %>
+      <li><span class="label">Created By: <%= "#{owner.firstname} #{owner.lastname}" %></span></li>
+    <% end %>
+    <% if @business_requirement.requirement_case.present? %>
+      <li><span class="label">Requirement Case: <%= @business_requirement.requirement_case %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.identifier.present? %>
+      <li><span class="label">Identifier: <%= @business_requirement.identifier %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.project_identifier.present? %>
+      <li><span class="label">Project Identifier: <%= @business_requirement.project_identifier %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.description.present? %>
+      <li><span class="label">Description: <%= @business_requirement.description %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.cost_benefits.present? %>
+      <li><span class="label">Cost Benefits: <%= @business_requirement.cost_benefits %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.status.present? %>
+      <li><span class="label">Status: <%= BusinessRequirement::STATUS_MAP[@business_requirement.status] %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.project_sponsor.present? %>
+      <li><span class="label">Project Sponsor: <%= @business_requirement.project_sponsor %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.requirement_submitted_date.present? %>
+      <li><span class="label">Requirement Submitted Date: <%= @business_requirement.requirement_submitted_date.strftime("%d %b %Y") %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.scheduled_end_date.present? %>
+      <li><span class="label">Scheduled End Date: <%= @business_requirement.scheduled_end_date.strftime("%d %b %Y") %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.actual_start_date.present? %>
+      <li><span class="label">Actual Start Date: <%= @business_requirement.actual_start_date.strftime("%d %b %Y") %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.actual_end_date.present? %>
+      <li><span class="label">Actual End Date: <%= @business_requirement.actual_end_date.strftime("%d %b %Y") %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.revised_end_date.present? %>
+      <li><span class="label">Revised End Date: <%= @business_requirement.revised_end_date.strftime("%d %b %Y") %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.business_need_as_per_business_case.present? %>
+      <li><span class="label">Business Need As Per Business Case: <%= @business_requirement.business_need_as_per_business_case %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.planned_project_go_live_date.present? %>
+      <li><span class="label">Planned Project Go-Live Date: <%= @business_requirement.planned_project_go_live_date.strftime("%d %b %Y") %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.project_category.present? %>
+      <li><span class="label">Project Category: <%= @business_requirement.project_category %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.priority_level.present? %>
+      <li><span class="label">Priority Level: <%= @business_requirement.priority_level %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.vendor_name.present? %>
+      <li><span class="label">Vendor Name: <%= @business_requirement.vendor_name %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.project_enhancement.present? %>
+      <li><span class="label">Project/Enhancement: <%= @business_requirement.project_enhancement %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.template.present? %>
+      <li><span class="label">Template: <%= @business_requirement.template %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.portfolio_category.present? %>
+      <li><span class="label">Portfolio Category: <%= @business_requirement.portfolio_category.is_a?(Array) ? @business_requirement.portfolio_category.reject(&:blank?).join(', ') : @business_requirement.portfolio_category %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.requirement_received_from.present? %>
+      <li><span class="label">Requirement Received From: <%= @business_requirement.requirement_received_from.is_a?(Array) ? @business_requirement.requirement_received_from.reject(&:blank?).join(', ') : @business_requirement.requirement_received_from %></span></li>
+    <% end %>
+    
+    <% if @business_requirement.application_name.present? %>
+      <li><span class="label">Application Name: <%= @business_requirement.application_name.is_a?(Array) ? @business_requirement.application_name.reject(&:blank?).join(', ') : @business_requirement.application_name %></span></li>
+    <% end %>
+    
         <h3>Attachments</h3>
         <ul>
           <% @business_requirement.attachments.each do |attachment| %>
@@ -65,7 +129,7 @@
                   <% role_name = Role.find(role_id).name %>
                   <p>
                       <strong><%= role_name %></strong> - 
-                      <%= stackholders.map { |stackholder| stackholder.user.name }.join(', ') %>
+                      <%= stackholders.map { |stackholder| stackholder&.user&.name }.join(', ') %>
                   </p>
               <% end %>
           </div>
@@ -97,7 +161,7 @@
                 <td><%= meeting.scheduled_at.strftime("%d %b %Y") %></td>
                 <td>
                   <% meeting.meeting_attendees.each do |attendee| %>
-                    <p><%= attendee.user.name %></p>
+                    <p><%= attendee&.user&.name %></p>
                   <% end %>
                 </td>
                 <td>

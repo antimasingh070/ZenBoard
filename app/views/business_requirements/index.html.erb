@@ -16,14 +16,14 @@
 <table>
   <thead>
     <tr>
-      <th>Identifier</th>
-      <th>Requirement Case</th>
-      <th>Description</th>
-      <th>Requirement Received From</th>
-      <th>Project/Enhancement</th>
-      <th>Priority Lvel</th>
-      <th>Status</th>
-      <th>Stackhholders</th>
+      <th class='export-csv'>Identifier</th>
+      <th class='export-csv'>Requirement Case</th>
+      <th class='export-csv'>Description</th>
+      <th class='export-csv'>Requirement Received From</th>
+      <th class='export-csv'>Project/Enhancement</th>
+      <th class='export-csv'>Priority Level</th>
+      <th class='export-csv'>Status</th>
+      <th class='export-csv'>Stackhholders</th>
       <th colspan="3">Actions</th>
     </tr>
   </thead>
@@ -34,12 +34,14 @@
       <% @business_requirements.each do |business_requirement| %>
           
         <tr>
-          <td><%= business_requirement.identifier %></td>
-          <td><%= business_requirement.requirement_case %></td>
-          <td><%= business_requirement.description %></td>
-          <td><%= business_requirement.requirement_received_from.reject(&:blank?).join(", ") %></td>
-          <td><%= BusinessRequirement::STATUS_MAP[business_requirement.status] %></td>
-          <td><% grouped_stakeholders = business_requirement.br_stakeholders.group_by { |stakeholder| stakeholder.role.name } %>
+          <td class='export-csv'><%= business_requirement.identifier %></td>
+          <td class='export-csv'><%= business_requirement.requirement_case %></td>
+          <td class='export-csv'><%= business_requirement.description %></td>
+          <td class='export-csv'><%= business_requirement.requirement_received_from.reject(&:blank?).join(", ") %></td>
+          <td class='export-csv'><%= business_requirement.project_enhancement %></td>
+          <td class='export-csv'><%= business_requirement.priority_level %></td>
+          <td class='export-csv'><%= BusinessRequirement::STATUS_MAP[business_requirement.status] %></td>
+          <td class='export-csv'><% grouped_stakeholders = business_requirement.br_stakeholders.group_by { |stakeholder| stakeholder.role.name } %>
 
           <ul>
           <% grouped_stakeholders.each do |role_name, stakeholders| %>
@@ -54,13 +56,16 @@
               <%= content_tag(:span, 'Accepted', class: 'badge badge-success') %>
             <% elsif business_requirement.status == 8 %>
               <%= content_tag(:span, 'Declined', class: 'badge badge-danger') %>
+            <% elsif business_requirement.status == 6 %>
+              <%= content_tag(:span, 'Requirement On Hold', class: 'badge badge-primary') %>
             <% else %>
             <% user_stakeholders = business_requirement.br_stakeholders.where(user_id: User.current.id) %>
             <% pmo_role_present = user_stakeholders.any? { |stakeholder| stakeholder.role.name == 'PMO' } %>
 
-            <% if pmo_role_present %>
+            <% if pmo_role_present || User.current.admin? %>
               <%= link_to 'Accept', '#', class: 'btn btn-success btn-sm', title: 'Accept Business Requirement', data: { toggle: 'modal', target: "#acceptModal-#{business_requirement.id}" } %>
               <%= link_to 'Decline', decline_business_requirement_path(business_requirement), method: :patch, class: 'btn btn-danger btn-sm', title: 'Decline Business Requirement' %>
+              <%= link_to 'Hold', hold_business_requirement_path(business_requirement), method: :patch, class: 'btn btn-danger btn-sm', title: 'Hold Business Requirement' %>
             <% end %>
             <% end %>
           </td>
@@ -193,28 +198,76 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
 <script>
 
-  function exportToCsv() {
+function exportToCsv() {
     const rows = [];
     const table = document.querySelector('table');
+
+    // Utility function to wrap text at a specific width
+    function wrapText(text, maxWidth) {
+        const words = text.split(' ');
+        let wrappedText = '';
+        let currentLine = '';
+
+        words.forEach(word => {
+            // Check if adding the next word exceeds the maxWidth
+            if ((currentLine + word).length > maxWidth) {
+                // If yes, add the current line to wrappedText and start a new line
+                wrappedText += currentLine.trim() + '\n';
+                currentLine = word + ' ';
+            } else {
+                // If no, continue adding to the current line
+                currentLine += word + ' ';
+            }
+        });
+
+        // Add any remaining content in the current line
+        wrappedText += currentLine.trim();
+
+        return wrappedText;
+    }
+
     table.querySelectorAll('tr').forEach(row => {
         const rowData = [];
-        row.querySelectorAll('th, td').forEach(cell => {
+
+        // Only consider cells with the class 'export-csv'
+        row.querySelectorAll('th.export-csv, td.export-csv').forEach(cell => {
+            let cellContent;
+
             if (cell.classList.contains('multiple-values')) {
                 const values = [];
                 cell.querySelectorAll('.value').forEach(value => {
-                    values.push(value.innerText);
+                    // Trim, wrap text, and handle line breaks by wrapping in quotes
+                    let trimmedValue = value.innerText.trim();
+                    let wrappedValue = wrapText(trimmedValue, 50); // Adjust the max width if needed
+                    values.push(wrappedValue);
                 });
-                rowData.push(values.join(', ')); // Concatenate multiple values into a single string
+                cellContent = values.join(', ');
             } else {
-                rowData.push(cell.innerText);
+                // Trim, wrap text, and handle line breaks by wrapping in quotes
+                let trimmedContent = cell.innerText.trim();
+                cellContent = wrapText(trimmedContent, 50);
             }
+
+            // Replace any line breaks or multiple spaces with a single space for CSV cleanliness
+            cellContent = cellContent.replace(/\s+/g, ' ');
+
+            // Wrap content in double quotes and escape any existing double quotes
+            cellContent = `"${cellContent.replace(/"/g, '""')}"`;
+
+            // Add the cleaned and wrapped content to the row data
+            rowData.push(cellContent);
         });
-        rows.push('"' + rowData.join('","') + '"');
+
+        // Only add the row if it contains data (in case there are rows without 'export-csv' cells)
+        if (rowData.length > 0) {
+            rows.push(rowData.join(','));
+        }
     });
+
     const csv = rows.join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     saveAs(blob, 'business_requirement.csv');
-  }
+}
 
   document.addEventListener('DOMContentLoaded', function() {
     // Attach event listener to the form's submit button

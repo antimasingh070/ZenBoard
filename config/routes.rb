@@ -36,6 +36,8 @@ root to: 'my#page', as: 'home'
   get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
   get 'project_score_card', to: 'welcome#project_score_card'
+    get 'help', to: 'welcome#help'
+  get 'download_tra_user_module/:id', to: 'welcome#download_tra_user_module', as: 'download_tra_user_module'
   get '/projects_for_period', to: 'welcome#projects_for_period'
   get '/fetch_members', to: 'welcome#fetch_members' 
   # get 'activity_logs', :to => 'activity_log#activity_logs'
@@ -154,8 +156,10 @@ root to: 'my#page', as: 'home'
   resources :business_requirements do
     resources :br_stakeholders, only: [:new, :create, :edit, :update, :destroy]
     member do
+      post 'send_email'
       post 'add_attachment'
       get 'accept'
+      patch 'hold'
       patch 'accept'
       patch 'decline'
     end
@@ -169,6 +173,12 @@ root to: 'my#page', as: 'home'
           end
           resources :remarks, only: [:create, :update, :destroy]  
         end
+        member do
+          post 'send_mom_email'
+        end
+      end
+      member do 
+        post 'send_meeting_invitation'
       end
     end
   end

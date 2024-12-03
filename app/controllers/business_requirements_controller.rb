@@ -1,6 +1,21 @@
 class BusinessRequirementsController < ApplicationController
-    before_action :set_business_requirement, only: %i[show edit update destroy accept decline]
+    before_action :set_business_requirement, only: %i[show edit update destroy accept decline send_email]
     helper :attachments
+
+    def send_email
+    
+      @business_requirement = BusinessRequirement.find(params[:id])
+    
+      if @business_requirement.has_stakeholders?
+        # Send email to all stakeholders in a single email
+        stakeholders = @business_requirement.br_stakeholders
+        Mailer.deliver_business_requirement_created(User.current, stakeholders.pluck(:user_id), @business_requirement)
+        redirect_to edit_business_requirement_path(@business_requirement), notice: 'Email sent successfully to all stakeholders.'
+      else
+        redirect_to @business_requirement, alert: 'Cannot send email: No stakeholders are associated with this business requirement.'
+      end
+    end
+
     def index
       @business_requirements =  if User.current.admin?
                                       BusinessRequirement.all
@@ -221,7 +236,7 @@ class BusinessRequirementsController < ApplicationController
           @business_requirement.template = "IT Enhancement"
         end
         if @business_requirement.save
-          Mailer.deliver_business_requirement_created(User.current, @business_requirement)
+          # Mailer.deliver_business_requirement_created(User.current, @business_requirement)
           attach_files(@business_requirement)
           redirect_to edit_business_requirement_path(@business_requirement), notice: 'Business Requirement was successfully created. Please add Stackholders'
         else
@@ -245,7 +260,7 @@ class BusinessRequirementsController < ApplicationController
           @business_requirement.update(template: "")
         end
         attach_files(@business_requirement)
-        redirect_to @business_requirement, notice: 'Business Requirement was successfully updated.'
+        redirect_to edit_business_requirement_path(@business_requirement), notice: 'Business Requirement was successfully updated.'
       end
     end
 
@@ -254,6 +269,12 @@ class BusinessRequirementsController < ApplicationController
       redirect_to business_requirements_path(@business_requirement), notice: 'Business Requirement was successfully deleted.'
     end
   
+    def hold
+      @business_requirement = BusinessRequirement.find(params[:id])
+      @business_requirement.update(status: 6)
+      redirect_to business_requirements_url, notice: 'Business Requirement on Hold.'
+    end
+
     def decline
       @business_requirement = BusinessRequirement.find(params[:id])
       @business_requirement.update(status: 8)
