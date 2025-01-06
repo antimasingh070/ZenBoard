@@ -105,9 +105,15 @@ id = custom_value&.value&.to_i
         <li><strong><%= "#{member.user.name} (#{role.name})" %></strong></li>
         <% end %>
         <% end %>
-        <% if @user && @role %>
-        <p>New Member:  <%= "#{@user} (#{@role.name})" %></p>
+        <% @users = User.where(id: @user_ids)
+        @roles = Role.where(id: @role_ids) %>
+        <p>New Member: </p>
+        <% if @users.present? && @roles.present? %>
+            <% @users.each_with_index do |user, index| %>
+                <%= "#{user.firstname} #{user.lastname} (#{@roles[index].name})" %><br>
+            <% end %>
         <% end %>
+
         <p>Please log in to Trackmine to view and manage the project details.</p>
      
         <p>Best Regards</p>

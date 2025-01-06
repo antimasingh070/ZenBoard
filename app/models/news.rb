@@ -50,7 +50,12 @@ class News < ActiveRecord::Base
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity
+  after_save :update_project_timestamp
+  after_destroy :update_project_timestamp
 
+  def update_project_timestamp
+    project.touch if project.present?
+  end
 
   def log_create_activity
     activity_log = ActivityLog.create(

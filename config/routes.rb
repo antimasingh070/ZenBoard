@@ -36,8 +36,10 @@ root to: 'my#page', as: 'home'
   get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
   get 'project_score_card', to: 'welcome#project_score_card'
-    get 'help', to: 'welcome#help'
-  get 'download_tra_user_module/:id', to: 'welcome#download_tra_user_module', as: 'download_tra_user_module'
+  get 'export_all_it', :to => 'welcome#export_all_it'
+  get 'export_all_non_it', :to => 'welcome#export_all_non_it'
+  get 'help', to: 'welcome#help'
+  get 'download_help_documents/:id', to: 'welcome#download_help_documents', as: 'download_help_documents'
   get '/projects_for_period', to: 'welcome#projects_for_period'
   get '/fetch_members', to: 'welcome#fetch_members' 
   # get 'activity_logs', :to => 'activity_log#activity_logs'
@@ -162,6 +164,9 @@ root to: 'my#page', as: 'home'
       patch 'hold'
       patch 'accept'
       patch 'decline'
+    end
+    collection do
+      get :export_all  # Define a new route for exporting all data
     end
     resources :meetings do
       resources :meeting_attendees, only: [:new, :create, :edit, :update, :destroy]

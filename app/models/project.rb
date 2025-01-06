@@ -134,14 +134,10 @@ class Project < ActiveRecord::Base
 
   def add_pmo
     begin
+      group = Group.find_by_lastname("PMO")
+      user_ids = group.users.pluck(:id) if group.present?
       role = Role.find_by!(name: "PMO")
-      
-      # Find the master project
-      project = Project.find_by!(name: "Master Project") # Use find_by! to ensure project exists
-      # Get user IDs of PMO members from the master project
-      member_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
-      uer_ids = Member.where(id: member_ids, project_id: project.id).pluck(:user_id)
-      # Iterate through each user and add them to the current project
+
       user_ids.each do |user_id|
         # Find or create the member for the current project
         member = Member.find_or_initialize_by(user_id: user_id, project_id: self.id)

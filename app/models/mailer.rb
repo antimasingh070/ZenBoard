@@ -264,8 +264,7 @@ class Mailer < ActionMailer::Base
   #
   # Example:
   #   Mailer.deliver_issue_add(issue)
-  def self.deliver_issue_add(issue)
-    user = User.current
+  def self.deliver_issue_add(user, issue)
     if Setting.notified_events.include?('issue_added')
       issue_add(user, issue).deliver_later
     end
@@ -340,17 +339,17 @@ class Mailer < ActionMailer::Base
     # if !role_users.blank?
     #   mail_to += role_users.map(&:mail).uniq
     # end
-    mail_to += [@author.mail, @assignee.mail]
+    @user = user
+    mail_to = [@author.mail] + [@assignee.mail] + [@user&.mail]
     mail_cc = mail_data[:mail_cc].uniq
     s = "[#{issue.project.name} - #{issue.tracker.name} ##{issue.id}] "
     s += "(#{issue.status.name}) " if journal.new_value_for('status_id') && Setting.show_status_changes_in_mail_subject?
     s += issue.subject
     @issue = issue
-    @user = user
     @journal = journal
     @journal_details = journal.visible_details
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue, :anchor => "change-#{journal.id}")
-    mail :to => mail_to.uniq, :cc => mail_cc.uniq,
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :bcc => "santima861@gmail.com"
       :subject => s
   end
 
@@ -358,7 +357,7 @@ class Mailer < ActionMailer::Base
   #
   # Example:
   #   Mailer.deliver_issue_edit(journal)
-  def self.deliver_issue_edit(journal)
+  def self.deliver_issue_edit(user, journal)
     users  = journal.notified_users | journal.notified_watchers | journal.notified_mentions | journal.journalized.notified_mentions
     users.select! do |user|
       journal.notes? || journal.visible_details(user).any?
@@ -366,34 +365,26 @@ class Mailer < ActionMailer::Base
     users.each do |user|
       # issue_edit(user, journal).deliver_later
     end
-    user = User.current
+  
     if Setting.notified_events.include?('issue_updated') ||  Setting.notified_events.include?('issue_note_added') ||  Setting.notified_events.include?('issue_status_updated') ||  Setting.notified_events.include?('issue_assigned_to_updated') ||  Setting.notified_events.include?('issue_priority_updated') ||  Setting.notified_events.include?('issue_fixed_version_updated')
       issue_edit(user, journal).deliver_later
     end
   end
 
   # Builds a mail to user about a new document.
-  def document_added(user, document, author)
+  def document_added(user, document)
     redmine_headers 'Project' => document.project.identifier
     @author = author
     @document = document
     @user = user
     @document_url = url_for(:controller => 'documents', :action => 'show', :id => document)
-    mail :to => "singhantima720@gmail.com",
-    # mail :to => user,
+    mail :to => user,
       :subject => "[#{document.project.name}] #{l(:label_document_new)}: #{document.title}"
   end
 
-  # Notifies users that document was created by author
-  #
-  # Example:
-  #   Mailer.deliver_document_added(document, author)
-  def self.deliver_document_added(document, author)
-    # users = document.notified_users
-    # users.each do |user|
-    user = User.last
+  def self.deliver_document_added(user, document)
     if Setting.notified_events.include?('document_added')
-      document_added(user, document, author).deliver_later
+      document_added(user, document).deliver_later
     end
     # end
   end
@@ -1058,6 +1049,7 @@ class Mailer < ActionMailer::Base
   end
 
   def project_updated(user, member_role, role, project, updated_fields)
+    binding.pry
     @project = project
     @user = user
     @member_role = member_role
@@ -1080,7 +1072,7 @@ class Mailer < ActionMailer::Base
         @project = project
       end
       if Setting.notified_events.include?('project_updated')
-        project_updated(@user, @member_role, @role, @project, updated_fields).deliver_later
+        project_updated(user, @member_role, @role, @project, updated_fields).deliver_later
       end
     end
   end
@@ -1108,18 +1100,20 @@ class Mailer < ActionMailer::Base
     end
   end
 
-  def membership_added_email(user, project)
+  def membership_added_email(user, user_ids, role_ids, project)
     @user = user
     @project = project
+    @user_ids = user_ids
+    @role_ids = role_ids
     mail_data = user_mails(@project)
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
     mail(to: mail_to, cc: mail_cc, subject: "[Trackmine] Project: #{project.name} #{project.identifier}")    
   end
 
-  def self.deliver_membership_added_email(user, project)
+  def self.deliver_membership_added_email(user, user_ids, role_ids, project)
     if Setting.notified_events.include?('membership_added_email')
-      membership_added_email(user, project).deliver_later
+      membership_added_email(user, user_ids, role_ids, project).deliver_later
     end
   end
 
@@ -1164,6 +1158,22 @@ class Mailer < ActionMailer::Base
     end
   end
  
+  def send_risk(user, project)
+    @project = project
+        
+    @project_status = STATUS_MAP[project.status] || ""
+    mail_data = user_mails(@project)
+    mail_to = mail_data[:mail_to].uniq
+    mail_cc = mail_data[:mail_cc].uniq
+    mail(to: mail_to, cc: mail_cc, subject: "<PMO> Risk or challenges- #{@project.name}")
+  end
+
+  def self.deliver_send_risk(user, project)
+    if Setting.notified_events.include?('send_risk')
+      send_risk(user, project).deliver_now
+    end
+  end 
+
   def send_wsr_email(user, project)
     @project = project
     @members = Member.where(project_id: @project.id)
@@ -1203,14 +1213,13 @@ class Mailer < ActionMailer::Base
 
     # Adjust the recipient of the email based on project or member data
     @recipient_email = @members.pluck(:user_id).map { |user_id| User.find(user_id).mail }.join(",") # Pluck emails of all project members
-    
-    mail(to: @recipient_email, subject: "[Trackmine] Pending Activity List: #{@project.name} (due date passed)")
+    mail(to: "singhantima720@gmail.com", subject: "[Trackmine] Pending Activity List: #{@project.name} (due date passed)")
   end
 
   def self.deliver_send_issue_list(user, project,overdue_issues)
     if Setting.notified_events.include?('send_issue_list')
       if overdue_issues.any?
-        send_issue_list(user, project, overdue_issues).deliver_later
+        send_issue_list(user, project, overdue_issues).deliver_now
       end
     end
   end

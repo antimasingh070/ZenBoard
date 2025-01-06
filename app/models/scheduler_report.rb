@@ -57,8 +57,10 @@ class SchedulerReport < ActiveRecord::Base
             issue.due_date.present? && issue.due_date < Date.today
           end
         end
-        Mailer.deliver_send_issue_list(user, project, @overdue_issues)
-        puts "Mail sent for project #{project.name}" 
+        if @overdue_issues.any?
+          Mailer.deliver_send_issue_list(user, project, @overdue_issues)
+          puts "Mail sent for project #{project.name}" 
+        end
       end
       end
     end
@@ -71,13 +73,6 @@ class SchedulerReport < ActiveRecord::Base
         end
       end
     
-      def self.generate_report
-        report = self.new(
-          report_date: Date.today
-        )
-        report.save
-        report
-      end
     
       def self.send_report(user, project)
         if Setting.notified_events.include?('send_wsr_email')
@@ -86,6 +81,35 @@ class SchedulerReport < ActiveRecord::Base
           puts "WSR mail sent for project #{project.name}"
         end
       end    
+
+      def self.generate_report
+        report = self.new(
+          report_date: Date.today
+        )
+        report.save
+        report
+      end
+
+      def self.generate_and_send_risk_report
+        Project.find_each do |project|
+          user = User.first # Consider replacing this with logic to determine the correct recipient
+          send_risk_report(user, project)
+        end
+      end
+      
+      def self.send_risk_report(user, project)
+        tracker = Tracker.find_by(name: "Risk Register")
+        return unless tracker
+      
+        risks = project.issues.where(status_id: 5, tracker_id: tracker.id)
+        return if risks.blank?
+      
+        if Setting.notified_events.include?('send_risk')
+          Mailer.deliver_send_risk(user, project)
+          generate_report # Ensure this method generates the desired report properly
+          puts "Risk or challenges mail sent for project #{project.name}"
+        end
+      end      
 
       def self.custom_field_value_date(user,issue, field_name) 
         custom_field = CustomField.find_by(name: field_name) 

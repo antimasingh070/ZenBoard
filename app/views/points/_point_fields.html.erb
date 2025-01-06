@@ -7,8 +7,8 @@
   </div>
 
   <div class="form-group">
-    <%= form.label :owner, "Assignee" %>
-    <%= form.select :owner, options_for_select(@br_stakeholders.map { |stakeholder| ["#{stakeholder.user.firstname} #{stakeholder.user.lastname}", stakeholder.user_id] }, form.object.owner), class: 'form-control' %>
+    <%= form.label :owner_ids, "Assignee" %>
+    <%= form.select :owner_ids, options_for_select(@br_stakeholders.map { |stakeholder| ["#{stakeholder.user.firstname} #{stakeholder.user.lastname}", stakeholder.user_id] }, form.object.owner_ids), class: 'form-control' %>
   </div>
 
   <div class="form-group">

@@ -176,11 +176,34 @@ module Redmine
         menu.push :users, {:controller => 'users', :action => 'index'}, :caption => :label_user_plural, :if => Proc.new {
                     User.current.groups.include?(Group.find_by_lastname('UAM'))
                   }
+          # Project Score Card link (only for Program Managers)
+        menu.push :project_score_card, { controller: 'welcome', action: 'project_score_card' },
+        caption: 'Project Score Card',
+        if: Proc.new { User.current.admin? || User.current.groups.include?(Group.find_by_lastname('PMO')) }
+
+        # IT Project Dashboard / Non IT Project Dashboard links (based on current user's projects and custom field)
+        custom_field = CustomField.find_by(name: "Is IT Project?")
+        next unless custom_field
+
+        current_user = User.current
+        project_ids = Project.joins(:members).where(members: { user_id: current_user.id }).pluck(:id)
+        custom_values = CustomValue.where(customized_type: "Project", customized_id: project_ids, custom_field_id: custom_field.id)
+        it_project_present = custom_values.any? { |cv| cv.value == "1" }
+        non_it_project_present = custom_values.any? { |cv| cv.value == "0" }
+
+
+          menu.push :it_project_dashboard, { controller: 'welcome', action: 'it_project_dashboard' },
+              caption: 'IT Project Dashboard', 
+              if: Proc.new {User.current.admin? || it_project_present }
+          menu.push :non_it_project_dashboard, { controller: 'welcome', action: 'non_it_project_dashboard' },
+              caption: 'Non IT Project Dashboard', 
+              if: Proc.new { User.current.admin? || non_it_project_present }
+
         menu.push :activity_logs, {:controller => 'activity_logs', :action => 'index'},
                   :caption => "Activity Logs", :if => Proc.new {User.current.admin?}
         menu.push :administration, {:controller => 'admin', :action => 'index'},
-                  :if => Proc.new {User.current.admin?}, :last => true
-        menu.push :help, {:controller => 'welcome', :action => 'help'}, :caption => "HElp"
+                  :if => Proc.new {User.current.admin?}
+        menu.push :help, {:controller => 'welcome', :action => 'help'}, :caption => "Home", :first => true
       end
 
       MenuManager.map :account_menu do |menu|

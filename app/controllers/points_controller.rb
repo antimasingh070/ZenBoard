@@ -64,7 +64,7 @@ class PointsController < ApplicationController
     end
   
     def point_params
-      params.require(:point).permit(:description, :status, :owner, :timeline)
+      params.require(:point).permit(:description, :status, :timeline, owner_ids: [])
     end
 end
   

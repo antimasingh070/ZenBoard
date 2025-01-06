@@ -28,7 +28,7 @@ class WelcomeController < ApplicationController
   # STATUS_HOLD = 11
   # STATUS_CANCELLED = 12
 
-  def download_tra_user_module
+  def download_help_documents
     document = Document.find(params[:id]) # Fetch the document by ID
     # Check if the document has an associated attachment (or file)
     if document && document.attachments.any?
@@ -182,41 +182,48 @@ class WelcomeController < ApplicationController
       Date.new(Date.today.year, 12, 25),
       Date.new(Date.today.year, 5, 1)
     ]
+    
     @total_projects = 0.0
-    @projects.select do |project|
-       planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
-       next unless planned_project_go_live_date
-       next unless planned_project_go_live_date >= start_date && planned_project_go_live_date <= end_date
-       @total_projects += 1
-    end
-
-    @delayed_projects = 0.0
-    @projects.select do |project|
+    projects_in_date_range = []
+    
+    @projects.each do |project|
       planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
-
+      next unless planned_project_go_live_date
+      next unless planned_project_go_live_date >= start_date && planned_project_go_live_date <= end_date
+      
+      projects_in_date_range << project
+      @total_projects += 1
+    end
+  
+    @delayed_projects = 0
+    delayed_projects = []
+    binding.pry 
+    projects_in_date_range.each do |project|
+      planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
+      
       cf = CustomField.find_by(name: "Actual End Date")
       cv = CustomValue.find_by(customized_type: "Project", customized_id: project.id, custom_field_id: cf.id)
       actual_end_date = cv&.value&.to_date
       
       next unless planned_project_go_live_date && actual_end_date
       next unless planned_project_go_live_date >= start_date && planned_project_go_live_date <= end_date
-      # delay = (actual_end_date - planned_project_go_live_date).to_i
+      
       working_days = 0
       current_date = planned_project_go_live_date
       while current_date < actual_end_date
-        
-        unless current_date.sunday? | holidays.include?(current_date)
+        unless current_date.sunday? || holidays.include?(current_date)
           working_days += 1
         end
         current_date = current_date.next_day
       end
       next unless working_days > 0
- 
+      binding.pry 
+      delayed_projects << project
       @delayed_projects += 1
     end
-    return 0 if @total_projects.zero?
-    100 -  ((@delayed_projects / @total_projects * 100).round(2) )
+    return { percentage: 100 - ((@delayed_projects / @total_projects * 100).round(2)), delayed_projects: delayed_projects }
   end
+  
 
   def date_value(project, field_name)
     custom_field = CustomField.find_by(name: field_name)
@@ -279,23 +286,36 @@ class WelcomeController < ApplicationController
           function_values&.casecmp?(params[:function_filter])
         end
       end if params[:function_filter].present?
-      
-
       if params[:start_date_from].present? && params[:start_date_to].present?
         start_date_range = Date.parse(params[:start_date_from])..Date.parse(params[:start_date_to])
-        @projects = @projects.select { |project| start_date_range.cover?(Date.parse(date_value(project, 'Scheduled Start Date'))) }
+        
+        @projects = @projects.select do |project|
+          start_date_str = date_value(project, 'Scheduled Start Date')
+          next false unless start_date_str.present?
+          
+          start_date = Date.parse(start_date_str) 
+          start_date_range.cover?(start_date) 
+        end
       end
 
       if params[:end_date_from].present? && params[:end_date_to].present?
         end_date_range = Date.parse(params[:end_date_from])..Date.parse(params[:end_date_to])
-        @projects = @projects.select { |project| end_date_range.cover?(Date.parse(date_value(project, 'Scheduled End Date'))) }
+        
+        @projects = @projects.select do |project|
+          end_date_str = date_value(project, 'Scheduled End Date') 
+          next false unless end_date_str.present? 
+          
+          end_date = Date.parse(end_date_str) 
+          end_date_range.cover?(end_date) 
+        end
       end
+      
       if User.current.admin?
         @projects# Show all projects if the user is an admin
       else
         @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }  # Show only projects the user is a member of
       end
-      @categories = @projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.uniq
+      @categories =@projects.map { |project| custom_field_value(project, 'Portfolio Category') }.compact.flatten.uniq
       @functions = @projects.flat_map { |project| custom_field_value(project, 'Function') }.compact.uniq
       @statuses = @projects.map { |project| @project_status_text[project.status] }.compact.uniq.sort
       @managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
@@ -331,6 +351,8 @@ class WelcomeController < ApplicationController
         end
       }
     
+     # without pagination
+      @total_project = @projects
       # Paginate through the existing projects
       @projects = @projects.paginate(page: params[:page], per_page: 5)
       REDIS.set(cache_key, Marshal.dump([@projects, @categories, @functions, @statuses, @managers, @names, @subprojects, @next_week_go_live_projects]), ex: 5.minutes.to_i)
@@ -399,6 +421,9 @@ class WelcomeController < ApplicationController
     @next_week_go_live_projects = @next_week_go_live_projects[0..2]
     rescue => e
     end
+  end
+  
+  def export_all_it
   end
   
   def member_names(project, field_name)

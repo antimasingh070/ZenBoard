@@ -2,8 +2,7 @@ class ActivityLogsController < ApplicationController
   def index
     @entity_types = ActivityLog.distinct.pluck(:entity_type)
     @field_names = ActivityLog.distinct.pluck(:field_name)
-    @authors = User.all.map { |u| ["#{u.firstname} #{u.lastname}", u.id] }
-    
+    @authors = User.where(id: ActivityLog.distinct.pluck(:author_id)).map { |u| ["#{u.firstname} #{u.lastname}", u.id] }
     @activity_logs = ActivityLog.order(created_at: :desc).where("created_at >= ?", 1.month.ago).all
 
     if params[:entity_type].present?

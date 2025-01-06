@@ -136,6 +136,13 @@ class Issue < ActiveRecord::Base
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
+  after_save :update_project_timestamp
+  after_destroy :update_project_timestamp
+
+  def update_project_timestamp
+    project.touch if project.present?
+  end
+  
   def log_create_activity
     ActivityLog.create(
       entity_type: 'Issue',
@@ -2296,10 +2303,10 @@ class Issue < ActiveRecord::Base
       approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
       approval_required_custom = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: approval_required_custom_field.id)
       if notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2 && approval_required_custom.value == 1
-        Mailer.deliver_issue_pending_approval(self)
-        Mailer.deliver_issue_add(self)
+        Mailer.deliver_issue_pending_approval(User.current, self)
+        Mailer.deliver_issue_add(User.current, self)
       elsif notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2
-        Mailer.deliver_issue_add(self)
+        Mailer.deliver_issue_add(User.current, self)
       end
     end
   end

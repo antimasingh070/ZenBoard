@@ -161,6 +161,29 @@
     </table>
   </div>
 
+  <div class="top-delayed-projects">
+    <h2>Total last Year</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Scheduled End</th>
+          <th>Actual End</th>
+          <th>Delay (days)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%  @total_last_year[:delayed_projects].each do |data| %>
+          <tr>
+            <td><%= link_to data[:project].name, project_path(data[:project]) %></td>
+            <td><%= formatted_date(date_value(data[:project], "Scheduled End Date")) %></td>
+            <td><%= formatted_date(date_value(data[:project], "Actual End Date")) %></td>
+            <td><%= data[:delay] %> days</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>

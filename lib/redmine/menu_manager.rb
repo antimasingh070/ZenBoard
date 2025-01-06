@@ -114,31 +114,6 @@ module Redmine
         links = []
         menu_items_for(menu, project) do |node|
           links << render_menu_node(node, project)
-      
-          if menu == :top_menu
-
-            if node.name == :projects
-              # links << content_tag('li', link_to('Business Requirement', business_requirements_path))
-              # links << content_tag('li', link_to('Activity Logs', activity_logs_path)) if User.current.admin?
-              links << content_tag('li', link_to('Project Score Card', project_score_card_path))
-              
-
-              custom_field = CustomField.find_by(name: "Is IT Project?")
-              next unless custom_field
-      
-              current_user = User.current
-              project_ids = Project.joins(:members).where(members: { user_id: current_user.id }).pluck(:id)
-              custom_values = CustomValue.where(customized_type: "Project", customized_id: project_ids, custom_field_id: custom_field.id)
-              it_project_present = custom_values.any? { |cv| cv.value == "1" }
-              non_it_project_present = custom_values.any? { |cv| cv.value == "0" }
-      
-              if User.current.logged?
-                links << content_tag('li', link_to('IT Project Dashboard', it_project_dashboard_path(status_filter: 1))) if it_project_present
-                links << content_tag('li', link_to('Non IT Project Dashboard', non_it_project_dashboard_path)) if non_it_project_present
-              end
-              links << content_tag('li', link_to('Project Score Card', project_score_card_path)) if User.current.admin?
-            end
-          end
         end
       
         links.empty? ? nil : content_tag('ul', links.join.html_safe)

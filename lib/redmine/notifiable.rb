@@ -33,6 +33,7 @@ module Redmine
       notifications << Notifiable.new('wiki_content_updated')
       notifications << Notifiable.new('send_wsr_email')
       notifications << Notifiable.new('send_issue_list')
+      notifications << Notifiable.new('send_risk')
       notifications << Notifiable.new('membership_added_email')
       notifications << Notifiable.new('membership_deleted_email')
       notifications << Notifiable.new('send_dashboard_email')

@@ -151,7 +151,7 @@ class ProjectsController < ApplicationController
       flash[:notice] = "You have not added members for project manager, program manager & PMO roles"
     else
       required_roles = Role.where(name: ["Project Manager", "Program Manager", "pmo"]).pluck(:id)
-      Mailer.deliver_membership_added_email(User.current, @project)
+      # Mailer.deliver_membership_added_email(User.current, @project)
     end
   end
   
@@ -340,6 +340,7 @@ class ProjectsController < ApplicationController
         end
         updated_fields[custom_field_name] = { before: old_value_name, after: new_value_name }
       end
+   
       Mailer.deliver_project_updated(User.current, @project, updated_fields)  
       respond_to do |format|
         format.html do

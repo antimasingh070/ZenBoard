@@ -18,7 +18,7 @@
     <% end %>
     
     <% if @business_requirement.project_identifier.present? %>
-      <li><span class="label">Project Identifier: <%= @business_requirement.project_identifier %></span></li>
+      <li><span class="label">Project Identifier: <%=  link_to @business_requirement.requirement_case, project_path(@business_requirement.project_identifier) %></span></li>
     <% end %>
     
     <% if @business_requirement.description.present? %>

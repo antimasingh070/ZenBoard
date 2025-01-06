@@ -71,9 +71,10 @@ class MembersController < ApplicationController
         roles = Role.where(id: role_ids) # Retrieve roles based on the role_ids array
         roles.each do |role|
           @role = role
-          # Mailer.deliver_membership_added_email(@user, @role, @project)
+         
         end
       end
+      Mailer.deliver_membership_added_email(User.current, user_ids, role_ids, @project)
     end
 
     respond_to do |format|

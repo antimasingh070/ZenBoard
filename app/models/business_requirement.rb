@@ -16,7 +16,7 @@ class BusinessRequirement< ActiveRecord::Base
     
     STATUS_MAP = {
         STATUS_IN_DISCUSSION => 'In Discussion',
-        STATUS_REQUIREMENT_FINILIZED => 'Requirement Finilized',
+        STATUS_REQUIREMENT_FINILIZED => 'Requirement Finalized',
         STATUS_AWAITING_DETAILS => 'Awaiting Details',
         STATUS_AWATING_BUSINESS_CASE => 'Awaiting Business Case',
         STATUS_REQUIREMENT_NOT_APPROVED => 'Requirement Not Approved',
@@ -56,6 +56,24 @@ class BusinessRequirement< ActiveRecord::Base
     after_update :log_update_activity
     after_destroy :log_destroy_activity
 
+
+    after_save :add_pmo
+
+    def add_pmo
+      begin
+        group = Group.find_by_lastname("PMO")
+        user_ids = group.users.pluck(:id) if group.present?
+        role_id = Role.find_by(name: "PMO")&.id
+        user_ids.each do |user_id|
+            br_stakeholder = BrStakeholder.find_or_create_by(user_id: user_id, role_id: role_id, business_requirement_id: self.id)
+        end
+      rescue ActiveRecord::RecordNotFound => e
+        # Handle specific cases when role or project is not found
+        Rails.logger.error "Role or Project not found: #{e.message}"
+        flash[:error] = "PMO role not found. Please check your setup."
+      rescue StandardError => e
+      end
+    end
 
     def has_stakeholders?
         br_stakeholders.any?

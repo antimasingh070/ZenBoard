@@ -1,5 +1,6 @@
 <!-- app/views/projects/_project_tree.html.erb -->
 <tr>
+ 
   <% if project.parent_id.nil? %>
     <td style="font-size: 10px; padding-left: <%= indent %>px;">
         <%= link_to project.name, project_path(project) %>
@@ -9,6 +10,12 @@
         <%= "#{project.name} - (#{Project.find_by(id: project.parent_id).try(:name)})" %>
     </td>
   <% end %>
+   <% br_id = BusinessRequirement.find_by(project_identifier: project.identifier)&.identifier %>
+   <% if br_id.present? %>
+    <td style="font-size: 10px;"><%= br_id %></td>
+   <% else %>
+    <td style="font-size: 10px;"></td>
+   <% end %>
   <td style="font-size: 10px;">On Track</td>
   <td style="font-size: 10px;"><%= member_name(project, "Project Manager") %></td>
   <% last_completed_activity = custom_field_value(project, "Project Activity") %>

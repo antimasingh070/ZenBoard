@@ -8,10 +8,95 @@
 
 <h1>Business Requirements</h1>
 
-<div class="d-flex justify-content-end">
-  <%= link_to 'New Business Requirement', new_business_requirement_path, class: 'btn btn-primary' %>
-  <button onclick="exportToCsv()">Export as CSV</button>
-</div>
+<!-- Responsive Business Requirements UI -->
+
+<div id="toggle-filters-btn" class="toggle-btn">Show Filters</div>
+  <!-- Filters Section -->
+  <div class="container">
+    <div id="filters-container" class="card mt-3" style="display: none;">
+      <div class="card-body">
+        <form action="" method="get">
+          <div class="row">
+            <!-- Requirement Case Filter -->
+            <div class="col-md-4 mb-3 filter-group">
+              <label class="filter-label" for="requirement_case">Requirement Case:</label>
+              <select name="requirement_case" id="requirement_case" class="form-control">
+                <option value="">All</option>
+                <% @requirement_case.each do |case_option| %>
+                  <option value="<%= case_option %>" <%= 'selected' if params[:requirement_case] == case_option %>><%= case_option %></option>
+                <% end %>
+              </select>
+            </div>
+    
+            <!-- Requirement Received From -->
+            <div class="col-md-4 mb-3 filter-group">
+              <label class="filter-label" for="requirement_received_from">Requirement Received From:</label>
+              <select name="requirement_received_from" id="requirement_received_from" class="form-control">
+                <option value="">All</option>
+                <% @requirement_received_from.each do |source| %>
+                  <option value="<%= source %>" <%= 'selected' if params[:requirement_received_from] == source %>><%= source %></option>
+                <% end %>
+              </select>
+            </div>
+    
+            <!-- Project/Enhancement -->
+            <div class="col-md-4 mb-3 filter-group">
+              <label class="filter-label" for="project_enhancement">Project/Enhancement:</label>
+              <select name="project_enhancement" id="project_enhancement" class="form-control">
+                <option value="">All</option>
+                <% @project_enhancement.each do |project| %>
+                  <option value="<%= project %>" <%= 'selected' if params[:project_enhancement] == project %>><%= project %></option>
+                <% end %>
+              </select>
+            </div>
+    
+            <!-- Priority Level -->
+            <div class="col-md-4 mb-3 filter-group">
+              <label class="filter-label" for="priority_level">Priority Level:</label>
+              <select name="priority_level" id="priority_level" class="form-control">
+                <option value="">All</option>
+                <% @priority_level.each do |level| %>
+                  <option value="<%= level %>" <%= 'selected' if params[:priority_level] == level %>><%= level %></option>
+                <% end %>
+              </select>
+            </div>
+    
+            <!-- Status -->
+            <div class="col-md-4 mb-3 filter-group">
+              <label class="filter-label" for="status">Status:</label>
+              <select name="status" id="status" class="form-control">
+                <option value="">All</option>
+                <% @statuses.each do |status_option| %>
+                  <option value="<%= status_option %>" <%= 'selected' if params[:status] == status_option %>><%= status_option %></option>
+                <% end %>
+              </select>
+            </div>
+
+            <div class="col-md-4 mb-3 filter-group">
+              <label class="filter-label" for="status">Project Manager:</label>
+              <select name="project_manager" id="status" class="form-control">
+                <option value="">All</option>
+                <% @project_manager_usernames.each do |username| %>
+                  <option value="<%= username %>" <%= 'selected' if params[:project_manager] == username %>><%= username %></option>
+                <% end %>
+              </select>
+            </div>
+
+    
+            <!-- Actions -->
+            <div class="col-md-12 d-flex justify-content-end">
+              <button type="submit" class="btn btn-primary mr-2">Filter</button>
+              <button type="button" onclick="clearFilters()" class="btn btn-danger">Clear</button>
+              <button type="button" onclick="exportToCsv()" class="btn btn-success mr-2">Export as CSV</button>
+              <%= link_to 'New Business Requirement', new_business_requirement_path, class: 'btn btn-primary' %>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+
 <br>
 <table>
   <thead>
@@ -23,7 +108,7 @@
       <th class='export-csv'>Project/Enhancement</th>
       <th class='export-csv'>Priority Level</th>
       <th class='export-csv'>Status</th>
-      <th class='export-csv'>Stackhholders</th>
+      <th class='export-csv'>Program Manager</th>
       <th colspan="3">Actions</th>
     </tr>
   </thead>
@@ -41,15 +126,19 @@
           <td class='export-csv'><%= business_requirement.project_enhancement %></td>
           <td class='export-csv'><%= business_requirement.priority_level %></td>
           <td class='export-csv'><%= BusinessRequirement::STATUS_MAP[business_requirement.status] %></td>
-          <td class='export-csv'><% grouped_stakeholders = business_requirement.br_stakeholders.group_by { |stakeholder| stakeholder.role.name } %>
+          <td class='export-csv'>
+          <% grouped_stakeholders = business_requirement.br_stakeholders
+                                                        .group_by { |stakeholder| stakeholder.role.name }
+                                                        .select { |role_name, _| role_name == 'Project Manager' } %>
 
           <ul>
-          <% grouped_stakeholders.each do |role_name, stakeholders| %>
-              <li>
-              <strong><%= role_name %></strong> - <%= stakeholders.map { |stakeholder| stakeholder.user.name }.join(', ') %>
-              </li>
-          <% end %>
-          </ul></td>
+            <% grouped_stakeholders.each do |role_name, stakeholders| %>
+              <%= stakeholders.map { |stakeholder| stakeholder.user.name }.join(', ') %>
+              
+            <% end %>
+          </ul>
+        </td>
+
           <td>
             <%= link_to 'Show', business_requirement_path(business_requirement), class: 'btn btn-info btn-sm', title: 'Show Business Requirement' %>
             <% if business_requirement.status == 7 %>
@@ -116,7 +205,6 @@
                 </div>
               </div>
               <p><%= f.text_area(:business_need_as_per_business_case, rows: 2, required: true, class: 'form-control', placeholder: 'State the business need here') if business_requirement.business_need_as_per_business_case.blank? %></p>
-              <p><%= f.date_field :planned_project_go_live_date, required: true, class: 'form-control' if business_requirement.planned_project_go_live_date.blank? %></p>
               <p><%= f.check_box :is_it_project, label: "Is IT Project?", required: true, class: 'form-check-input' if business_requirement.is_it_project.blank? %></p>
               <div >
                 <%= f.submit 'Submit', class: 'btn btn-primary' %>
@@ -131,8 +219,80 @@
     <% end %>
   </tbody>
 </table>
+<% begin %>
+  <% if @business_requirements.present? && @business_requirements.respond_to?(:current_page) %>
+    <span class="pagination"><%= will_paginate @business_requirements, @business_requirements.count %></span>
+  <% else %>
+  <% end %>
+<% rescue StandardError => e %>
+  <div class="alert alert-warning" role="alert">
+  </div>
+  <% Rails.logger.error "Pagination Error: #{e.message}" %>
+<% end %>
 
 <style>
+.container {
+  margin-top: 10px;
+  font-size: 9px;
+  display: flex;
+}
+  .toggle-btn {
+    display: inline-block;
+    padding: 6px 12px; /* Smaller padding */
+    border: 1px solid #ccc;
+    border-radius: 20px; /* Smaller rounded corners */
+    font-size: 10px; /* Smaller font size */
+    font-weight: 400; /* Reduced font weight */
+    cursor: pointer;
+    background-color: #f1f1f1;
+    color: #333;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Reduced shadow size */
+  }
+
+  .toggle-btn:hover {
+    background-color: #e0e0e0;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Slightly enhanced shadow */
+  }
+
+  .toggle-btn:focus {
+    outline: none;
+    box-shadow: 0 0 5px 2px rgba(0, 0, 255, 0.5);
+  }
+
+  #toggle-filters-btn, #toggle-rag-btn {
+    float: right;
+    background-color: #f1f1f1;
+  }
+  *{
+    font-size: 12px;
+  }
+  @media (min-width: 768px) {
+    .container-1,
+    .container-2 {
+      width: 45%;
+      margin-left: 2.5%;
+    }
+
+    .form-container {
+      width: 100%;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .container-1,
+    .container-2 {
+      width: 45%;
+      margin-left: 2.5%;
+    }
+
+    .form-container {
+      width: 45%;
+      margin-left: 2.5%;
+    }
+  }  
   table {
       border-collapse: collapse;
       width: 100%;
@@ -197,77 +357,43 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
 <script>
+  function exportToCsv() {
+      // Utility function to wrap text at a specific width (if needed)
+      function wrapText(text, maxWidth) {
+          const words = text.split(' ');
+          let wrappedText = '';
+          let currentLine = '';
 
-function exportToCsv() {
-    const rows = [];
-    const table = document.querySelector('table');
+          words.forEach(word => {
+              if ((currentLine + word).length > maxWidth) {
+                  wrappedText += currentLine.trim() + '\n';
+                  currentLine = word + ' ';
+              } else {
+                  currentLine += word + ' ';
+              }
+          });
 
-    // Utility function to wrap text at a specific width
-    function wrapText(text, maxWidth) {
-        const words = text.split(' ');
-        let wrappedText = '';
-        let currentLine = '';
+          wrappedText += currentLine.trim();
+          return wrappedText;
+      }
 
-        words.forEach(word => {
-            // Check if adding the next word exceeds the maxWidth
-            if ((currentLine + word).length > maxWidth) {
-                // If yes, add the current line to wrappedText and start a new line
-                wrappedText += currentLine.trim() + '\n';
-                currentLine = word + ' ';
-            } else {
-                // If no, continue adding to the current line
-                currentLine += word + ' ';
-            }
-        });
+      fetch('/business_requirements/export_all', { headers: { Accept: 'text/csv' } })
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Failed to fetch CSV data');
+              }
+              return response.text(); // Read response as plain text
+          })
+          .then(csvData => {
+              // Ensure CSV columns with multi-word headers remain intact
+              const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
+              saveAs(blob, 'business_requirements.csv');
+          })
+          .catch(error => {
+              console.error('Error exporting data to CSV:', error);
+          });
+  }
 
-        // Add any remaining content in the current line
-        wrappedText += currentLine.trim();
-
-        return wrappedText;
-    }
-
-    table.querySelectorAll('tr').forEach(row => {
-        const rowData = [];
-
-        // Only consider cells with the class 'export-csv'
-        row.querySelectorAll('th.export-csv, td.export-csv').forEach(cell => {
-            let cellContent;
-
-            if (cell.classList.contains('multiple-values')) {
-                const values = [];
-                cell.querySelectorAll('.value').forEach(value => {
-                    // Trim, wrap text, and handle line breaks by wrapping in quotes
-                    let trimmedValue = value.innerText.trim();
-                    let wrappedValue = wrapText(trimmedValue, 50); // Adjust the max width if needed
-                    values.push(wrappedValue);
-                });
-                cellContent = values.join(', ');
-            } else {
-                // Trim, wrap text, and handle line breaks by wrapping in quotes
-                let trimmedContent = cell.innerText.trim();
-                cellContent = wrapText(trimmedContent, 50);
-            }
-
-            // Replace any line breaks or multiple spaces with a single space for CSV cleanliness
-            cellContent = cellContent.replace(/\s+/g, ' ');
-
-            // Wrap content in double quotes and escape any existing double quotes
-            cellContent = `"${cellContent.replace(/"/g, '""')}"`;
-
-            // Add the cleaned and wrapped content to the row data
-            rowData.push(cellContent);
-        });
-
-        // Only add the row if it contains data (in case there are rows without 'export-csv' cells)
-        if (rowData.length > 0) {
-            rows.push(rowData.join(','));
-        }
-    });
-
-    const csv = rows.join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    saveAs(blob, 'business_requirement.csv');
-}
 
   document.addEventListener('DOMContentLoaded', function() {
     // Attach event listener to the form's submit button
@@ -292,6 +418,30 @@ function exportToCsv() {
         }
       });
     });
+  });
+
+</script>
+
+<script>
+  function toggleDisplay(buttonId, containerId, showText, hideText) {
+    const button = document.getElementById(buttonId);
+    const container = document.getElementById(containerId);
+    
+    if (container.style.display === 'none' || container.style.display === '') {
+        container.style.display = 'block';
+        button.textContent = hideText;
+    } else {
+        container.style.display = 'none';
+        button.textContent = showText;
+    }
+  }
+
+  document.getElementById('toggle-filters-btn').addEventListener('click', function () {
+    toggleDisplay('toggle-filters-btn', 'filters-container', 'Hide Filters', 'Show Filters');
+  });
+
+  document.getElementById('toggle-rag-btn').addEventListener('click', function () {
+    toggleDisplay('toggle-rag-btn', 'rag-container', 'Hide RAG Status', 'Show RAG Status');
   });
 
 </script>

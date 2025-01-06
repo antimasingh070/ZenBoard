@@ -13,41 +13,47 @@
 .dropdown {
   position: relative;
   display: inline-block;
-  width: 200px; /* Adjust width if needed */
+  width: 300px; /* Wider for better readability */
 }
 
 #search_input {
-  width: 100%;
-  padding: 6px;
+  width: 100px; /* Full width to match dropdown */
+  padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 .dropdown-content {
-  display: none;
+  display: none; /* Default hidden, shown dynamically */
   position: absolute;
-  top: 100%;
+  top: calc(100% + 4px); /* Slight gap from the input box */
   left: 0;
   width: 100%;
   background: #fff;
   border: 1px solid #ccc;
-  max-height: 150px;
-  overflow-y: auto;
+  border-radius: 4px; /* Rounded corners for better UI */
+  max-height: 200px; /* Slightly taller for more options */
+  overflow-y: auto; /* Scrollable when content exceeds height */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for better visibility */
   z-index: 10;
 }
 
 .dropdown-content label {
   display: block;
-  padding: 4px 8px;
-  margin: 0; /* Remove margin between items */
-  font-size: 13px;
+  padding: 6px 12px;
+  margin: 0; /* Maintain consistent spacing */
+  font-size: 14px; /* Slightly larger text for readability */
+  cursor: pointer; /* Indicate clickable items */
 }
 
-.dropdown:hover .dropdown-content {
-  display: block;
+.dropdown-content label:hover {
+  background-color: #f7f7f7; /* Highlight on hover */
 }
 
-
+.dropdown-content input[type="checkbox"] {
+  margin-right: 8px; /* Space between checkbox and label text */
+}
 
 .sort-icon {
   display: inline-block;
@@ -277,138 +283,146 @@ button:hover {
 
 </style>
 </head>
-<body>
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<div id="toggle-filters-btn" class="toggle-btn">Show Filters</div>
+<div id="toggle-rag-btn" class="toggle-btn">Show RAG Status</div><br>
+<h1></h1>
+<div class="container">
+  <div class="container-1" id="filters-container" style="display: none;">
+    <form action="" method="get">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="search_input">Project Name:</label>
+          <div class="dropdown">
+            <input type="text" id="search_input" placeholder="Search...">
+            <div id="dropdown_content" class="dropdown-content">
+              <label><input type="checkbox" name="name_filter[]" value="all"> All</label>
+              <% @names.each do |name| %>
+                <label><input type="checkbox" name="name_filter[]" value="<%= name %>"> <%= name %></label>
+              <% end %>
+            </div>
+          </div>
+        </div>
 
-<h1 style="font-weight: bold; font-size: 18px; text-align: center;">Project Dashboard</h1>
-<form action="" method="get">
-  <div class="flex-container">
-  <div class="dashboard">
-    <div class="filters no-print">
-    <div class="filter-group">
-    <label for="search_input">Project Name:</label>
-    <div class="dropdown">
-      <input type="text" id="search_input" placeholder="Search...">
-      <div id="dropdown_content" class="dropdown-content">
-        <label><input type="checkbox" name="name_filter[]" value="all"> All</label>
-        <% @names.each do |name| %>
-          <label><input type="checkbox" name="name_filter[]" value="<%= name %>"> <%= name %></label>
-        <% end %>
-          
-      </div>
-    </div>
-  </div>
+        <div class="filter-group">
+          <label>Include Subprojects:</label>
+          <div class="radio-group">
+            <input type="radio" id="show_subprojects_true" name="show_subprojects" value="true" <%= 'checked' if params[:show_subprojects] == 'true' %>>
+            <label for="show_subprojects_true">Yes</label>
+            <input type="radio" id="show_subprojects_false" name="show_subprojects" value="false" <%= 'checked' if params[:show_subprojects].nil? || params[:show_subprojects] == 'false' %>>
+            <label for="show_subprojects_false">No</label>
+          </div>
+        </div>
 
-  <div class="filter-group">
-  <label for="search_input">Subproject Name:</label>
-  <div class="dropdown">
-    <input type="text" id="search_input" placeholder="Search...">
-    <div id="dropdown_content" class="dropdown-content">
-      <label><input type="checkbox" name="name_filter[]" value="all"> All</label>
-      <% @subprojects.each do |name| %>
-        <label><input type="checkbox" name="name_filter[]" value="<%= name %>"> <%= name %></label>
-      <% end %>
-        
-    </div>
-  </div>
-</div>
-    <div class="filter-group">
-      <label>Include Subprojects:</label>
-    <input type="radio" id="show_subprojects_true" name="show_subprojects" value="true"<%= 'checked' if params[:show_subprojects] == 'true' %>>
-    <label for="show_subprojects_true">Yes</label><br>
-    <input type="radio" id="show_subprojects_false" name="show_subprojects" value="false"<%= 'checked' if params[:show_subprojects].nil? || params[:show_subprojects] == 'false' %>>
-    <label for="show_subprojects_false">No</label><br>
-    </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="function_filter">Project/Enhancement:</label>
+          <select name="function_filter" id="function_filter">
+            <option value="">All</option>
+            <% @functions.each do |function| %>
+              <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
+            <% end %>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label for="category_filter">Portfolio Category:</label>
-        <select name="category_filter" id="category_filter">
-          <option value="">All</option>
-          <% @categories.each do |category| %>
-            <option value="<%= category %>" <%= 'selected' if params[:category_filter] == category %>><%= category %></option>
-          <% end %>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="function_filter">Function Name:</label>
-        <select name="function_filter" id="function_filter">
-          <option value="">All</option>
-          <% @functions.each do |function| %>
-            <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
-          <% end %>
-        </select>
-      </div>
-      <div class="filter-group">
-        <label for="manager_filter">Project Manager:</label>
-        <select name="manager_filter" id="manager_filter">
-          <option value="">All</option>
-          <% @managers.each do |manager| %>
-            <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
-          <% end %>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label for="function_filter">Function Name:</label>
+          <select name="function_filter" id="function_filter">
+            <option value="">All</option>
+            <% @functions.each do |function| %>
+              <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
+            <% end %>
+          </select>
+        </div>
 
-       <div class="filter-group">
-        <label for="start_date">Scheduled Start Date:</label>
-        <div class="date-range">
-          <input type="date" name="start_date_from" id="start_date_from" value="<%= params[:start_date_from] %>">
-          <span>to</span>
-          <input type="date" name="start_date_to" id="start_date_to" value="<%= params[:start_date_to] %>">
+        <div class="filter-group">
+          <label for="status_filter">Status:</label>
+          <select name="status_filter" id="status_filter">
+            <option value="">All</option>
+            <% @statuses.each do |status| %>
+              <option value="<%= status_id(status) %>" <%= 'selected' if params[:status_filter].to_s == status_id(status).to_s %>><%= status %></option>
+            <% end %>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="function_filter">categories:</label>
+          <select name="function_filter" id="function_filter">
+            <option value="">All</option>
+            <% @categories.each do |function| %>
+              <option value="<%= function %>" <%= 'selected' if params[:function_filter] == function %>><%= function %></option>
+            <% end %>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="manager_filter">Project Manager:</label>
+          <select name="manager_filter" id="manager_filter">
+            <option value="">All</option>
+            <% @managers.each do |manager| %>
+              <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
+            <% end %>
+          </select>
         </div>
       </div>
-      
-      <div class="filter-group">
-        <label for="end_date">Scheduled End Date:</label>
-        <div class="date-range">
-          <input type="date" name="end_date_from" id="end_date_from" value="<%= params[:end_date_from] %>">
-          <span>to</span>
-          <input type="date" name="end_date_to" id="end_date_to" value="<%= params[:end_date_to] %>">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label for="manager_filter">Program Manager:</label>
+          <select name="manager_filter" id="manager_filter">
+            <option value="">All</option>
+            <% @managers.each do |manager| %>
+              <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
+            <% end %>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label for="start_date">Start Date:</label>
+          <div class="date-range">
+            <input type="date" name="start_date_from" id="start_date_from" value="<%= params[:start_date_from] %>">
+            <span>to</span>
+            <input type="date" name="start_date_to" id="start_date_to" value="<%= params[:start_date_to] %>">
+          </div>
+        </div>
+
+        <div class="filter-group">
+          <label for="end_date">End Date:</label>
+          <div class="date-range">
+            <input type="date" name="end_date_from" id="end_date_from" value="<%= params[:end_date_from] %>">
+            <span>to</span>
+            <input type="date" name="end_date_to" id="end_date_to" value="<%= params[:end_date_to] %>">
+          </div>
         </div>
       </div>
-    
-    <div class="filter-group">
-      <label for="status_filter">Status:</label>
-      <select name="status_filter" id="status_filter">
-        <option value="">All</option>
-        <% @statuses.each do |status| %>
-          <option value="<%= status_id(status) %>" <%= 'selected' if params[:status_filter].to_s == status_id(status).to_s %>><%= status %></option>
-        <% end %>
-      </select>
-    </div>
-    <div class="filter-group">
-        <label for="days_input">Project Variance:</label>
-        <input type="number" name="days" id="days_input" value="<%= (params[:days].present? ? params[:days].to_i : 30) %>">
-        
-        <input type="submit" value="Filter" id= "form-group">
-        <button type="submit" onclick="clearFilters()" class="hover-red">Clear</button>
-        <button onclick="exportToCsv()">Export as CSV</button>
-        <button onclick="exportToPdf()">Export as PDF</button>
-      </div>
-    </div>
-  </div>
-</form>
 
-<div class="container-2">
-<h3>RAG Status</h3>
-  <div class="item">
-    <div class="text">Sch. end date  < today or no revised date</div>
-    <div class="color-box" style="background-color: red;"></div>
+      <div class="action-buttons">
+        <input type="submit" value="Filter">
+        <button type="button" onclick="clearFilters()">Clear</button>
+        <button type="button" onclick="exportToCsv()">Export CSV</button>
+        <button type="button" onclick="exportToPdf()">Export PDF</button>
+      </div>
+    </form>
   </div>
-  <div class="item">
-    <div class="text">Sch. end date  > today or revised date after <%= (params[:days].present? ? params[:days].to_i : 30) %> days</div>
-    <div class="color-box" style="background-color: red;"></div>
-  </div>
-  <div class="item">
-    <div class="text">Sch. end date >= today or revised date within <%= (params[:days].present? ? params[:days].to_i : 30) %> days</div>
-    <div class="color-box" style="background-color: #FFBF00;"></div>
-  </div>
-  <div class="item">
-    <div class="text">Sch. end date  > today & no revised date</div>
-    <div class="color-box" style="background-color: green;"></div>
+  <div class="container-2" id="rag-container" style="display: none;">
+    <h3>RAG Status</h3>
+    <div class="item">
+      <div class="text">Sch. end date < today or no revised date</div>
+      <div class="color-box" style="background-color: red;"></div>
+    </div>
+    <div class="item">
+      <div class="text">Sch. end date > today or revised date after <%= (params[:days].present? ? params[:days].to_i : 30) %> days</div>
+      <div class="color-box" style="background-color: red;"></div>
+    </div>
+    <div class="item">
+      <div class="text">Sch. end date >= today or revised date within <%= (params[:days].present? ? params[:days].to_i : 30) %> days</div>
+      <div class="color-box" style="background-color: #FFBF00;"></div>
+    </div>
+    <div class="item">
+      <div class="text">Sch. end date > today & no revised date</div>
+      <div class="color-box" style="background-color: green;"></div>
+    </div>
   </div>
 </div>
-</div>
+
 <div id="notification">
   <% if @next_week_go_live_projects.any? %>
   <p>Next week project go live: </p>
@@ -423,11 +437,10 @@ button:hover {
 </div>
 <% end %>
 
-
-
-  <img class="print-only-image" src="/images/../images/neo.png" width="200" height="50">
+<img class="print-only-image" src="/images/../images/neo.png" width="200" height="50">
   <h2>Average Delay: <%= @average_delay.nil? || @average_delay < 0 ? 'N/A' : "#{@average_delay} days" %></h2>
-<h1><%= @projects.count %><h1>
+
+  <h1><%= @projects.count %><h1>
 <table>
   <thead>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -436,6 +449,7 @@ button:hover {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
     <tr>
       <th rowspan="2" style="width: 10%; white-space: normal; cursor: pointer;" class="sortable">Project Name</th>
+      <th rowspan="2" style="width: 10%; white-space: normal; cursor: pointer;" class="sortable">BR ID</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Status</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Manager</th>
       <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Lead</th>
@@ -480,44 +494,44 @@ button:hover {
 
 
 
-  function exportToPdf() {
-    window.print();
+    function exportToPdf() {
+      window.print();
 
-    $.ajax({
-    url: '/send_weekly_report',
-    type: 'POST',
-    data: { reportType: 'pdf' },
-    success: function(response) {
-      console.log('Email sent successfully');
-    },
-    error: function(xhr, status, error) {
-      console.error('Error sending email:', error);
-    }
-  });
-  }
-
- function exportToCsv() {
-    const rows = [];
-    const table = document.querySelector('table');
-    table.querySelectorAll('tr').forEach(row => {
-        const rowData = [];
-        row.querySelectorAll('th, td').forEach(cell => {
-            if (cell.classList.contains('multiple-values')) {
-                const values = [];
-                cell.querySelectorAll('.value').forEach(value => {
-                    values.push(value.innerText);
-                });
-                rowData.push(values.join(', ')); // Concatenate multiple values into a single string
-            } else {
-                rowData.push(cell.innerText);
-            }
-        });
-        rows.push('"' + rowData.join('","') + '"');
+      $.ajax({
+      url: '/send_weekly_report',
+      type: 'POST',
+      data: { reportType: 'pdf' },
+      success: function(response) {
+        console.log('Email sent successfully');
+      },
+      error: function(xhr, status, error) {
+        console.error('Error sending email:', error);
+      }
     });
-    const csv = rows.join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-    saveAs(blob, 'project_dashboard.csv');
-}
+    }
+
+  function exportToCsv() {
+      const rows = [];
+      const table = document.querySelector('table');
+      table.querySelectorAll('tr').forEach(row => {
+          const rowData = [];
+          row.querySelectorAll('th, td').forEach(cell => {
+              if (cell.classList.contains('multiple-values')) {
+                  const values = [];
+                  cell.querySelectorAll('.value').forEach(value => {
+                      values.push(value.innerText);
+                  });
+                  rowData.push(values.join(', ')); // Concatenate multiple values into a single string
+              } else {
+                  rowData.push(cell.innerText);
+              }
+          });
+          rows.push('"' + rowData.join('","') + '"');
+      });
+      const csv = rows.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      saveAs(blob, 'project_dashboard.csv');
+  }
 
   function clearFilters() {
   var daysInput = document.getElementById('days_input');
@@ -544,43 +558,196 @@ button:hover {
   if (showSubprojectsTrue) showSubprojectsTrue.checked = false;
   if (showSubprojectsFalse) showSubprojectsFalse.checked = true;
   if (formGroup) formGroup.click();
-}
+  }
 
   
-  document.getElementById('search_input').addEventListener('input', function() {
-  const query = this.value.toLowerCase();
-  const items = document.querySelectorAll('#dropdown_content label');
-  
-  items.forEach(item => {
-    item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+    document.getElementById('search_input').addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    const items = document.querySelectorAll('#dropdown_content label');
+    
+    items.forEach(item => {
+      item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+    });
   });
-});
 
 </script>
 
 <style>
-.notification {
-  background-color: rgba(0, 0, 0, 0); /* Transparent background */
-  color: green; /* Red text color */
-  text-align: right;
-  animation: slide-right 8s infinite; /* Animation duration: 4s, Infinite loop */
-  font-weight: bold; /* Make the text bold */
-  padding: 10px; /* Add some padding for better visibility */
-}
+  .notification {
+    background-color: rgba(0, 0, 0, 0); /* Transparent background */
+    color: green; /* Red text color */
+    text-align: right;
+    animation: slide-right 8s infinite; /* Animation duration: 4s, Infinite loop */
+    font-weight: bold; /* Make the text bold */
+    padding: 10px; /* Add some padding for better visibility */
+  }
 
-@keyframes slide-right {
-  0% {
-    opacity: 1; /* Start with opacity 1 */
-    transform: translateX(0); /* Start at current position */
+  @keyframes slide-right {
+    0% {
+      opacity: 1; /* Start with opacity 1 */
+      transform: translateX(0); /* Start at current position */
+    }
+    90% {
+      transform: translateX(20px); /* Move slightly to the right */
+      opacity: 1; /* Stay visible */
+    }
+    100% {
+      transform: translateX(100%); /* Move all the way to the right */
+      opacity: 0; /* Fade out */
+    }
   }
-  90% {
-    transform: translateX(20px); /* Move slightly to the right */
-    opacity: 1; /* Stay visible */
-  }
-  100% {
-    transform: translateX(100%); /* Move all the way to the right */
-    opacity: 0; /* Fade out */
-  }
-}
 </style>
 
+
+<script>
+  function toggleDisplay(buttonId, containerId, showText, hideText) {
+    const button = document.getElementById(buttonId);
+    const container = document.getElementById(containerId);
+    
+    if (container.style.display === 'none' || container.style.display === '') {
+        container.style.display = 'block';
+        button.textContent = hideText;
+    } else {
+        container.style.display = 'none';
+        button.textContent = showText;
+    }
+  }
+
+  document.getElementById('toggle-filters-btn').addEventListener('click', function () {
+    toggleDisplay('toggle-filters-btn', 'filters-container', 'Hide Filters', 'Show Filters');
+  });
+
+  document.getElementById('toggle-rag-btn').addEventListener('click', function () {
+    toggleDisplay('toggle-rag-btn', 'rag-container', 'Hide RAG Status', 'Show RAG Status');
+  });
+
+</script>
+
+<style>
+  .container {
+    margin-top: 10px;
+    font-size: 9px;
+    display: flex;
+    gap: 2%; /* Reduced space between containers */
+  }
+
+  .container-1 {
+    flex: 0 0 70%; /* Takes up 60% of the parent container */
+  }
+
+  .container-2 {
+    flex: 0 0 20%; /* Takes up 35% of the parent container */
+  }
+
+  .container-1, .container-2 {
+    border: 1px solid #ccc;
+    padding: 8px; /* Reduced padding */
+    border-radius: 3px; /* Smaller border radius */
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Reduced shadow size */
+  }
+
+  .container h3 {
+    margin-bottom: 6px;
+    font-size: 0.8rem; /* Smaller font size */
+    color: #333;
+    text-align: center;
+  }
+
+  .container-2 .item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px; /* Reduced margin */
+  }
+
+  .container-2 .text {
+    flex: 1;
+    font-size: 0.7rem; /* Smaller font size */
+    color: #555;
+  }
+
+  .container-2 .color-box {
+    width: 12px; /* Smaller color box */
+    height: 12px; /* Smaller color box */
+    border: 1px solid #ccc;
+    margin-left: 6px; /* Reduced margin */
+    border-radius: 3px;
+  }
+
+  .filter-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px; /* Reduced margin */
+  }
+
+  .filter-group {
+    flex: 1;
+    margin-right: 6px; /* Smaller gap between groups */
+  }
+
+  .filter-group:last-child {
+    margin-right: 0;
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 6px; /* Smaller gap */
+  }
+
+  .date-range {
+    display: flex;
+    align-items: center;
+    gap: 3px; /* Reduced gap */
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 6px; /* Smaller gap between buttons */
+  }
+
+  .action-buttons button, .action-buttons input[type="submit"] {
+    padding: 4px 8px; /* Reduced padding */
+    font-size: 0.7rem; /* Smaller font size */
+    border: none;
+    border-radius: 4px; /* Smaller border radius */
+    cursor: pointer;
+    background-color: #007bff;
+    color: white;
+  }
+
+  .action-buttons button:hover, .action-buttons input[type="submit"]:hover {
+    background-color: #0056b3;
+  }
+
+  .toggle-btn {
+    display: inline-block;
+    padding: 6px 12px; /* Smaller padding */
+    border: 1px solid #ccc;
+    border-radius: 20px; /* Smaller rounded corners */
+    font-size: 10px; /* Smaller font size */
+    font-weight: 400; /* Reduced font weight */
+    cursor: pointer;
+    background-color: #f1f1f1;
+    color: #333;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Reduced shadow size */
+  }
+
+  .toggle-btn:hover {
+    background-color: #e0e0e0;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Slightly enhanced shadow */
+  }
+
+  .toggle-btn:focus {
+    outline: none;
+    box-shadow: 0 0 5px 2px rgba(0, 0, 255, 0.5);
+  }
+
+  #toggle-filters-btn, #toggle-rag-btn {
+    float: right;
+    background-color: #f1f1f1;
+  }
+    
+</style>

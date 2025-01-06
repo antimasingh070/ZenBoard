@@ -56,7 +56,7 @@
           <th class='export-csv'>Sr. No.</th>
           <th class='export-csv'>Action Item</th>
           <th class='export-csv'>Status</th>
-          <th class='export-csv'>Owner</th>
+          <th class='export-csv'>Owners</th>
           <th class='export-csv'>Timeline</th>
           <th>Action</th>
           <th class='export-csv' style="width: 300px;">Remarks</th> 
@@ -77,11 +77,6 @@
               
               <td class='export-csv' style="display: none;">
                 <%= Point::STATUS_MAP[point.status] %>
-              </td>
-              <td class='export-csv' style="display: none;">
-                <% owner_ids = point.owner.reject(&:blank?) %>
-                <% users = User.where(id: owner_ids) %>
-                <%= users.any? ? users.map { |user| "#{user.firstname} #{user.lastname}" }.join(', ') : 'Unknown User(s)' %>
               </td>
 
               </td>
@@ -107,8 +102,12 @@
 
               <!-- Owner Column -->
               <td>
-                <%= f.select :owner, options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, @point&.owner), {}, multiple: true, class: 'form-control', prompt: '' %>
-              </td>
+              <%= f.select :owner_ids, 
+                           options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, point.owner_ids), 
+                           { include_blank: true }, 
+                           { multiple: true, class: 'form-control' } %>
+            </td>
+            
 
               <!-- Timeline Column -->
               <td>
@@ -116,7 +115,7 @@
               </td>
 
               <!-- Action Column -->
-              <td>                <button type="button" class="btn btn-primary toggle-edit">Edit</button>
+              <td>
               <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), method: point.id.present? ? :patch : :post, local: true, html: { class: 'edit-form', style: 'display: none;' }) do |f| %>
                 <%= f.submit point.id.present? ? 'Save' : 'Create', class: 'btn btn-primary' %>
               <% end %>
@@ -194,8 +193,12 @@
 
               <!-- Owner Column -->
               <td>
-              <%= f.select :owner, options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, @point&.owner), {}, multiple: true, class: 'form-control', prompt: '' %>
-            </td>
+                <%= f.select :owner_ids, 
+                            options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, @point&.owner_ids), 
+                            { include_blank: true }, 
+                            { multiple: true, class: 'form-control' } %>
+              </td>
+
 
               <!-- Timeline Column -->
               <td>

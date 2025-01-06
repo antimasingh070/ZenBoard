@@ -1,6 +1,5 @@
 class Point < ActiveRecord::Base
-    include Redmine::SafeAttributes
-    serialize :owner
+    serialize :owner_ids, Array
     belongs_to :mom
     has_many :remarks, dependent: :destroy
   
@@ -14,15 +13,14 @@ class Point < ActiveRecord::Base
     STATUS_CLOSE = 6
 
     STATUS_MAP = {
+        STATUS_OPEN => 'Open',
         STATUS_IN_PROGRESS => 'In Progress',
         STATUS_PENDING => 'Pending',
-        STATUS_OPEN => 'Open',
         STATUS_APPROVED => 'Approved',
         STATUS_REJECTED => 'Declined',
         STATUS_CLOSE => 'Close'
     }.freeze
 
-    safe_attributes 'description', 'status', 'timeline', 'owner'
 
     after_create :log_create_activity
     after_update :log_update_activity

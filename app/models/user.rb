@@ -1000,29 +1000,6 @@ class User < Principal
     custom_field_enumeration = custom_value&.value
     custom_field_enumeration
   end
- 
-  def self.send_issue_lists
-    user= User.first
-    projects = Project.where(status: 1)
-    projects.each do |project|
-    if project.issues.where(status_id: 1).present?
-      @overdue_issues = project.issues.where(status_id: 1).select do |issue|
-        # Check for the presence of a revised planned due date
-        revised_due_date = custom_field_value_date(user, issue, "Revised planned due date")
-        
-        if revised_due_date.present?
-          # If revised planned due date is present, check if it has passed
-          revised_due_date.to_date < Date.today
-        else
-          # If no revised planned due date, check the original due date
-          issue.due_date.present? && issue.due_date < Date.today
-        end
-      end
-      Mailer.deliver_send_issue_list(user,project,@overdue_issues)
-      puts "Mail sent for project #{project.name}" 
-    end
-    end
-  end
 
   private
 

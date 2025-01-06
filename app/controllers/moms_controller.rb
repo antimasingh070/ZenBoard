@@ -10,14 +10,14 @@ class MomsController < ApplicationController
     @business_requirement = @meeting.business_requirement
     @points = @mom.points
 
-    if  (@meeting.meeting_attendees.present? || @points.pluck(:owner).present?)  && @points.present?
+    if  (@meeting.meeting_attendees.present? || @points.pluck(:owner_ids).present?)  && @points.present?
       # Send email to all stakeholders in a single email
-      attendees = @meeting.meeting_attendees
-      Mailer.deliver_send_mom(User.current, attendees.pluck(:user_id), @points.pluck(:id), @meeting.id)
+      attendees = @meeting.meeting_attendees.pluck(:user_id) || @points.pluck(:owner_ids)
+      Mailer.deliver_send_mom(User.current, attendees, @points.pluck(:id), @meeting.id)
       redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Mail Sent.'
     else
       redirect_to business_requirement_meeting_path(@business_requirement, @meeting), alert: 'Cannot send email: there is not mom.'
-    end
+    end    
   end
 
   def show
