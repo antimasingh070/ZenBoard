@@ -359,6 +359,24 @@
 <script>
   function exportToCsv() {
       // Utility function to wrap text at a specific width (if needed)
+      const filterParams = new URLSearchParams();
+    const filters = [
+        'requirement_case',
+        'requirement_received_from',
+        'status',
+        'priority_level',
+        'project_enhancement',
+        'portfolio_category',
+        'project_manager'
+    ];
+
+    // Populate filter parameters dynamically
+    filters.forEach(filter => {
+        const element = document.querySelector(`[name="${filter}"]`);
+        if (element && element.value) {
+            filterParams.append(filter, element.value);
+        }
+    });
       function wrapText(text, maxWidth) {
           const words = text.split(' ');
           let wrappedText = '';
@@ -377,7 +395,7 @@
           return wrappedText;
       }
 
-      fetch('/business_requirements/export_all', { headers: { Accept: 'text/csv' } })
+      fetch(`/business_requirements/export_all?${filterParams.toString()}`, { headers: { Accept: 'text/csv' } })
           .then(response => {
               if (!response.ok) {
                   throw new Error('Failed to fetch CSV data');

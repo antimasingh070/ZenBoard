@@ -309,6 +309,28 @@ class IssuesController < ApplicationController
       unless @issue.current_journal.new_record? || params[:no_flash]
         flash[:notice] = l(:notice_successful_update)
       end
+      journal = @issue.current_journal
+      issue = journal.journalized
+      cf_ids = CustomField.where(name: ["Approved Dy", "Approval Date", "Workflow", "Remarks"]).pluck(:id).map(&:to_s)
+  
+      # Check if any JournalDetail has been updated with a property matching the cf_ids
+      cf_journal_updated = journal.details.any? { |detail| detail.property == "cf" && cf_ids.include?(detail.prop_key) }
+  
+      # Skip notification if the specific custom field IDs are updated
+      return if cf_journal_updated
+  
+      if journal.notify? && issue.tracker_id == 2 &&
+          (
+            Setting.notified_events.include?('issue_updated') ||
+            (Setting.notified_events.include?('issue_note_added') && journal.notes.present?) ||
+            (Setting.notified_events.include?('issue_status_updated') && journal.new_status.present?) ||
+            (Setting.notified_events.include?('issue_assigned_to_updated') && journal.detail_for_attribute('assigned_to_id').present?) ||
+            (Setting.notified_events.include?('issue_priority_updated') && journal.new_value_for('priority_id').present?) ||
+            (Setting.notified_events.include?('issue_fixed_version_updated') && journal.detail_for_attribute('fixed_version_id').present?)
+          )
+        # Call the Mailer with current_user and the journal
+        Mailer.deliver_issue_edit(User.current, journal)
+      end
       respond_to do |format|
         format.html do
           redirect_back_or_default(

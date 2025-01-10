@@ -40,9 +40,11 @@ class BusinessRequirementsController < ApplicationController
 
         filters.each do |key, value|
           next unless value.present? # Skip if the filter value is empty or nil
-        
+          status_key = BusinessRequirement::STATUS_MAP.key(value)
           if key == :requirement_received_from
             @business_requirements = @business_requirements.select { |br| br.send(key)&.include?(value) }
+          elsif key == :status
+            @business_requirements = @business_requirements.where(key => status_key)
           else
             @business_requirements = @business_requirements.where(key => value) if value.present?
           end
@@ -109,15 +111,31 @@ class BusinessRequirementsController < ApplicationController
                                  BusinessRequirement.joins(:br_stakeholders)
                                                      .where(br_stakeholders: { user_id: User.current.id }).uniq
                                end
-    
+
       # Apply any filters based on parameters, similar to the index method
       @business_requirements = @business_requirements.where(requirement_case: params[:requirement_case]) if params[:requirement_case].present?
-      @business_requirements = @business_requirements.where(requirement_received_from: params[:requirement_received_from]) if params[:requirement_received_from].present?
-      @business_requirements = @business_requirements.where(status: params[:status]) if params[:status].present?
+      @business_requirements = @business_requirements.where("requirement_received_from LIKE ?", "%- #{params[:requirement_received_from]}\n%") if params[:requirement_received_from].present?
+      @business_requirements = @business_requirements.where(status: BusinessRequirement::STATUS_MAP.key(params[:status])) if params[:status].present?
       @business_requirements = @business_requirements.where(priority_level: params[:priority_level]) if params[:priority_level].present?
       @business_requirements = @business_requirements.where(project_enhancement: params[:project_enhancement]) if params[:project_enhancement].present?
       @business_requirements = @business_requirements.where(portfolio_category: params[:portfolio_category]) if params[:portfolio_category].present?
-    
+
+      if params[:project_manager].present?
+        # Get the role ID for 'Project Manager'
+        project_manager_role = Role.find_by(name: "Project Manager")
+      
+        if project_manager_role.present?
+          # Split and capitalize the project manager name
+          project_manager_name = params[:project_manager].split.map(&:capitalize).join(' ')
+      
+          # Find the user ID(s) matching the name
+          user_ids = User.where("CONCAT(firstname, ' ', lastname) = ?", project_manager_name).pluck(:id)
+      
+          # Filter business requirements where br_stakeholders match the role and user
+          @business_requirements = @business_requirements.joins(:br_stakeholders)
+                                                         .where(br_stakeholders: { user_id: user_ids, role_id: project_manager_role.id })
+        end
+      end   
       # Generate the CSV
       respond_to do |format|
         format.csv do
@@ -178,143 +196,161 @@ class BusinessRequirementsController < ApplicationController
     end
     
     def accept
-        @business_requirement = BusinessRequirement.find(params[:id])
-        if params[:business_requirement].nil? || @business_requirement.update(business_requirement_params)
-            mandatory_fields = [:is_it_project, :business_need_as_per_business_case, :priority_level, :requirement_submitted_date, :requirement_received_from, :portfolio_category, :project_category]
-            mandatory_fields.each do |field|
-              value = @business_requirement.send(field)
-              if field == :portfolio_category || field == :requirement_received_from
-                value = value.reject(&:blank?) if value.is_a?(Array)
-              end
-              if value.blank?
-                flash[:success] = "#{field.to_s.humanize} can't be blank"
-                return redirect_to business_requirements_path
-              end
-            end
-             # Update the status to closed
-            @project = Project.find_or_initialize_by(name: @business_requirement.requirement_case, description: @business_requirement.description)
-
-            @parent = Project.where(id: @project.parent_id).first
-            if @project.id.nil? && !@project.parent_id.nil? && !@parent.nil?
-              new_identifier = "#{Project.where(parent_id: @project.parent_id).count + 1}"
-              @project.identifier = "#{@parent.identifier}_#{new_identifier}"
-            elsif @project.id.nil? && !@project.parent_id.nil?
-              new_identifier = "#{@project.parent_id}_#{Project.where(parent_id: @project.parent_id).count + 1}"
-              @project.identifier = "neo_#{new_identifier}"
-            else
-              @project.identifier = "neo_#{Project.where(parent_id: @project.parent_id).last.id + 1
-              }"
-            end
-            @project.save(validate: false) if @project.new_record?
-
-            custom_fields = {
-              'Project Category' => @business_requirement.project_category,
-              'Portfolio Category' => @business_requirement.portfolio_category,
-              'Priority Level' => @business_requirement.priority_level,
-              'Function' => @business_requirement.requirement_received_from,
-              'Application Name' => @business_requirement.application_name,
-              'Vendor Name' => @business_requirement.vendor_name,
-              'Business Need' => @business_requirement.business_need_as_per_business_case,
-              'Project/Enhancement' => @business_requirement.project_enhancement,
-              'Is IT Project?' => @business_requirement.is_it_project,
-              'Planned Project Go Live Date' => @business_requirement.planned_project_go_live_date,
-              'Scheduled Start Date' => @business_requirement.requirement_submitted_date,
-              'Scheduled End Date' => @business_requirement.scheduled_end_date,
-              'Actual Start Date' => @business_requirement.actual_start_date,
-              'Actual End Date' => @business_requirement.actual_end_date,
-              'Template' => @business_requirement.template   
-            }
-            # 'SMT Report' => @business_requirement.smt_report    
-              custom_fields.each do  |field_name, value|
-                begin
-                  custom_field = CustomField.find_by(type: "ProjectCustomField", name: field_name)
-                  next unless custom_field
-                  if field_name == "Portfolio Category" || field_name == "Application Name" || field_name == "Function"
-                    # Delete existing custom values for this field
-                    CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
-
-                    # Initialize an empty array to store custom values
-                    custom_values = []
-                    value.each do |enumeration_name|
-                      enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: enumeration_name)
-                      if enumeration
-                        custom_value = CustomValue.find_or_create_by(
-                          customized_type: "Project",
-                          customized_id: @project.id,
-                          custom_field_id: custom_field.id,
-                          value: enumeration.id
-                        )
-
-                        custom_values << custom_value
-                        custom_value.update(value: "") if custom_value.value.nil?
-                      
-                        @project.custom_field_values = { custom_field.id => custom_values.map(&:value) }
-                      end
-                    end
-
-                  elsif field_name == "Project Category" || field_name == "Priority Level" || field_name == "Vendor Name" || field_name == "Project/Enhancement" 
-                    # Delete existing custom values for this field
-                    CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
-                    enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
-                    if enumeration
-                      custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: enumeration.id)
-                      custom_value.update(value: "") if custom_value.value.nil?
-                      @project.custom_field_values = { custom_field.id => custom_value }
-                    end
-                  elsif field_name == "Is IT Project?"
-                    CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
-                
-                    if value == true
-                      custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: "1")
-                      custom_value.update(value: "") if custom_value.value.nil?
-                      @project.custom_field_values = { custom_field.id => custom_value }
-                    else
-                      custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: "0")
-                      custom_value.update(value: "") if custom_value.value.nil?
-                    end
-                  elsif field_name == "Template"
-                    auto_create_records(@project, value)
-                    enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
-                    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id, value: enumeration.id)
-                    custom_value.update(value: "") if custom_value.value.nil?
-                    @project.custom_field_values = { custom_field.id => custom_value }
-                  else
-                    custom_value = CustomValue.find_or_initialize_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id)
-                    if custom_field.field_format == 'list' && custom_field.multiple
-                      custom_value.value = value.reject(&:blank?) # Remove any blank values
-                      custom_value.save
-                      @project.custom_field_values = { custom_field.id => custom_value }
-                    else
-                      custom_value.value = value
-                      custom_value.save
-                      @project.custom_field_values = { custom_field.id => custom_value }
-                    end
-                  end
-                rescue => e
-                  # Handle the error and display the message
-                  flash[:error] = "Failed to create or update project. Error: #{field_name} #{value}#{e.message}"
-                  redirect_to business_requirements_path
-                end
-              end
-              @business_requirement.update(status: 7)
-              @business_requirement.update(project_identifier: @project.identifier)
-              # Add Business Requirement members to the project
-              add_members_to_project(@business_requirement, @project)
-              # Attach Business Requirement files to the project as documents
-              attach_files_to_project(@business_requirement, @project)
-            if @project.save
-                
-          
-                flash[:success] = 'Business Requirement successfully accepted, updated, and project created.'
-                return redirect_to project_path(@project)
-            elsif @project.id.present?
-                flash[:success] = "Business Requirement successfully accepted, updated, and project created.."
-                return redirect_to project_path(@project)
-            else
-                flash[:error] = " #{@project.errors.full_messages} Failed to create project."
-                return redirect_to business_requirements_path
-            end
+      @business_requirement = BusinessRequirement.find(params[:id])
+    
+      # Check if BusinessRequirement is found and update it
+      if @business_requirement && @business_requirement.update(business_requirement_params)
+        mandatory_fields = [:is_it_project, :business_need_as_per_business_case, :priority_level, :requirement_submitted_date, :requirement_received_from, :portfolio_category, :project_category]
+    
+        # Validate mandatory fields
+        mandatory_fields.each do |field|
+          value = @business_requirement.send(field)
+          if field == :portfolio_category || field == :requirement_received_from
+            value = value.reject(&:blank?) if value.is_a?(Array)
+          end
+          if value.blank?
+            flash[:error] = "#{field.to_s.humanize} can't be blank"
+            return redirect_to business_requirements_path
+          end
         end
+    
+        # Update the status to closed
+        @business_requirement.update(status: 7)
+    
+        # Project creation and updation logic
+        @project = Project.find_or_initialize_by(name: @business_requirement.requirement_case, description: @business_requirement.description)
+    
+        @parent = Project.where(id: @project.parent_id).first
+        if @project.id.nil? && !@project.parent_id.nil? && !@parent.nil?
+          new_identifier = "#{Project.where(parent_id: @project.parent_id).count + 1}"
+          @project.identifier = "#{@parent.identifier}_#{new_identifier}"
+        elsif @project.id.nil? && !@project.parent_id.nil?
+          new_identifier = "#{@project.parent_id}_#{Project.where(parent_id: @project.parent_id).count + 1}"
+          @project.identifier = "neo_#{new_identifier}"
+        else
+          @project.identifier = "neo_#{Project.where(parent_id: @project.parent_id).last.id + 1
+          }"
+        end
+        @project.save(validate: false) if @project.new_record?
+    
+        # Custom field handling with exception handling
+        custom_fields = {
+          'Project Category' => @business_requirement.project_category,
+          'Portfolio Category' => @business_requirement.portfolio_category,
+          'Priority Level' => @business_requirement.priority_level,
+          'Function' => @business_requirement.requirement_received_from,
+          'Application Name' => @business_requirement.application_name,
+          'Vendor Name' => @business_requirement.vendor_name,
+          'Business Need' => @business_requirement.business_need_as_per_business_case,
+          'Project/Enhancement' => @business_requirement.project_enhancement,
+          'Is IT Project?' => @business_requirement.is_it_project,
+          'Planned Project Go Live Date' => @business_requirement.planned_project_go_live_date,
+          'Scheduled Start Date' => @business_requirement.requirement_submitted_date,
+          'Scheduled End Date' => @business_requirement.scheduled_end_date,
+          'Actual Start Date' => @business_requirement.actual_start_date,
+          'Actual End Date' => @business_requirement.actual_end_date,
+          'Template' => @business_requirement.template
+        }
+    
+        custom_fields.each do |field_name, value|
+          begin
+            custom_field = CustomField.find_by(type: "ProjectCustomField", name: field_name)
+            next unless custom_field
+            # Handle different field types with exception handling
+            case field_name
+            when "Portfolio Category", "Application Name", "Function"
+              CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
+              custom_values = value.reject(&:blank?).map do |enumeration_name|
+                enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: enumeration_name)
+                if enumeration
+                  custom_value = CustomValue.find_or_create_by(
+                    customized_type: "Project",
+                    customized_id: @project.id,
+                    custom_field_id: custom_field.id
+                  )
+                  custom_value.value = enumeration.id
+                  custom_value.save
+                  custom_value
+                end
+              end.compact
+    
+              @project.custom_field_values = { custom_field.id => custom_values.first&.id }
+    
+            when "Project Category", "Priority Level", "Vendor Name", "Project/Enhancement"
+              CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
+              enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
+              if enumeration
+                custom_value = CustomValue.find_or_create_by(
+                  customized_type: "Project",
+                  customized_id: @project.id,
+                  custom_field_id: custom_field.id,
+                  value: enumeration.id
+                )
+                @project.custom_field_values = { custom_field.id => custom_value }
+              end
+    
+            when "Is IT Project?"
+              CustomValue.where(customized_id: @project.id, custom_field_id: custom_field.id).delete_all
+              custom_value = CustomValue.find_or_create_by(
+                customized_type: "Project",
+                customized_id: @project.id,
+                custom_field_id: custom_field.id,
+                value: value ? "1" : "0"
+              )
+              @project.custom_field_values = { custom_field.id => custom_value }
+    
+            when "Template"
+              auto_create_records(@project, @business_requirement, value) # Assuming auto_create_records is a defined method
+              enumeration = CustomFieldEnumeration.find_by(custom_field_id: custom_field.id, name: value)
+              if enumeration
+                custom_value = CustomValue.find_or_create_by(
+                  customized_type: "Project",
+                  customized_id: @project.id,
+                  custom_field_id: custom_field.id,
+                  value: enumeration.id
+                )
+                @project.custom_field_values = { custom_field.id => custom_value }
+              end
+    
+            else
+              custom_value = CustomValue.find_or_initialize_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field.id)
+              if custom_field.field_format == 'list' && custom_field.multiple
+                custom_value.value = value.reject(&:blank?) # Remove any blank values
+                custom_value.save
+                @project.custom_field_values = { custom_field.id => custom_value }
+              else
+                custom_value.value = value
+                custom_value.save
+                @project.custom_field_values = { custom_field.id => custom_value }
+              end
+            end
+    
+          rescue => e
+            # Handle the error and display the message
+            flash[:error] = "Failed to create or update project. Error: #{field_name} #{value} #{e.message}"
+            return redirect_to business_requirements_path
+          end
+        end
+    
+        @business_requirement.update(project_identifier: @project.identifier)
+    
+        # Add Business Requirement members to the project (Assuming add_members_to_project is a defined method)
+        add_members_to_project(@business_requirement, @project)
+    
+        # Attach Business Requirement files to the project as documents (Assuming attach_files_to_project is a defined method)
+        attach_files_to_project(@business_requirement, @project)
+    
+        if @project.save
+          flash[:success] = 'Business Requirement successfully accepted, updated, and project created.'
+          return redirect_to project_path(@project)
+        elsif @project.id.present?
+          flash[:success] = "Business Requirement successfully accepted, updated, and project created.."
+          return redirect_to project_path(@project)
+        else
+          flash[:error] = " #{@project.errors.full_messages} Failed to create project."
+          return redirect_to business_requirements_path
+        end
+      end
     end
 
     def create
@@ -383,6 +419,7 @@ class BusinessRequirementsController < ApplicationController
     private
 
     def generate_csv(business_requirements)
+
       CSV.generate(headers: true) do |csv|
         # Adding headers
         csv << ['Identifier', 'Description', 'Requirement Case', 'Requirement Received From', 'Project Enhancement', 'Status', 'Priority Level', 'Stakeholders']
@@ -428,7 +465,7 @@ class BusinessRequirementsController < ApplicationController
       project_manager ? "#{project_manager.user.firstname} #{project_manager.user.lastname}" : "N/A"
     end
 
-    def auto_create_records(project, template_value)
+    def auto_create_records(project, business_requirement, template_value)
       template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
       return unless template_field
 
@@ -445,14 +482,23 @@ class BusinessRequirementsController < ApplicationController
     
       # Get all unique field names from CustomFields for Issues
       field_names = CustomField.where(type: "IssueCustomField").pluck(:name).uniq
-      create_issues_for_field_names(project, field_names, issues, plan_tracker)
+      create_issues_for_field_names(project, business_requirement, field_names, issues, plan_tracker)
     end
   
-    def create_issues_for_field_names(project, field_names, issues, plan_tracker)
+    def create_issues_for_field_names(project, business_requirement, field_names, issues, plan_tracker)
       if  Issue.where(tracker_id: plan_tracker.id, project_id: project.id).count == 0
+        project_manager_role_id = Role.find_by(name: "Project Manager")&.id
+        return unless project_manager_role_id # Exit if the role does not exist
+
+        # Fetch the first project manager's user ID for the current project
+        first_project_manager  = BrStakeholder.where(business_requirement_id: business_requirement.id, role_id: project_manager_role_id).order(:created_at).first
+
+        # Get the user_id if such a stakeholder exists
+        project_manager_user_id = first_project_manager&.user_id
         issues.each do |issue|
+          binding.pry
           @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: project.id, subject: issue.subject)
-          @new_issue.assigned_to_id = User.current.id
+          @new_issue.assigned_to_id = project_manager_user_id.present? ? project_manager_user_id : User.current.id
           @new_issue.author = User.current
           @new_issue.start_date = Date.today
           @new_issue.due_date = (Date.today + 10)

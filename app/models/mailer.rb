@@ -349,7 +349,7 @@ class Mailer < ActionMailer::Base
     @journal = journal
     @journal_details = journal.visible_details
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue, :anchor => "change-#{journal.id}")
-    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :bcc => "santima861@gmail.com"
+    mail :to => user.mail, :cc => mail_cc.uniq, :bcc => "santima861@gmail.com"
       :subject => s
   end
 
@@ -1049,7 +1049,6 @@ class Mailer < ActionMailer::Base
   end
 
   def project_updated(user, member_role, role, project, updated_fields)
-    binding.pry
     @project = project
     @user = user
     @member_role = member_role

@@ -197,7 +197,6 @@ class WelcomeController < ApplicationController
   
     @delayed_projects = 0
     delayed_projects = []
-    binding.pry 
     projects_in_date_range.each do |project|
       planned_project_go_live_date = fetch_custom_field_date(project, 'Planned Project Go Live Date')
       
@@ -217,7 +216,6 @@ class WelcomeController < ApplicationController
         current_date = current_date.next_day
       end
       next unless working_days > 0
-      binding.pry 
       delayed_projects << project
       @delayed_projects += 1
     end

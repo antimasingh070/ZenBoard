@@ -9,7 +9,7 @@ end %>
 <% def custom_function_date(field_name)
     custom_field = CustomField.find_by(name: field_name)
     custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-    custom_field_enumeration = custom_value.value
+    custom_field_enumeration = custom_value&.value
     if !custom_field_enumeration.nil? 
         date = Date.parse(custom_field_enumeration) 
         formatted_date = date.strftime("%d/%m/%Y")
@@ -27,7 +27,9 @@ end %>
   <h2>The following updates have been made to the project "<%= @project.name %>" in Trackmine:</h2>
   <ul>
     <% @updated_fields.each do |field, values| %>
-      <li><strong><%= field %>:</strong> from <%= values[:before] %> to <%= values[:after] %></li>
+        <% unless values[:before].sort == values[:after].sort %>
+        <li><strong><%= field %>:</strong> from <b><%= values[:before].to_sentence %></b> to <b><%= values[:after].to_sentence %></b></li>
+        <% end %>
     <% end %>
   </ul>
   <p><strong>Project Name:</strong> <%= @project.name %></p>

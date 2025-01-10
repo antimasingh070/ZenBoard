@@ -271,10 +271,20 @@ class Project < ActiveRecord::Base
   def create_issues_for_field_names(field_names, issues, plan_tracker, master_project)
     begin
       return unless Issue.where(tracker_id: plan_tracker.id, project_id: self.id).count.zero?
-  
+      role_id = Role.find_by(name: "Project Manager")&.id
+      return unless role_id # Exit if the role does not exist
+      
+      # Fetch the first project manager's user ID for the current project
+      project_manager_id = MemberRole.where(role_id: role_id)
+                                     .where(member_id: Member.where(project_id: self.id).select(:id))
+                                     .pluck(:member_id)
+                                     .map { |member_id| Member.find_by(id: member_id)&.user_id }
+                                     .compact
+                                     .first
+      
       issues.each do |issue|
         @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: issue.subject)
-        @new_issue.assign_attributes(assigned_to_id: User.current.id, author: User.current, start_date: Date.today, due_date: Date.today + 10)
+        @new_issue.assign_attributes(assigned_to_id: project_manager_id.present? ? project_manager_id : User.current.id, author: User.current, start_date: Date.today, due_date: Date.today + 10)
   
         # Handle parent issue
         if issue.parent_id.present?
