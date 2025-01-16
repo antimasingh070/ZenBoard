@@ -21,9 +21,11 @@
     <div >
       <p>Hello Team,</p>
      <% owner = User.find_by(id: ActivityLog.find_by(entity_type: "BusinessRequirement", entity_id: @business_requirement.id, field_name: "Create")&.author_id)%>
-      
-      <p>A new business requirementhas has been successfully created by <%= " #{owner&.firstname} #{owner&.lastname} " %>. PLease find the details below:</p>
-
+      <% if owner.present? %>
+        <p>A new business requirementhas has been successfully created by <%= " #{owner&.firstname} #{owner&.lastname} " %>. PLease find the details below:</p>
+      <% else %>
+        <p>PLease find the business requirement details below:</p>
+      <% end %>
       <table>
         <tr>
           <th>Identifier</th>

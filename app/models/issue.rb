@@ -1912,7 +1912,7 @@ class Issue < ActiveRecord::Base
       date.sunday? || holidays.include?(date)
     end
   
-    self.estimated_hours = (working_days.count * 24).to_i
+    self.estimated_hours = (working_days.count * 8).to_i
   rescue => e
   end
   end

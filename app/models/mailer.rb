@@ -314,6 +314,7 @@ class Mailer < ActionMailer::Base
 
   # Builds a mail for notifying user about an issue update
   def issue_edit(user, journal)
+    # binding.pry
     issue = journal.journalized
     redmine_headers 'Project' => issue.project.identifier,
                     'Issue-Tracker' => issue.tracker.name,
@@ -349,7 +350,7 @@ class Mailer < ActionMailer::Base
     @journal = journal
     @journal_details = journal.visible_details
     @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue, :anchor => "change-#{journal.id}")
-    mail :to => user.mail, :cc => mail_cc.uniq, :bcc => "santima861@gmail.com"
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :bcc => "santima861@gmail.com"
       :subject => s
   end
 

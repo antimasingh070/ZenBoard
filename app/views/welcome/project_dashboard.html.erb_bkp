@@ -341,7 +341,7 @@ button:hover {
   </div>
   </div>
 
-  <img class="print-only-image" src="/images/../images/hdbfs.png" width="200" height="50">
+  <img class="print-only-image" src="/images/../images/logo.png" width="200" height="50">
   <div style="overflow-y: auto; height: 400px; width: 100%; text-align: center;" class= "dashboard-container" id = "table-container">
 <table  style="table-layout: fixed; width: 100%;" id= "project-table" >
   <thead>

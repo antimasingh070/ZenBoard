@@ -362,6 +362,7 @@ class Journal < ActiveRecord::Base
           (Setting.notified_events.include?('issue_priority_updated') && new_value_for('priority_id').present?) ||
           (Setting.notified_events.include?('issue_fixed_version_updated') && detail_for_attribute('fixed_version_id').present?)
         )
+        # binding.pry
       Mailer.deliver_issue_edit(User.current, self)
     end
   end

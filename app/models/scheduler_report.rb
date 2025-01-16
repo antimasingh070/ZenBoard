@@ -91,23 +91,17 @@ class SchedulerReport < ActiveRecord::Base
       end
 
       def self.generate_and_send_risk_report
-        Project.find_each do |project|
-          user = User.first # Consider replacing this with logic to determine the correct recipient
-          send_risk_report(user, project)
-        end
-      end
-      
-      def self.send_risk_report(user, project)
+        projects = Project.where.not(name: "Master Project")
         tracker = Tracker.find_by(name: "Risk Register")
         return unless tracker
       
         risks = project.issues.where(status_id: 5, tracker_id: tracker.id)
         return if risks.blank?
-      
+       get only that projects which have risk with status id 5 & trackre
         if Setting.notified_events.include?('send_risk')
-          Mailer.deliver_send_risk(user, project)
+          Mailer.deliver_send_risk(user, projects)
           generate_report # Ensure this method generates the desired report properly
-          puts "Risk or challenges mail sent for project #{project.name}"
+          puts "Risk or challenges mail sent for project #{projects.pluck(:name)}"
         end
       end      
 

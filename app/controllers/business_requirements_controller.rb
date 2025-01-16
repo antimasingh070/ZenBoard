@@ -9,8 +9,9 @@ class BusinessRequirementsController < ApplicationController
       if @business_requirement.has_stakeholders?
         # Send email to all stakeholders in a single email
         program_manager_role = Role.find_by(name: "Program Manager")
+        business_spoc_role = Role.find_by(name: "Business Spoc")
         # Fetch stakeholders with the "Program Manager" role
-        program_manager_stakeholders = @business_requirement.br_stakeholders.where(role_id: program_manager_role.id)
+        program_manager_stakeholders = @business_requirement.br_stakeholders.where(role_id: [program_manager_role.id + business_spoc_role.id])
         Mailer.deliver_business_requirement_created(User.current, program_manager_stakeholders.pluck(:user_id), @business_requirement)
         redirect_to edit_business_requirement_path(@business_requirement), notice: 'Email sent successfully to all stakeholders.'
       else

@@ -71,7 +71,7 @@
         <td><%= point.description %></td>
         <td><%= Point::STATUS_MAP[point.status] %></td>
         <td>
-          <% owner_ids = point.owner.reject(&:blank?) %>
+          <% owner_ids = point.owner_ids.reject(&:blank?) %>
           <% users = User.where(id: owner_ids) %>
           <%= users.any? ? users.map { |user| "#{user.firstname} #{user.lastname}" }.join(', ') : '' %>
         </td>

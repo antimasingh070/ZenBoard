@@ -50,9 +50,15 @@
         <%= link_to "Send Back", "#", class: "icon icon-move-top", id: "sendBackLink" %>
       <% else %>
         <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+        <%= link_to l(:button_edit), edit_issue_path(@issue),
+                  :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
+                  :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
       <% end %>
     <% elsif @issue.tracker_id == 2  %>
       <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+      <%= link_to l(:button_edit), edit_issue_path(@issue),
+                  :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
+                  :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
     <% else %>
       <%= link_to l(:button_edit), edit_issue_path(@issue),
                 :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
