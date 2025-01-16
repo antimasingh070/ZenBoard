@@ -1,0 +1,434 @@
+<div class="contextual">
+  <%= bookmark_link @project %>
+
+  <%= actions_dropdown do %>
+  <% if User.current.allowed_to?(:add_subprojects, @project) %>
+    <%= link_to l(:label_subproject_new), new_project_path(:parent_id => @project), :class => 'icon icon-add' %>
+  <% end %>
+  <% if User.current.allowed_to?(:close_project, @project) %>
+    <% if @project.active? %>
+      <%= link_to l(:button_close), close_project_path(@project), :data => {:confirm => l(:text_project_close_confirmation, @project.to_s)}, :method => :post, :class => 'icon fas fa-lock' %>
+      <%= link_to "Hold", "#", class: "icon icon-move-top", id: "holdLink" %>
+      <%= link_to "Go Live", "#", class: "icon icon-move-top", id: "go_liveLink" %>
+      <%= link_to "Cancel", "#", class: "icon icon-move-top", id: "cancelledLink" %>
+    <% else %>
+      <%= link_to l(:button_reopen), reopen_project_path(@project), :data => {:confirm => l(:text_project_reopen_confirmation, @project.to_s)}, :method => :post, :class => 'icon icon-unlock' %>
+    <% end %>
+  <% end %>
+  <% if @project.deletable? %>
+    <%= link_to l(:button_delete), project_path(@project), :method => :delete, :class => 'icon icon-del' %>
+  <% end %>
+  <%= link_to_if_authorized l(:label_settings),
+              {:controller => 'projects', :action => 'settings', :id => @project},
+              :class => 'icon icon-settings' if User.current.allowed_to?(:edit_project, @project) %>
+  <% end %>
+</div>
+
+<h2><%=l(:label_overview)%></h2>
+
+<% if @project.closed? %>
+  <p class="warning"><span class="icon"><i class="fas fa-lock"></i></span><%= l(:text_project_closed) %></p>
+<% elsif @project.hold? %>
+  <p class="warning"><span class="icon"><i class="fas fa-pause-circle"></i></span><%= l(:text_project_hold) %></p>
+<% elsif @project.go_live? %>
+  <p class="warning"><span class="icon"><i class="fas fa-pause-circle"></i></span><%= l(:text_project_go_live) %></p>
+<% elsif @project.cancelled? %>
+  <p class="warning"><span class="icon"><i class="fas fa-clock"></i></span><%= l(:text_project_cancelled) %></p>
+<% end %>
+
+<div class="splitcontent">
+<div class="splitcontentleft">
+  <% if @project.description.present? %>
+  <div class="wiki">
+    <%= textilizable @project.description %>
+  </div>
+  <% end %>
+  <% if @project.homepage.present? || @project.visible_custom_field_values.any? { |o| o.value.present? } %>
+  <ul>
+  <% unless @project.homepage.blank? %>
+    <li><span class="label"><%=l(:field_homepage)%>:</span> <%= link_to_if uri_with_safe_scheme?(@project.homepage), @project.homepage, @project.homepage %></li>
+  <% end %>
+  <li class=""><span class="label">Created at: </span><%= @project.updated_on.strftime("%-d %b %Y") %></li>
+  <li class=""><span class="label">Updated at: </span><%= @project.updated_on.strftime("%-d %b %Y") %></li>
+  <% tracker = Tracker.find_by(name: 'Project Plan- Activity List') %>
+  <% latest_issue = @project.issues.where(tracker_id: tracker.id).order(due_date: :desc).first %>
+  <% due_date = latest_issue&.due_date %>
+  <% if due_date %>
+    <li class=""><span class="label">Last Activity Due Date: </span><%= due_date&.strftime("%-d %b %Y") %></li>
+  <% end %>
+  <% render_custom_field_values(@project) do |custom_field, formatted| %>
+    <% if custom_field.name == "Revised End Date" %>
+      <% revised_end_date_custom_field = CustomField.find_by(name: "Revised End Date") %>
+      <% revised_end_date_custom_value = @project.custom_values.where(custom_field: revised_end_date_custom_field).order(created_at: :desc).first %>
+        <li class=""><span class="label">Revised End Date: </span><%= revised_end_date_custom_value.value.to_date.strftime("%d/%b/%Y") %></li>
+    <% else %>
+      <li class="<%= custom_field.css_classes %>"><span class="label"><%= custom_field.name %>:</span> <%= formatted %></li>
+    <% end %>
+  <% end %>
+  </ul>
+  <% end %>
+
+  <% if User.current.allowed_to?(:view_issues, @project) %>
+  <div class="issues box">
+    <h3 class="icon icon-issue">
+      <%= "Trackers" %>&nbsp;
+      <%= link_to l(:label_details),
+            project_issues_report_details_path(@project, :detail => 'tracker'),
+            :class => 'icon-only icon-zoom-in',
+            :title => l(:label_details) %>
+    </h3>
+    <% if @trackers.present? %>
+    <table class="list issue-report">
+      <thead>
+        <tr>
+          <th></th>
+          <th><%=l(:label_open_issues_plural)%></th>
+          <th><%=l(:label_closed_issues_plural)%></th>
+          <th><%=l(:label_total)%></th>
+        </tr>
+      </thead>
+      <tbody>
+      <% @trackers.each do |tracker| %>
+        <tr>
+          <td class="name">
+            <%= link_to tracker.name, project_issues_path(@project, :set_filter => 1, :tracker_id => tracker.id), :title => tracker.description %>
+          </td>
+          <td>
+            <%= link_to @open_issues_by_tracker[tracker].to_i, project_issues_path(@project, :set_filter => 1, :tracker_id => tracker.id) %>
+          </td>
+          <td>
+            <%= link_to (@total_issues_by_tracker[tracker].to_i - @open_issues_by_tracker[tracker].to_i), project_issues_path(@project, :set_filter => 1, :tracker_id => tracker.id, :status_id => 'c') %>
+          </td>
+          <td class="total">
+            <%= link_to @total_issues_by_tracker[tracker].to_i, project_issues_path(@project, :set_filter => 1, :tracker_id => tracker.id, :status_id => '*') %>
+          </td>
+        </tr>
+      <% end %>
+      </tbody>
+    </table>
+    <% end %>
+    <p>
+      <%= link_to l(:label_issue_view_all), project_issues_path(@project, :set_filter => 1) %>
+      | <%= link_to l(:field_summary), project_issues_report_path(@project) %>
+      <% if User.current.allowed_to?(:view_calendar, @project, :global => true) %>
+        | <%= link_to l(:label_calendar), project_calendar_path(@project) %>
+      <% end %>
+      <% if User.current.allowed_to?(:view_gantt, @project, :global => true) %>
+        | <%= link_to l(:label_gantt), project_gantt_path(@project) %>
+      <% end %>
+    </p>
+  </div>
+  <% end %>
+
+  <% if User.current.allowed_to?(:view_time_entries, @project) %>
+  <div class="spent_time box">
+    <h3 class="icon icon-time"><%= l(:label_time_tracking) %></h3>
+    <ul>
+      <% if @total_estimated_hours.present? %>
+        <li><%= l(:field_estimated_hours) %>: <%= l_hours(@total_estimated_hours) %>
+      <% end %>
+      <% if @total_hours.present? %>
+          <li><%= l(:label_spent_time) %>: <%= l_hours(@total_hours) %>
+      <% end %>
+    </ul>
+    <p>
+    <% if User.current.allowed_to?(:log_time, @project) %>
+      <%= link_to l(:button_log_time), new_project_time_entry_path(@project) %> |
+    <% end %>
+    <%= link_to(l(:label_details), project_time_entries_path(@project)) %> |
+    <%= link_to(l(:label_report), report_project_time_entries_path(@project)) %>
+    </p>
+  </div>
+<% end %>
+  <%= call_hook(:view_projects_show_left, :project => @project) %>
+</div>
+
+<div class="splitcontentright">
+
+
+  <%= render :partial => 'members_box' %>
+
+  <% if @subprojects.any? %>
+  <div class="projects box">
+    <h3 class="icon icon-projects"><%=l(:label_subproject_plural)%></h3>
+	<ul class="subprojects">
+	  <% @subprojects.each do |project| %>
+	  <li><%= link_to(project.name, project_path(project), :class => project.css_classes).html_safe %></li>
+	  <% end %> 
+    </ul>
+  </div>
+  <% end %>
+
+  <% if @revised_end_date_history&.any? %>
+    <div class="news box">
+      <h3>Revised End Dates</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Revised End Date</th>
+            <th>Reason</th>
+            <th>Author</th>
+            <th>Updated At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @revised_end_date_history.each do |revised_end_date| %>
+            <tr>
+              <td style="width: 50px;"><%= revised_end_date&.value&.to_date&.strftime("%-d %b %y") %></td>
+              <td style="width: 100px;"><%= revised_end_date&.reason %></td>
+              <td style="width: 50px;"><%= User.find_by(id: (revised_end_date&.author_id)).try(:name) %></td>
+              <td style="width: 50px;"><%= revised_end_date&.created_at&.in_time_zone("Asia/Kolkata")&.strftime("%-d %b %y %H:%M") %></td>
+            </tr>
+          <% end %> 
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <% if @status_reason_history&.any? %>
+    <div class="news box">
+      <h3>Project Status Log</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Reason</th>
+            <th>Author</th>
+            <th>Updated At</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% @status_reason_history.each do |status_reason| %>
+            <tr>
+              <td style="width: 50px;"><%= status_reason&.value %></td>
+              <td style="width: 50px;"><%= status_reason&.reason %></td>
+              <td style="width: 50px;"><%= User.find_by(id: (status_reason&.author_id)).try(:name) %></td>
+              <td style="width: 50px;"><%= status_reason&.created_at&.in_time_zone("Asia/Kolkata")&.strftime("%-d %b %y %H:%M") %></td>
+            </tr>
+          <% end %> 
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+
+  <%= call_hook(:view_projects_show_right, :project => @project) %>
+</div>
+</div>
+
+<% content_for :sidebar do %>
+  <%= call_hook(:view_projects_show_sidebar_bottom, :project => @project) %>
+<% end %>
+
+<% content_for :header_tags do %>
+<%= auto_discovery_link_tag(:atom, {:controller => 'activities', :action => 'index', :id => @project, :format => 'atom', :key => User.current.atom_key}) %>
+<% end %>
+
+<% html_title(l(:label_overview)) -%>
+<%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" %>
+
+
+<div id="holdModal" class="modal">
+<div class="modal-content">
+  <span class="close">&times;</span>
+  <h2>Project on Hold</h2>
+  <form id="holdForm" action="<%= hold_project_path(@project) %>" method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <label for="holdRemarks">Reason to Hold<sup>*</sup>:</label>
+    <textarea id="holdRemarks" name="remarks" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+</div>
+</div>
+
+<div id="go_liveModal" class="modal">
+<div class="modal-content">
+  <span class="close">&times;</span>
+  <h2>Project on Live</h2>
+  <form id="go_liveForm" action="<%= go_live_project_path(@project) %>" method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <label for="go_liveRemarks">Reason to gone live<sup>*</sup>:</label>
+    <textarea id="go_liveRemarks" name="remarks" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+</div>
+</div>
+
+<div id="cancelledModal" class="modal">
+<div class="modal-content">
+  <span class="close">&times;</span>
+  <h2>Project to cancel</h2>
+  <form id="cancelledForm" action="<%= cancelled_project_path(@project) %>" method="post">
+    <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+    <label for="cancelledRemarks">Reason to cancel<sup>*</sup>:</label>
+    <textarea id="cancelledRemarks" name="remarks" required></textarea>
+    <button type="submit">Submit</button>
+  </form>
+</div>
+</div>
+
+<style>
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th, td {
+  border: 1px solid #dddddd;
+  text-align: left;
+  padding: 8px;
+  word-wrap: break-word;
+}
+th {
+  background-color: #f2f2f2;
+}
+label > sup {
+  color: #ff0000; /* Red color */
+  font-size: 12px; /* Smaller font size */
+  vertical-align: super; /* Align as superscript */
+}
+/* The Modal (background) */
+.modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  left: 0;
+  top: 0;
+  font-weight: bold;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+}
+h2 {
+  font-weight: bold;
+}
+
+/* Modal Content/Box */
+.modal-content {
+  background-color: #0065ff; /* Blue background */
+  color: #fff; /* White text */
+  margin: 15% auto; /* 15% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 29%; /* Smaller width */
+  height: 33%;
+  border-radius: 10px; /* Rounded corners */
+}
+
+/* The Close Button */
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: #fff; /* White text on hover */
+  text-decoration: none;
+  cursor: pointer;
+}
+#remarks {
+  width: 100%;
+  height: 80px; /* Adjust the height as needed */
+}
+
+/* Form Styles */
+#holdForm, #go_liveForm, #cancelledForm {
+  display: flex;
+  flex-direction: column;
+}
+
+
+#holdForm label, #go_liveForm label,
+#cancelledForm label{
+  margin-bottom: 8px;
+}
+
+#holdForm textarea, #go_liveForm textarea,
+#cancelledForm textarea {
+  margin-bottom: 12px;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  display: flex;
+  width: 360px; /* Set a fixed width */
+  height: 100px; /* Set a fixed height */
+  resize: none; 
+}
+
+#holdForm button, #go_liveForm button, #cancelledForm button {
+  background-color: #0051cc;
+  color: #fff;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  align-self: center;
+}
+
+#remarks:required:invalid {
+  border-color: #ff0000; /* Red color */
+}
+
+#holdForm button:hover, #go_liveForm button:hover,
+#cancelledForm button:hover {
+  background-color: #0000FF;
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+console.log("DOM fully loaded and parsed");
+
+// Get modals and buttons
+var modals = {
+  cancelled: document.getElementById("cancelledModal"),
+  hold: document.getElementById("holdModal"),
+  go_live: document.getElementById("go_liveModal")
+};
+
+var links = {
+  cancelled: document.getElementById("cancelledLink"),
+  hold: document.getElementById("holdLink"),
+  go_live: document.getElementById("go_liveLink")
+};
+
+console.log("Modals:", modals);
+console.log("Links:", links);
+
+// Open modals
+Object.keys(links).forEach(key => {
+  if (links[key] && modals[key]) { // Check if both the link and modal exist
+    links[key].onclick = function () {
+      console.log(key + " link clicked");
+      modals[key].style.display = "block";
+    }
+  } else {
+    console.log(key + " link or modal is null");
+  }
+});
+
+// Close modals on span click
+var spans = document.getElementsByClassName("close");
+Array.prototype.forEach.call(spans, function (span) {
+  span.onclick = function () {
+    Object.keys(modals).forEach(key => {
+      if (modals[key]) {
+        modals[key].style.display = "none";
+      }
+    });
+  };
+});
+
+// Close modals on outside click
+window.onclick = function (event) {
+  Object.keys(modals).forEach(key => {
+    if (modals[key] && event.target == modals[key]) {
+      modals[key].style.display = "none";
+    }
+  });
+}
+});
+</script>

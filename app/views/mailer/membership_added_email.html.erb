@@ -1,0 +1,122 @@
+
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
+    custom_field_enumeration&.name
+end %>
+
+<% def custom_text(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)&.value
+end %>
+
+<% def custom_function_date(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+    custom_value&.value
+end %>
+
+<% custom_field = CustomField.find_by(name: "author_id")
+custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+id = custom_value&.value&.to_i 
+    user = User.find_by(id: id) %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Project Created</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        p {
+            margin-bottom: 10px;
+        }
+        .link {
+            color: blue;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="header">A new project has been created by <%= user&.name %> in Trackmine:</div><br>
+        <table>
+            <tr>
+                <td><strong>Project Name:</strong></td>
+                <td><%= @project.name %></td>
+            </tr>
+            <tr>
+                <td><strong>Description:</strong></td>
+                <td><%= @project.description %></td>
+            </tr>
+            <tr>
+                <td><strong>Business Need:</strong></td>
+                <td><%= custom_text('Business Need') %></td>
+            </tr>
+            <tr>
+                <td><strong>Start Date:</strong></td>
+                <td><%= custom_function_date('Start at') %></td>
+            </tr>
+            <tr>
+                <td><strong>End Date:</td>
+                <td><%= custom_function_date('Due Date') %></td>
+            </tr>
+            <tr>
+                <td><strong>Planned Go Live Date:</strong></td>
+                <td><%= custom_function_date('Planned Project Go Live Date') %></td>
+            </tr>
+            <tr>
+                <td><strong>Function Name:</strong></td>
+                <td><%= custom_function('Function Name') %></td>
+            </tr>
+            <tr>
+                <td><strong>Portfolio Category:</strong></td>
+                <td><%= custom_function('Portfolio Category') %></td>
+            </tr>
+            <tr>
+                <td><strong>Priority Level:</strong></td>
+                <td><%= custom_function('Priority Level') %></td>
+            </tr>
+            </table>
+
+        <p>Member list with role: </p>
+        <% previous_members = @project.members.where.not(id: nil) %>
+        <% existing_members = @project.members %>
+        <% existing_members.each do |member| %>
+        <% if member.user.name != @user || member.roles.first.name != @role %>
+        <% role_id = MemberRole.find_by(member_id: member.id)&.role_id # Corrected typo here
+            role = Role.find_by(id: role_id) %>
+        <li><strong><%= "#{member.user.name} (#{role.name})" %></strong></li>
+        <% end %>
+        <% end %>
+        <% @users = User.where(id: @user_ids)
+        @roles = Role.where(id: @role_ids) %>
+        <p>New Member: </p>
+        <% if @users.present? && @roles.present? %>
+            <% @users.each_with_index do |user, index| %>
+                <%= "#{user.firstname} #{user.lastname} (#{@roles[index].name})" %><br>
+            <% end %>
+        <% end %>
+
+        <p>Please log in to Trackmine to view and manage the project details.</p>
+     
+        <p>Best Regards</p>
+    </div>
+</body>
+</html>

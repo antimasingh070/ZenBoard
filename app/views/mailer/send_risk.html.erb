@@ -1,0 +1,53 @@
+<h1 style="font-family: Arial, sans-serif; color: #333;">Hi All,</h1>
+
+<p style="font-family: Arial, sans-serif; color: #555; line-height: 1.6;">
+    Please note, there is a risk identifier in the <strong><%= @project.name %></strong> project by IT PM.
+</p>
+
+<table class="list issue-report" style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f4f4f4; color: #333; font-weight: bold;">
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">ID</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Project Name</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Subject</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Impact</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Tracker</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Stakeholder/User</th>
+        </tr>
+    </thead>
+    <tbody>
+        <% @issues.each do |issue| %>
+        <tr style="background-color: <%= cycle('#ffffff', '#f9f9f9') %>; color: #555;">
+            <td style="border: 1px solid #ddd; padding: 10px;"><%= issue.id %></td>
+            <td style="border: 1px solid #ddd; padding: 10px;"><%= @project.name %></td>
+            <td style="border: 1px solid #ddd; padding: 10px;"><%= issue.subject %></td>
+            <td style="border: 1px solid #ddd; padding: 10px;"><%= issue.impact %></td>
+            <td style="border: 1px solid #ddd; padding: 10px;"><%= issue.tracker.name %></td>
+            <td style="border: 1px solid #ddd; padding: 10px;"><%= issue.stakeholder %></td>
+        </tr>
+        <% end %>
+    </tbody>
+</table>
+
+<p style="font-family: Arial, sans-serif; color: #555; line-height: 1.6;">
+    We will discuss the same in the upcoming IT Weekly meet.
+</p>
+
+<p style="font-family: Arial, sans-serif; margin: 20px 0 0; color: #555;">
+    Regards, <br>
+    <strong>PMO</strong>
+</p>
+<span style="font-family: Arial, sans-serif; color: #888;">nknkc</span>
+
+<style>
+    * {
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+    table.list.issue-report {
+        border: 1px solid #ddd;
+    }
+    table.list.issue-report th, table.list.issue-report td {
+        text-align: left;
+    }
+</style>

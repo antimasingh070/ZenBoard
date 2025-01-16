@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Issue Management</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.4.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <!-- Bootstrap JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.4.3/dist/js/bootstrap.min.js"></script>
+</head>
+<body>
+  <div class="contextual">
+    <% approval_custom_field = CustomField.find_by(name: "Approval Required")
+    approval_custom_value = CustomValue.find_by(custom_field_id: approval_custom_field.id, customized_type: "Issue", customized_id: @issue.id)
+    role_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Role")
+    custom_value = CustomValue.find_by(customized_type: "Issue", custom_field_id: role_custom_field.id, customized_id: @issue.id).try(:value)
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.to_i, custom_field_id: role_custom_field.id).try(:name)
+    matched_roles = @project.members.joins(:roles).where(roles: { name: custom_field_enumeration }).pluck(:user_id)
+    current_user_id = User.current.id
+    tracker = Tracker.find_by(name: "Project Plan- Activity List") 
+    workflow_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
+    workflow_custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: workflow_custom_field.id) %>
+
+    <% if @issue.tracker_id == 2 && approval_custom_value && (approval_custom_value.value == "1") && @issue.author_id == current_user_id || User.current.admin? %>
+    <%= link_to "Approve", "#", class: "icon icon-unlock", id: "approveLink" %>
+        <%= link_to "Decline", "#", class: "icon icon-unlock", id: "declineLink" %>
+        <%= link_to "Send Back", "#", class: "icon icon-move-top", id: "sendBackLink" %>
+       <%= link_to l(:button_edit), edit_issue_path(@issue),
+                  :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
+                  :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
+        <%= link_to l(:button_log_time), new_issue_time_entry_path(@issue),
+                    :class => 'icon icon-time-add' if User.current.allowed_to?(:log_time, @project) %>
+        <%= actions_dropdown do %>
+          <%= watcher_link(@issue, User.current) %>
+          <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
+                      :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
+            <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+            <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
+                        :data => {:confirm => issues_destroy_confirmation_message(@issue)},
+                        :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
+        <% end %>
+    <% elsif @issue.tracker_id == 2 && approval_custom_value && (approval_custom_value.value == "1") && (matched_roles.include?(current_user_id) || @issue.assigned_to_id == User.current.id) %>
+      <% if !@issue.approved?  || !@issue.declined? %>
+        <%= link_to "Approve", "#", class: "icon icon-unlock", id: "approveLink" %>
+        <%= link_to "Decline", "#", class: "icon icon-unlock", id: "declineLink" %>
+        <%= link_to "Send Back", "#", class: "icon icon-move-top", id: "sendBackLink" %>
+      <% else %>
+        <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+        <%= link_to l(:button_edit), edit_issue_path(@issue),
+                  :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
+                  :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
+      <% end %>
+    <% elsif @issue.tracker_id == 2  %>
+      <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+      <%= link_to l(:button_edit), edit_issue_path(@issue),
+                  :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
+                  :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
+    <% else %>
+      <%= link_to l(:button_edit), edit_issue_path(@issue),
+                :onclick => 'showAndScrollTo("update", "issue_notes"); return false;',
+                :class => 'icon icon-edit', :accesskey => accesskey(:edit) if @issue.editable? %>
+      <%= link_to l(:button_log_time), new_issue_time_entry_path(@issue),
+                  :class => 'icon icon-time-add' if User.current.allowed_to?(:log_time, @project) %>
+      <%= actions_dropdown do %>
+        <%= watcher_link(@issue, User.current) %>
+        <%= link_to l(:button_copy), project_copy_issue_path(@project, @issue),
+                    :class => 'icon icon-copy' if User.current.allowed_to?(:copy_issues, @project) && Issue.allowed_target_projects.any? %>
+          <%= copy_object_url_link(issue_url(@issue, only_path: false)) %>
+          <%= link_to l(:button_delete_object, object_name: l(:label_issue).downcase), issue_path(@issue),
+                      :data => {:confirm => issues_destroy_confirmation_message(@issue)},
+                      :method => :delete, :class => 'icon icon-del' if @issue.deletable? %>
+      <% end %>
+    <% end %>
+
+  </div>
+
+
+  <div id="declineModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Project Task Decline</h2>
+      <form id="declineForm" action="<%= decline_issue_path(@issue) %>" method="post">
+        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <label for="declineRemarks">Remarks<sup>*</sup>:</label>
+        <textarea id="declineRemarks" name="remarks" required></textarea>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="approveModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Project Task Approve</h2>
+      <form id="approveForm" action="<%= approve_issue_path(@issue) %>" method="post">
+        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <label for="approveRemarks">Remarks<sup>*</sup>:</label>
+        <textarea id="approveRemarks" name="remarks" required></textarea>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <div id="sendBackModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <h2>Project Task Send Back</h2>
+      <form id="sendBackForm" action="<%= send_back_issue_path(@issue) %>" method="post">
+        <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+        <label for="sendBackRemarks">Remarks<sup>*</sup>:</label>
+        <textarea id="sendBackRemarks" name="remarks" required></textarea>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    label > sup {
+      color: #ff0000; /* Red color */
+      font-size: 12px; /* Smaller font size */
+      vertical-align: super; /* Align as superscript */
+    }
+    /* The Modal (background) */
+    .modal {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      left: 0;
+      top: 0;
+      font-weight: bold;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+    }
+    h2 {
+      font-weight: bold;
+    }
+
+    /* Modal Content/Box */
+    .modal-content {
+      background-color: #0065ff; /* Blue background */
+      color: #fff; /* White text */
+      margin: 15% auto; /* 15% from the top and centered */
+      padding: 20px;
+      border: 1px solid #888;
+      width: 29%; /* Smaller width */
+      height: 33%;
+      border-radius: 10px; /* Rounded corners */
+    }
+
+    /* The Close Button */
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: #fff; /* White text on hover */
+      text-decoration: none;
+      cursor: pointer;
+    }
+    #remarks {
+      width: 100px;
+      height: 20px; /* Adjust the height as needed */
+    }
+
+    /* Form Styles */
+    #sendBackForm, #declineForm, #approveForm {
+      display: flex;
+      flex-direction: column;
+    }
+
+    
+    #sendBackForm label,
+    #declineForm label,
+    #approveForm label {
+      margin-bottom: 8px;
+    }
+
+    #sendBackForm textarea,
+    #declineForm textarea,
+    #approveForm textarea {
+      margin-bottom: 6px;
+      padding: 6px;
+      border: none;
+      border-radius: 4px;
+      resize: none; 
+    }
+
+    #sendBackForm button, #declineForm button, #approveForm button {
+      background-color: #0051cc;
+      color: #fff;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      align-self: center;
+    }
+
+    #remarks:required:invalid {
+      border-color: #ff0000; /* Red color */
+    }
+
+    #sendBackForm button:hover, 
+    #declineForm button:hover, 
+    #approveForm button:hover {
+      background-color: #0000FF;
+    }
+  </style>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    console.log("DOM fully loaded and parsed");
+
+    // Get modals and buttons
+    var modals = {
+      decline: document.getElementById("declineModal"),
+      approve: document.getElementById("approveModal"),
+      sendBack: document.getElementById("sendBackModal")
+    };
+
+    var links = {
+      decline: document.getElementById("declineLink"),
+      approve: document.getElementById("approveLink"),
+      sendBack: document.getElementById("sendBackLink")
+    };
+
+    console.log("Modals:", modals);
+    console.log("Links:", links);
+
+    // Open modals
+    Object.keys(links).forEach(key => {
+      if (links[key] && modals[key]) { // Check if both the link and modal exist
+        links[key].onclick = function () {
+          console.log(key + " link clicked");
+          modals[key].style.display = "block";
+        }
+      } else {
+        console.log(key + " link or modal is null");
+      }
+    });
+
+    // Close modals on span click
+    var spans = document.getElementsByClassName("close");
+    Array.prototype.forEach.call(spans, function (span) {
+      span.onclick = function () {
+        Object.keys(modals).forEach(key => {
+          if (modals[key]) {
+            modals[key].style.display = "none";
+          }
+        });
+      };
+    });
+
+    // Close modals on outside click
+    window.onclick = function (event) {
+      Object.keys(modals).forEach(key => {
+        if (modals[key] && event.target == modals[key]) {
+          modals[key].style.display = "none";
+        }
+      });
+    }
+  });
+</script>
+
+
+</body>
+</html>

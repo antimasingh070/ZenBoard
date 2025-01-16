@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+  </head>
+  <body>
+    <p>Dear Attendee,</p>
+    <p>You are invited to a meeting titled "<strong><%= @meeting.title %></strong>" scheduled at <strong><%= @meeting.scheduled_at.strftime("%d/%m/%Y %H:%M") %></strong> for Business Requirement <strong><%= @business_requirement.requirement_case %></strong></p>
+    <p>Note: <%= @meeting.note %></p>
+    <p>Please attend the meeting on time.</p>
+
+    <p>Attendees list: </p>
+      <% meeting_attendees = @meeting.meeting_attendees %>
+      <% meeting_attendees.each do |meeting_attendee| %>
+      <li><strong><%= "#{meeting_attendee.user.name}" %></strong></li>
+      <% end %>
+
+    <p>Best Regards</p>
+  </body>
+</html>

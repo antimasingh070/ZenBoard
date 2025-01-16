@@ -1,0 +1,55 @@
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id)
+    return unless custom_value # Exit if custom value not found
+    
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
+    custom_field_enumeration&.name
+end %>
+
+<% def custom_function_date(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id)
+    custom_value&.value # No need for further processing, return the value directly
+end %>
+<%  custom_field = CustomField.find_by(name: "author_id")
+custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+id = custom_value&.value&.to_i 
+    user = User.find_by(id: id) %>
+<%= "A new project has been created by #{user&.name} in Trackmine:" %>
+<%= "Project Name: #{@project.name}" %>
+<%= "Description:  #{@project.description}" %>
+<%= "Business Need: #{custom_function('Business Need')}" %>
+<%= "Start Date: #{custom_function_date('Start at')}" %>
+<%= "End Date: #{custom_function_date('Due Date')}" %> 
+<%= "Planned Project Go Live Date: #{custom_function_date('Planned Project Go Live Date')}" %>
+<%= "Function Name: #{custom_function('User Function')}" %>
+<%= "Portfolio Category: #{custom_function('Portfolio Category')}" %>
+<%= "Priority Level: #{custom_function('Priority Level')}" %>
+
+
+<%= "Member list with role:" %>
+<% previous_members = @project.members.where.not(id: nil) %>
+<% existing_members = @project.members %>
+<%# Display existing members and their roles %>
+<% existing_members.each do |member| %>
+  <% if member.user.name != @user || member.roles.first.name != @role %>
+  <% role_id = MemberRole.find_by(member_id: member.id)&.role_id 
+     role = Role.find_by(id: role_id) %>
+  <%= "#{member.user.name} (#{role.name})" %>
+  <% end %>
+<% end %>
+
+<%# Display newly added member and their role %>
+<% if @user && @role %>
+  <%= "New Member: #{@user} (#{@role.name})" %>
+<% end %>
+
+You have been added as a member of this project. Please log in to Trackmine to view and manage the project details.
+Trackmine link: https://Trackmine.neo.com
+
+<%= "Best Regards" %>

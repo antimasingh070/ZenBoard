@@ -1,0 +1,66 @@
+
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
+    custom_field_enumeration&.name
+end %>
+
+<% def custom_function_date(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
+    custom_value.value
+end %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Project Created</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        p {
+            margin-bottom: 10px;
+        }
+        .link {
+            color: blue;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">A new project has been created in Trackmine:</div>
+        <p>Project Name: <%= @project.name %></p>
+        <p>Description: <%= @project.description %></p>
+        <p>Business Need: <%= custom_function('Business Need') %></p>
+        <p>Start Date: <%= custom_function_date('Start Date') %></p>
+        <p>End Date: <%= custom_function_date('End Date') %></p>
+        <p>Planned Go Live Date: <%= custom_function_date('Planned Go Live Date') %></p>
+        <p>Function Name: <%= custom_function('Function Name') %></p>
+        <p>Portfolio Category: <%= custom_function('Portfolio Category') %></p>
+        <p>Priority Level: <%= custom_function('Priority Level') %></p>
+
+        <p>You have been added as a member of this project. Please log in to Trackmine to view and manage the project details.</p>
+        <p><a href="<%= https://Trackmine.neo.com/#{@issue.id} %>" class="link">Trackmine</a></p>
+        <p>Best Regards</p>
+    </div>    </div>
+
+</body>
+</html>

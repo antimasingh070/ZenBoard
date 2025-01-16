@@ -1,0 +1,5 @@
+<%= title l(:label_br_new) %>
+<div class="d-flex justify-content-end"><button type="button" class="btn btn-secondary" onclick="location.href='<%= business_requirements_path %>'">Back</button></div><br>
+<%= form_with(model: @business_requirement, html: { multipart: true }) do |f| %>
+    <%= render partial: 'form', locals: { f: f } %>
+  <% end %>

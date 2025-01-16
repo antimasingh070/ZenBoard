@@ -1,0 +1,21 @@
+<h2>Project Activty Logs</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Field Name</th>
+      <th>Old Value</th>
+      <th>New Value</th>
+      <th>Changed At</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @activity_logs.each do |activity_log| %>
+      <tr>
+        <td><%= activity_log.field_name %></td>
+        <td><%= activity_log.old_value %></td>
+        <td><%= activity_log.new_value %></td>
+        <td><%= activity_log.created_at %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

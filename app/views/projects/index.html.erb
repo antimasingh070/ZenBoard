@@ -1,0 +1,73 @@
+<div class="contextual">
+  <%= form_tag({}, :method => :get) do %>
+  <% end %>
+  <%= render_project_action_links %>
+</div>
+
+<h2><%= @query.new_record? ? l(:label_project_plural) : @query.name %></h2>
+
+<%= form_tag(projects_path(@project, nil), :method => :get, :id => 'query_form') do %>
+<%= render :partial => 'queries/query_form' %>
+<% end %>
+
+<% if @query.valid? %>
+  <% if @entries.empty? %>
+    <p class="nodata"><%= l(:label_no_data) %></p>
+  <% else %>
+  <%= render :partial => @query.display_type, :locals => { :entries => @entries.sort_by! { |project| project.identifier.to_i  }}%>
+  <% end %>
+<% end %>
+
+<% if User.current.logged? %>
+<p style="text-align:right;">
+<span class="icon icon-user my-project"><%= l(:label_my_projects) %></span>
+<span class="icon icon-bookmarked-project"><%= l(:label_my_bookmarks) %></span>
+</p>
+<% end %>
+
+<% content_for :sidebar do %>
+  <%= render :partial => 'projects/sidebar' %>
+<% end %>
+
+<% other_formats_links do |f| %>
+  <%= f.link_to 'Atom', :url => {:key => User.current.atom_key} %>
+  <% if @query.display_type == 'list' %>
+    <%= f.link_to_with_query_parameters 'CSV', {}, :onclick => "showModal('csv-export-options', '350px'); return false;" %>
+  <% end %>
+<% end %>
+
+<% html_title(l(:label_project_plural)) -%>
+
+<script>
+$(document).ready(function() {
+  $('tr.odd, tr.even').each(function() {
+    var startAt = $(this).find('.cf_11').text();
+    var endAt = $(this).find('.cf_12').text();
+    var revisedDue = $(this).find('.cf_22').text();
+    var currentDate = new Date();
+    var partsStart = startAt.split("/");
+    var partsEnd = endAt.split("/");
+    var partsRevised = revisedDue.split("/");
+
+    var formattedStartDate = new Date(partsStart[2], partsStart[1] - 1, partsStart[0]);
+    var formattedEndDate = new Date(partsEnd[2], partsEnd[1] - 1, partsEnd[0]);
+    var formattedRevisedDueDate = new Date(partsRevised[2], partsRevised[1] - 1, partsRevised[0]);
+    console.log(formattedRevisedDueDate)
+
+    if (formattedEndDate > currentDate && formattedRevisedDueDate == "Invalid Date") {
+      $(this).find('.status').css('background-color', "green");
+    } else if (formattedEndDate > currentDate && formattedRevisedDueDate < new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+    $(this).find('.status').css('background-color', "#FFBF00");
+    }
+    else if (formattedEndDate > currentDate && formattedRevisedDueDate >= new Date(currentDate.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+      console.log("red")
+      $(this).find('.status').css('background-color', "red");
+    }
+    else if (formattedEndDate < currentDate || formattedRevisedDueDate == "Invalid Date" ){
+      console.log("red")
+      $(this).find('.status').css('background-color', "red");
+    }  
+    
+  });
+});
+</script>

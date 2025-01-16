@@ -1,0 +1,154 @@
+<%= error_messages_for 'project' %>
+
+<div class="box tabular">
+<!--[form:project]-->
+<p><%= f.text_field :name, :required => true, :size => 60 %></p>
+<% if action_name == 'settings' %>
+  <p><%= f.select :status, options_for_select(Project::STATUS_MAP.map { |k, v| [v, k] }) %></p>
+<% end %>
+<p><%= f.text_area :description, :rows => 8, :class => 'wiki-edit' %></p>
+<div class="custom-fields-grid">
+
+
+<% unless @project.allowed_parents.compact.empty? %>
+    <p><%= label(:project, :parent_id, l(:field_parent)) %><%= parent_project_select_tag(@project) %></p>
+<% end %>
+
+<% if @project.safe_attribute? 'inherit_members' %>
+<p><%= f.check_box :inherit_members %></p>
+<% end %>
+
+<%= wikitoolbar_for 'project_description' %>
+
+</div>
+<% if @project.id.nil? %>
+  <div class="custom-fields-grid">
+    <% @project.visible_custom_field_values.each do |value| %>
+      <p>
+        <%= custom_field_tag_with_label :project, value %>
+      </p>
+    <% end %>
+  </div>
+<% else %>
+  <div class="custom-fields-grid">
+  <% @project.visible_custom_field_values.each do |value| %>
+    <% if value.custom_field.name == "Revised End Date" %>
+      <% if !@project.id.nil? %>
+        <div>
+          <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+          <p>
+            <label for="revised_end_date">Revised End Date</label>
+            <input type="date" id="revised_end_date" name="revised_end_date" class="form-control">
+          </p>
+          <p>
+            <label for="revised_end_date">Reason - Revised End Date<sup style="color: red;">*</sup></label>
+            <input type="text" id="reason" name="reason" class="form-control">
+            <button type="button" id="update-button" class="btn btn-primary">Update</button>
+          </p>
+        </div>
+        <div class="col">
+          <div class="col-md-6 offset-md-6">
+            <% if @revised_end_date_history&.any? %>
+              <div class="border p-3 mb-3 text-right">
+                <h3 class="text-right">Revised End Date History</h3>
+                <% @revised_end_date_history.each do |history| %>
+                  <div class="text-right">
+                    <%= history&.value&.to_date&.strftime("%d/%m/%Y") %>
+                  </div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    <% else %>
+      <% unless value.custom_field.name == "Revised End Date" %>
+        <p>
+          <%= custom_field_tag_with_label :project, value %>
+        </p>
+      <% end %>
+    <% end %>
+  <% end %>
+</div>
+
+<% end %>
+
+<%= call_hook(:view_projects_form, :project => @project, :form => f) %>
+</div>
+
+<% if @project.safe_attribute?('enabled_module_names') %>
+<fieldset class="box tabular" id="project_modules"><legend><%= toggle_checkboxes_link('#project_modules input[type="checkbox"]') %><%= l(:label_module_plural) %></legend>
+<% Redmine::AccessControl.available_project_modules.each do |m| %>
+    <label class="floating">
+    <%= check_box_tag 'project[enabled_module_names][]', m, @project.module_enabled?(m), :id => "project_enabled_module_names_#{m}" %>
+    <%= l_or_humanize(m, :prefix => "project_module_") %>
+    </label>
+<% end %>
+<%= hidden_field_tag 'project[enabled_module_names][]', '' %>
+</fieldset>
+<% end %>
+<!--[eoform:project]-->
+
+<% unless @project.identifier_frozen? %>
+  <% content_for :header_tags do %>
+    <%= javascript_include_tag 'project_identifier' %>
+  <% end %>
+<% end %>
+
+<% if !User.current.admin? && @project.inherit_members? && @project.parent && User.current.member_of?(@project.parent) %>
+  <%= javascript_tag do %>
+    $(document).ready(function() {
+      $("#project_inherit_members").change(function(){
+        if (!$(this).is(':checked')) {
+          if (!confirm("<%= escape_javascript(l(:text_own_membership_delete_confirmation)) %>")) {
+            $("#project_inherit_members").attr("checked", true);
+          }
+        }
+      });
+    });
+  <% end %>
+<% end %>
+
+
+<script>
+ <% if !@project.id.nil? %>
+  $(document).ready(function() {
+    $('#update-button').click(function() {
+     
+      var revisedEndDate = $('#revised_end_date').val();
+      var reason = $('#reason').val();
+      $.ajax({
+        url: '<%= update_revised_end_date_project_path(@project) %>',
+        method: 'POST',
+        headers: {
+          'X-CSRF-Token': $('meta[name="csrf-token"]').attr('content')
+        },
+        data: { revised_end_date: revisedEndDate, reason: reason },
+        success: function(response) {
+          // You can redirect or perform any other action here after successful update
+          location.reload();
+        },
+        error: function(xhr, status, error) {
+          alert('Failed to update Revised End Date.');
+          // Handle the error as needed
+        }
+      });
+   
+    });
+  });
+     <% end %>
+</script>
+
+<style>
+  #reason:required:invalid {
+    border-color: #ff0000; /* Red color */
+  }
+    .custom-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px; /* Space between items */
+  margin: 20px 0;
+}
+
+
+</style>

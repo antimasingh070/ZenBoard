@@ -1,0 +1,31 @@
+<div class="point-fields">
+  <h5>Point</h5>
+  
+  <div class="form-group">
+    <%= form.label :description, "Point Description" %>
+    <%= form.text_area :description, class: 'form-control' %>
+  </div>
+
+  <div class="form-group">
+    <%= form.label :owner_ids, "Assignee" %>
+    <%= form.select :owner_ids, options_for_select(@br_stakeholders.map { |stakeholder| ["#{stakeholder.user.firstname} #{stakeholder.user.lastname}", stakeholder.user_id] }, form.object.owner_ids), class: 'form-control' %>
+  </div>
+
+  <div class="form-group">
+    <%= form.label :status, "Status" %>
+    <%= form.select :status, options_for_select(Mom::STATUS_MAP.map { |k, v| [v, k] }, form.object.status), class: 'form-control' %>
+  </div>
+
+  <!-- Remarks Section -->
+  <h6>Remarks</h6>
+  <%= form.fields_for :remarks do |remark_form| %>
+    <div class="form-group">
+      <%= remark_form.label :content, "Remark" %>
+      <%= remark_form.text_area :content, class: 'form-control' %>
+    </div>
+  <% end %>
+
+  <div class="form-group">
+    <button type="button" class="btn btn-secondary" onclick="addRemark(<%= form.object.id %>)">Add Remark</button>
+  </div>
+</div>

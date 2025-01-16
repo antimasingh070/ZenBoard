@@ -1,0 +1,58 @@
+User-agent: *
+<% if Setting.login_required? -%>
+Disallow: /
+<% else -%>
+<% @projects.each do |project| -%>
+<%   [project, project.id].each do |p| -%>
+Disallow: <%= url_for(:controller => 'repositories', :action => :show, :id => p) %>
+Disallow: <%= url_for(project_issues_path(:project_id => p)) %>
+Disallow: <%= url_for(project_activity_path(:id => p)) %>
+<%   end -%>
+<% end -%>
+Disallow: <%= url_for(issues_gantt_path) %>
+Disallow: <%= url_for(issues_calendar_path) %>
+Disallow: <%= url_for(activity_path) %>
+Disallow: <%= url_for(search_path) %>
+Disallow: <%= url_for(issues_path) %>?*sort=
+Disallow: <%= url_for(issues_path) %>?*query_id=
+Disallow: <%= url_for(issues_path) %>?*set_filter=
+Disallow: <%= url_for(issues_path(:trailing_slash => true)) %>*.pdf$
+Disallow: <%= url_for(projects_path(:trailing_slash => true)) %>*.pdf$
+Disallow: <%= url_for(signin_path) %>
+Disallow: <%= url_for(register_path) %>
+Disallow: <%= url_for(lost_password_path) %>
+<% end -%>
+
+<script>
+let projectData_<%= project.id %> = {
+  labels: ['Data 1', 'Data 2', 'Data 3'],
+  datasets: [{
+    data: [30, 40, 30], // Sample data, replace with actual data for the pie chart
+    backgroundColor: [
+      'rgba(255, 99, 132, 0.7)',
+      'rgba(54, 162, 235, 0.7)',
+      'rgba(255, 206, 86, 0.7)'
+    ]
+  }]
+};
+
+let ctx_<%= project.id %> = document.getElementById('portfolioChart_<%= project.id %>').getContext('2d');
+let projectChart_<%= project.id %> = new Chart(ctx_<%= project.id %>, {
+  type: 'pie',
+  data: projectData_<%= project.id %>,
+  options: {
+    responsive: true,
+    legend: {
+      position: 'top',
+    },
+    title: {
+      display: true,
+      text: '<%= project.name %> Chart'
+    },
+    animation: {
+      animateScale: true,
+      animateRotate: true
+    }
+  }
+});
+</script>

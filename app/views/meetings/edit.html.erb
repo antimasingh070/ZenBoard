@@ -1,0 +1,8 @@
+<div class="d-flex justify-content-end"><button type="button" class="btn btn-secondary" onclick="location.href='<%= business_requirement_meeting_path(@business_requirement, @meeting) %>'">Back</button></div><br>
+<div class="d-flex justify-content-end mt-3">
+  <%= button_to 'Send Meeting Invitation', send_meeting_invitation_business_requirement_meeting_path(@business_requirement, @meeting), method: :post, class: 'btn btn-secondary' %>
+</div>
+<%= labelled_form_for [@business_requirement, @meeting], :html => {:multipart => true} do |f| %>
+    <%= render :partial => 'form', :locals => { :f => f } %>
+<% end %>
+    

@@ -1,0 +1,21 @@
+<% author_id = @issue.author_id 
+author = User.find_by(id: author_id)
+assigned_to_id = @issue.assigned_to_id 
+assignee = User.find_by(id: assigned_to_id) %>
+<h1>Project task has been sent back by <%= user.name %> to the <%= author.name %></h1>
+
+<p>Project task Subject: <%= @issue.subject %></p>
+<p>Project Name: <%= @issue.project.name %></p>
+<p>Status: <%= @issue.status.name %></p>
+<p>Task: <%= @issue.tracker.name %></p>
+<p>Assignee: <%= assignee.name %></p>
+<p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+<p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+<p>Remarks: <%= custom_field = CustomField.find_by(type: "IssueCustomField", name: "Remarks")
+custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
+custom_value&.value  %></p>
+
+
+<p>Please log in to Trackmine to view and manage the issue details.</p>
+<p><a href="<%= https://Trackmine.neo.com/#{@issue.id} %>" class="link">Trackmine</a></p>
+<p>Best Regards</p>

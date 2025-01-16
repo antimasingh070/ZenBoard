@@ -1,0 +1,50 @@
+  <% def custom_function(field_name)
+      custom_field = CustomField.find_by(name: field_name)
+      return unless custom_field # Exit if custom field not found
+      
+      custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @issue.project&.id, custom_field_id: custom_field.id)
+      return unless custom_value # Exit if custom value not found
+      
+      custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
+      custom_field_enumeration&.name
+  end 
+
+  def custom_function_date(issue, field_name)
+      custom_field = CustomField.find_by(name: field_name)
+      custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id)
+      custom_field_enumeration = custom_value&.value
+      next unless custom_field_enumeration
+      if !custom_field_enumeration.nil? 
+          date = Date.parse(custom_field_enumeration) 
+          formatted_date = date.strftime("%d/%m/%Y")
+      else 
+          custom_field_enumeration 
+      end 
+  end %>
+
+  <% assigned_to_id = @issue.assigned_to_id 
+  assignee = User.find_by(id: assigned_to_id) %>
+
+  <p><strong>Issue Approval Required</strong></p>
+  <p>An issue requires your approval. You can review it directly using the link below:</p>
+  
+  <p><a href="https://Trackmine.neo.com/<%= @issue.id %>">View Issue Details</a></p>
+
+  <p><strong>Issue Details:</strong></p>
+  <p>Subject: <%= @issue.subject %></p>
+  <p>Project: <%= @issue.project.name %></p>
+  <p>Status: <%= @issue.status.name %></p>
+  <p>Task Type: <%= @issue.tracker.name %></p>
+  <p>Assigned To: <%= assignee.name %></p>
+  <p>Priority Level: <%= custom_function('Priority Level') %></p>
+  <p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+  <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+  <p>Revised Planned Due Date: <%= custom_function_date(@issue, "Actual End Date") %></p>
+
+  <p><strong>Valuation and Impact:</strong></p>
+  <p>Estimated Cost: <%= custom_function('Estimated Cost') %></p>
+  <p>Estimated Benefit: <%= custom_function('Estimated Benefit') %></p>
+
+  <p>Please log in to Trackmine to review, approve, or provide feedback on this issue.</p>
+  <p>Best Regards,</p>
+  <p>Your Project Management Team</p>

@@ -1,0 +1,38 @@
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: @issue.project&.id, custom_field_id: custom_field.id)
+    return unless custom_value # Exit if custom value not found
+    
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
+    custom_field_enumeration&.name
+end 
+
+ def custom_function_date(issue, field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id)
+    custom_value = custom_value&.value
+    return unless custom_value
+    if !custom_value.to_s.blank? 
+        date = Date.parse(custom_value) 
+        formatted_date = date.strftime("%d/%m/%Y")
+    else 
+        custom_value 
+    end 
+end %>
+
+<% assigned_to_id = @issue.assigned_to_id 
+assignee = User.find_by(id: assigned_to_id) %>
+<p>Issue Subject: <%= @issue.subject %></p>
+<p>Project Name: <%= @issue.project.name %></p>
+<p>Status: <%= @issue.status.name %></p>
+<p>Task: <%= @issue.tracker.name %></p>
+<p>Assignee: <%= assignee.name %></p>
+<p>Priority Level: <%= Enumeration.find_by(type: "IssuePriority", position: @issue.priority_id).try(:name) %></p>
+<p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+<p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
+<p>revised planned due date: <%= custom_function_date(@issue, "Actual End Date")%></p>
+
+<p>Please log in to Trackmine to view and manage the issue details.</p>
+<p>Best Regards</p>

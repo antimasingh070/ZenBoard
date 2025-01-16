@@ -1,0 +1,62 @@
+<!-- app/views/projects/_project_tree.html.erb -->
+<tr>
+ 
+  <% if project.parent_id.nil? %>
+    <td style="font-size: 10px; padding-left: <%= indent %>px;">
+        <%= link_to project.name, project_path(project) %>
+    </td>
+  <% else %>
+    <td style="font-size: 10px; padding-left: <%= indent %>px;">
+        <%= "#{project.name} - (#{Project.find_by(id: project.parent_id).try(:name)})" %>
+    </td>
+  <% end %>
+   <% br_id = BusinessRequirement.find_by(project_identifier: project.identifier)&.identifier %>
+   <% if br_id.present? %>
+    <td style="font-size: 10px;"><%= br_id %></td>
+   <% else %>
+    <td style="font-size: 10px;"></td>
+   <% end %>
+  <td style="font-size: 10px;">On Track</td>
+  <td style="font-size: 10px;"><%= member_name(project, "Project Manager") %></td>
+  <% last_completed_activity = custom_field_value(project, "Project Activity") %>
+  <td style="font-size: 10px;"><%= last_completed_activity %></td>
+<td style="font-size: 10px;"><%= last_completed_activity %></td>
+<td style="font-size: 10px;"><%= last_completed_activity %></td>
+  <td style="font-size: 10px;"><%= custom_field_value(project, "Portfolio Category") %></td>
+   <td style="font-size: 10px;"><%= custom_field_value(project, "Portfolio Category") %></td>
+  <td style="font-size: 10px;"><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
+  <td style="font-size: 10px; color: white; background-color: <%= date_value(project, "Scheduled End Date").present? ? 'green' : 'inherit' %>;">
+  <%= formatted_date(date_value(project, "Scheduled End Date")) %>
+</td>
+
+
+  <td style="font-size: 10px;"><%= formatted_date(date_value(project, "Planned Project Go Live Date")) %></td>
+  <td style="font-size: 10px;"><%= formatted_date(date_value(project, "Revised End Date")) %></td>
+  <% tracker = Tracker.find_by(name: 'Project Plan- Activity List') %>
+  <% latest_issue = project.issues.where(tracker_id: tracker.id).order(due_date: :desc).first %>
+  <% due_date = latest_issue&.due_date %>
+  <% if due_date %>
+  <td style="font-size: 10px;"><%= due_date&.strftime("%-d %b %Y") %></td>
+  <% else %>
+   <td style="font-size: 10px;"></td>
+  <% end %>
+  <% tracker_id = Tracker.find_by(name: "Risk Register")&.id %>
+  <% open_issue_count = Issue.where(project_id: project.id, tracker_id: tracker_id, status_id: [1,2,4,6,7]).count %>
+  <% id = project.identifier %>
+  <td style="font-size: 10px;"><%= tracker_count(project, "Project Plan- Activity List") %></td>
+  <% tracker_id = Tracker.find_by(name: "Project Plan- Activity List")&.id %>
+
+  <td style="font-size: 10px;"><%= tracker_count(project, "Project Plan- Activity List") %></td>
+  <td style="font-size: 10px;"><%= tracker_count(project, "Change Request") %></td>
+  <td style="font-size: 10px;"><%= link_to open_issue_count, "/projects/#{id}/issues?set_filter=1&tracker_id=#{tracker_id}&status_id=[1,3,4]" %></td>
+  <td style="font-size: 10px;"><%= percentage_done(project) %></td>
+  <td style="font-size: 10px;">
+    <% if date_value(project, "Actual End Date").present? && date_value(project, "Scheduled End Date").present? %>
+      <% delay = (Date.parse(date_value(project, "Actual End Date")) - Date.parse(date_value(project, "Scheduled End Date"))).to_i %>
+      <%= delay > 0 ? "#{delay} days" : "N/A" %>
+    <% else %>
+      N/A
+    <% end %>
+  </td>
+</tr>
+

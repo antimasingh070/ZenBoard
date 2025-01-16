@@ -1,0 +1,460 @@
+<!-- Container for the split content layout -->
+<div class="splitcontent">
+
+  <!-- Left side: Meeting Details -->
+  <div class="splitcontentleft">
+    <h2><strong>Meeting Details</strong></h2>
+    <div class="detail-item">
+      <strong>Title:</strong> <%= @meeting.title %>
+    </div>
+    <div class="detail-item">
+      <strong>Scheduled:</strong> <%= @meeting.scheduled_at.strftime("%d/%m/%Y %H:%M") %>
+    </div>
+    <div class="detail-item">
+      <strong>Function:</strong> <%= @meeting.function_name %>
+    </div>
+    <div class="detail-item">
+      <strong>Note:</strong> <%= @meeting.note %>
+    </div>
+
+    <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
+      <div class="meeting-actions">
+        <%= link_to 'Edit', edit_business_requirement_meeting_path(@business_requirement, @meeting), class: 'btn btn-warning btn-sm' %>
+        <%= link_to 'Delete', business_requirement_meeting_path(@business_requirement, @meeting), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm' %>
+        <button class="btn btn-primary btn-sm" onclick="toggleMomForm()">New/Edit MOM</button>
+      </div>
+    <% end %>
+
+    <%= link_to 'Back to Meetings', business_requirement_path(@business_requirement), class: 'btn btn-secondary btn-sm' %>
+  </div>
+
+  <!-- Right side: MOM Details and Attendees -->
+  <div class="splitcontentright">
+    <!-- Attendee Details Section -->
+    <% if @meeting.meeting_attendees.any? %>
+      <div class="members box">
+          <h3 class="icon icon-group"><%= l(:label_attendee_plural) %></h3>
+            <ul>
+              <% @meeting.meeting_attendees.each do |attendee| %>
+                <li><%= attendee&.user&.name %></li>
+              <% end %>
+            </ul>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<!-- MOM Form Section (initially hidden) -->
+<div id="mom-form" class="card" style="border: 0.5px solid #ccc; padding: 1rem; border-radius: 8px;">
+    <h3 class="form-title"><%= @meeting.mom.id.present? ? 'MOM' : 'Create MOM' %></h3>
+    
+    <table class="table table-bordered table-striped">
+
+  
+      <thead>
+        <tr>
+          <th class='export-csv'>Sr. No.</th>
+          <th class='export-csv'>Action Item</th>
+          <th class='export-csv'>Status</th>
+          <th class='export-csv'>Owners</th>
+          <th class='export-csv'>Timeline</th>
+          <th>Action</th>
+          <th class='export-csv' style="width: 300px;">Remarks</th> 
+        </tr>
+      </thead>
+      <tbody>
+        <% @points.each_with_index do |point, index| %>
+          <tr>
+            <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), local: true, html: { class: 'edit-form', style: 'display: none;' }) do |f| %>
+              <!-- Sr. No. Column -->
+              <td class='export-csv'><%= index + 1 %></td>
+
+              <!-- Action Item (Description) Column -->
+              <!-- Ensure content wraps even in hidden cells -->
+              <td class="export-csv" style="display: none;">
+                  <%= point.description %>
+              </td>
+              
+              <td class='export-csv' style="display: none;">
+                <%= Point::STATUS_MAP[point.status] %>
+              </td>
+
+              </td>
+              <td class='export-csv' style="display: none;">
+                <%= point.timeline&.strftime("%d/%m/%Y") %>
+              </td>
+              <td class='export-csv' style="display: none;">
+              <% point.remarks.each do |remark| %>
+                <div class="remark-item">
+                  <p>
+                    <strong><%= User.find_by(id: remark.author_id)&.firstname %>:</strong> 
+                    <%= remark.content %>
+                  </p>
+                  <% end %>
+              </td>
+              <td>
+                  <%= f.text_area :description, class: 'form-control  auto-resize', rows: 4, value: point.description %>
+              </td>
+              
+              <td>
+                  <%= f.select :status, options_for_select(Point::STATUS_MAP.map { |k, v| [v, k] }, point.status), {}, class: 'form-control' %>
+              </td>
+
+              <!-- Owner Column -->
+              <td>
+              <%= f.select :owner_ids, 
+                           options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, point.owner_ids), 
+                           { include_blank: true }, 
+                           { multiple: true, class: 'form-control' } %>
+            </td>
+            
+
+              <!-- Timeline Column -->
+              <td>
+                  <%= f.date_field :timeline, value: point.timeline&.strftime("%Y-%m-%d"), class: 'form-control' %>
+              </td>
+
+              <!-- Action Column -->
+              <td>
+              <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), method: point.id.present? ? :patch : :post, local: true, html: { class: 'edit-form', style: 'display: none;' }) do |f| %>
+                <%= f.submit point.id.present? ? 'Save' : 'Create', class: 'btn btn-primary' %>
+              <% end %>
+                <!-- Delete Button - Separate form for delete action -->
+                <%= form_with(model: point, url: business_requirement_meeting_mom_point_path(@business_requirement, @meeting, @mom, point), method: :delete, local: true, html: { class: 'delete-form', style: 'display: inline;' }) do |delete_form| %>
+                  <%= delete_form.submit "Delete", class: 'btn btn-danger', data: { confirm: 'Are you sure you want to delete this point?' } %>
+                <% end %>
+              </td>
+            <% end %>
+              <!-- Remarks Section in Table Cell -->
+              <td>
+                <div class="remarks-section">
+                  <button class="toggle-remarks-btn" onclick="toggleRemarks(<%= point.id %>)">
+                    <%= point.remarks.any? ? 'Show Remarks' : 'Add Remarks' %>
+                  </button>
+
+                  <div id="remarks-<%= point.id %>" class="remarks-container" style="display: none;">
+                    <% point.remarks.each do |remark| %>
+                      <div class="remark-item">
+                        <p>
+                          <strong><%= User.find_by(id: remark.author_id)&.firstname %>:</strong> 
+                          <%= remark.content %>
+                        </p>
+
+                        <!-- Edit and Delete Buttons for each remark -->
+                        <div class="remark-actions">
+                          <!-- Edit button shows the edit form -->
+                          <button class="btn btn-secondary btn-sm" onclick="toggleEditForm(<%= remark.id %>)">Edit</button>
+                          
+                          <!-- Delete form triggers remark deletion -->
+                          <%= form_with model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, remark], method: :delete, local: true do |delete_form| %>
+                            <%= delete_form.submit "Delete", class: "btn btn-danger btn-sm", data: { confirm: "Are you sure you want to delete this remark?" } %>
+                          <% end %>
+                        </div>
+
+                        <!-- Edit form, initially hidden, toggled by Edit button -->
+                        <div id="edit-form-<%= remark.id %>" class="edit-remark-form" style="display: none;">
+                          <%= form_with model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, remark], local: true, method: :patch do |edit_form| %>
+                            <div class="form-group">
+                              <%= edit_form.text_area :content, value: remark.content, required: true, rows: 2 %>
+                            </div>
+                            <%= edit_form.submit "Update", class: "btn btn-primary btn-sm" %>
+                          <% end %>
+                        </div>
+                      </div>
+                    <% end %>
+
+                    <!-- Add new remark form -->
+                    <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
+                      <%= form_with model: [@meeting.mom.meeting.business_requirement, @meeting, @meeting.mom, point, Remark.new], local: true, html: { class: 'remark-form' } do |form| %>
+                        <div class="form-group">
+                          <%= form.label :content, "Add a Remark:" %>
+                          <%= form.text_area :content, required: true, rows: 2 %>
+                        </div>
+                        <%= form.hidden_field :author_id, value: User.current.id %>
+                        <%= form.submit "Add", class: "btn btn-primary btn-sm" %>
+                      <% end %>
+                    <% end %>
+                  </div>
+                </div>
+              </td>
+
+          </tr>
+        <% end %>
+          <tr>
+            <%= form_with(model: Point.new, url: business_requirement_meeting_mom_points_path(@business_requirement, @meeting, @mom), local: true) do |f| %>
+              <td></td>
+
+              <td>
+                <%= f.text_area :description, required: true, class: 'form-control' %> 
+              </td>
+              <td>
+                <%= f.select :status, options_for_select(Point::STATUS_MAP.map { |k, v| [v, k] }), {}, class: 'form-control' %>
+              </td>
+
+              <!-- Owner Column -->
+              <td>
+                <%= f.select :owner_ids, 
+                            options_for_select(@br_stakeholders.map { |stakeholder| [stakeholder.user.name, stakeholder.user_id] }, @point&.owner_ids), 
+                            { include_blank: true }, 
+                            { multiple: true, class: 'form-control' } %>
+              </td>
+
+
+              <!-- Timeline Column -->
+              <td>
+                <%= f.date_field :timeline, class: 'form-control' %>
+              </td>
+              <td>
+                <%= f.submit 'Add', class: 'btn btn-primary' %>
+              </td>
+            <% end %>
+          </tr>
+
+      </tbody>
+    </table>
+
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+<button onclick="exportToCsv()">Export as CSV</button>
+<%= button_to 'Send Mom', send_mom_email_business_requirement_meeting_mom_path(@business_requirement.id, @meeting.id, @mom.id), method: :post, class: 'btn btn-secondary' %>
+
+</div>
+<!-- JavaScript to Toggle View/Edit Mode -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
+<script>
+
+function exportToCsv() {
+    const rows = [];
+    const table = document.querySelector('table');
+
+    // Utility function to wrap text at a specific width
+    function wrapText(text, maxWidth) {
+        const words = text.split(' ');
+        let wrappedText = '';
+        let currentLine = '';
+
+        words.forEach(word => {
+            // Check if adding the next word exceeds the maxWidth
+            if ((currentLine + word).length > maxWidth) {
+                // If yes, add the current line to wrappedText and start a new line
+                wrappedText += currentLine.trim() + '\n';
+                currentLine = word + ' ';
+            } else {
+                // If no, continue adding to the current line
+                currentLine += word + ' ';
+            }
+        });
+
+        // Add any remaining content in the current line
+        wrappedText += currentLine.trim();
+
+        return wrappedText;
+    }
+
+    table.querySelectorAll('tr').forEach(row => {
+        const rowData = [];
+
+        // Only consider cells with the class 'export-csv'
+        row.querySelectorAll('th.export-csv, td.export-csv').forEach(cell => {
+            let cellContent;
+
+            if (cell.classList.contains('multiple-values')) {
+                const values = [];
+                cell.querySelectorAll('.value').forEach(value => {
+                    // Trim, wrap text, and handle line breaks by wrapping in quotes
+                    let trimmedValue = value.innerText.trim();
+                    let wrappedValue = wrapText(trimmedValue, 50); // Adjust the max width if needed
+                    values.push(wrappedValue);
+                });
+                cellContent = values.join(', ');
+            } else {
+                // Trim, wrap text, and handle line breaks by wrapping in quotes
+                let trimmedContent = cell.innerText.trim();
+                cellContent = wrapText(trimmedContent, 50);
+            }
+
+            // Replace any line breaks or multiple spaces with a single space for CSV cleanliness
+            cellContent = cellContent.replace(/\s+/g, ' ');
+
+            // Wrap content in double quotes and escape any existing double quotes
+            cellContent = `"${cellContent.replace(/"/g, '""')}"`;
+
+            // Add the cleaned and wrapped content to the row data
+            rowData.push(cellContent);
+        });
+
+        // Only add the row if it contains data (in case there are rows without 'export-csv' cells)
+        if (rowData.length > 0) {
+            rows.push(rowData.join(','));
+        }
+    });
+
+    const csv = rows.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    saveAs(blob, 'mom.csv');
+}
+
+
+
+  function toggleEditForm(remarkId) {
+    const editForm = document.getElementById(`edit-form-${remarkId}`);
+    if (editForm.style.display === "none") {
+      editForm.style.display = "block";
+    } else {
+      editForm.style.display = "none";
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    const editButtons = document.querySelectorAll('.toggle-edit');
+    
+    editButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const row = button.closest('tr');
+        const viewElements = row.querySelectorAll('.view-mode');
+        const editForms = row.querySelectorAll('.edit-form');
+        
+        // Toggle visibility of view and edit elements
+        viewElements.forEach(el => el.style.display = (el.style.display === 'none') ? '' : 'none');
+        editForms.forEach(form => form.style.display = (form.style.display === 'none') ? '' : 'none');
+        
+        // Toggle button text between 'Edit' and 'Cancel'
+        button.textContent = (button.textContent === 'Edit') ? 'Cancel' : 'Edit';
+      });
+    });
+  });
+</script>
+
+<!-- JavaScript for toggling MOM form -->
+<script>
+  // JavaScript to toggle the visibility of the MOM form
+  function toggleMomForm() {
+    var formContainer = document.getElementById('mom-form');
+    formContainer.style.display = formContainer.style.display === 'none' ? 'block' : 'none';
+  }
+
+  // JavaScript to handle form submission
+  document.addEventListener('DOMContentLoaded', function() {
+    var momFormToggleButton = document.getElementById('mom-form-toggle');
+    if (momFormToggleButton) {
+      momFormToggleButton.addEventListener('click', toggleMomForm);
+    }
+  });
+
+    function toggleMomForm() {
+      var formContainer = document.getElementById('mom-form');
+      var momDetails = document.getElementById('mom-details');
+      
+      if (formContainer.style.display === 'none') {
+        formContainer.style.display = 'block';
+        momDetails.style.display = 'none';
+      } else {
+        formContainer.style.display = 'none';
+        momDetails.style.display = 'block';
+      }
+    }
+
+    function toggleRemarks(pointId) {
+      var remarksContainer = document.getElementById('remarks-' + pointId);
+      remarksContainer.style.display = remarksContainer.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
+
+<!-- Styles for improved UI/UX -->
+<style>
+
+  /* app/assets/stylesheets/application.css */
+  textarea.auto-resize {
+    word-wrap: break-word; /* Ensures long words are wrapped to the next line */
+    white-space: pre-wrap;  /* You can adjust this max-height as per your needs */
+  }
+  .splitcontent {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .splitcontentleft,
+  .splitcontentright {
+    width: 48%;
+  }
+
+  .detail-item,
+  .point-item,
+  .attendees-list ul {
+    margin-bottom: 8px;
+  }
+
+  .ml-2 {
+    margin-left: 0.5rem; /* Adjust as needed */
+  }
+
+  .meeting-actions,
+  .remarks-section {
+    margin-top: 10px;
+  }
+
+  .points-list ul {
+    list-style-type: none;
+    padding: 0;
+  }
+
+  .point-item {
+    padding: 5px;
+    border-bottom: 1px solid #ddd;
+  }
+
+  .point-actions {
+    margin-bottom: 5px;
+  }
+
+  .remarks-container {
+    margin-top: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 5px;
+    background-color: #fff;
+  }
+
+  .toggle-remarks-btn {
+    cursor: pointer;
+  }
+
+  .form-container {
+    margin-top: 20px;
+  }
+
+  .btn-link {
+    color: #007bff;
+    text-decoration: none;
+  }
+
+  .btn-link:hover {
+    text-decoration: underline;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: Arial, sans-serif;
+  }
+
+  th, td {
+    border: 1px solid #dddddd;
+    padding: 8px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+</style>

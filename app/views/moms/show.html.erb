@@ -1,0 +1,21 @@
+<h3>Meeting MOM</h3>
+<div class="mom-details">
+  <h4>Function: <%= @meeting.mom.function_name %></h4>
+  <p>Status: <%= Mom::STATUS_MAP[@meeting.mom.status] || 'Unknown' %></p>
+  <p>Summary: <%= @meeting.mom.summary %></p>
+  <p>Target Date: <%= @meeting.mom.target_date %></p>
+
+  <h4>Points</h4>
+  <% @meeting.mom.points.each do |point| %>
+    <div class="point-section">
+      <p><strong>Description:</strong> <%= point.description %></p>
+      <p><strong>Assignee:</strong> <%= point.owner %></p>
+      <p><strong>Status:</strong> <%= Mom::STATUS_MAP[point.status] || 'Unknown' %></p>
+
+      <h5>Remarks:</h5>
+      <% point.remarks.each do |remark| %>
+        <p><strong><%= User.find(remark.author_id).firstname %>:</strong> <%= remark.content %></p>
+      <% end %>
+    </div>
+  <% end %>
+</div>

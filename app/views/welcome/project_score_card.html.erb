@@ -1,0 +1,290 @@
+
+ <!-- app/views/welcome/project_score_card.html.erb -->
+
+<% content_for :header_tags do %>
+  <style>
+  .meters-container {
+    display: flex;
+    justify-content: space-around;
+  }
+  .progress {
+  position: relative;
+  margin: 40px;
+  float: left;
+  text-align: center;
+  cursor: pointer;
+}
+
+.barOverflow {
+  position: relative;
+  overflow: hidden;
+  width: 240px; /* Increased size */
+  height: 120px; /* Increased size */
+  margin-bottom: -14px;
+}
+.bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 240px; /* Increased size */
+  height: 240px; /* Increased size */
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 30px solid #eee;
+  border-bottom-color: red; /* Initial color */
+  border-right-color: red; /* Initial color */
+}
+
+.needle {
+  position: absolute;
+  width: 2px;
+  height: 120px;
+  background-color: black;
+  top: 0;
+  left: 50%;
+  transform-origin: bottom center;
+  transform: rotate(-90deg); /* Initial position */
+}
+
+.indicator-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.indicator {
+  font-size: 12px;
+}
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  th, td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+  }
+
+  th {
+    background-color: #f2f2f2;
+  }
+
+  .project-info {
+    margin-bottom: 10px;
+  }
+  </style>
+<% end %>
+
+<div class="project-scorecard">
+  <h1>IT Project Scorecard</h1>
+  <!-- Filter Form -->
+  <div class="filter-form">
+    <%= form_with url: project_score_card_path, method: :get, local: true do %>
+      <label for="role">Role:</label>
+      <%= select_tag :role, options_from_collection_for_select(Role.all, :name, :name, params[:role]), include_blank: true %>
+
+      <label for="member_name">Member Name:</label>
+      <%= select_tag :member_name, options_for_select(User.pluck(:firstname, :lastname).map { |firstname, lastname| ["#{firstname} #{lastname}", "#{firstname} #{lastname}"] }, params[:member_name]), include_blank: true, class: "searchable-dropdown" %>
+
+
+      <%= submit_tag "Filter", class: "filter-button" %>
+    <% end %>
+  </div>
+  <h2>Average Delay: <%= @average_delay %> days</h2>
+  <div class="meters-container">
+    <div class="progress" data-period="last_year" data-progress="<%= @total_last_year %>">
+    <div class="barOverflow">
+        <div class="bar"></div>
+        <div class="needle"></div>
+    </div>
+    <span><%= @total_last_year %></span>%
+    <p>Last Year</p>
+    <div class="indicator-container">
+        <div class="indicator">0</div>
+        <div class="indicator">100</div>
+    </div>
+    </div>
+
+
+    <div class="progress" data-period="year_to_date" data-progress="<%= @total_year_to_date %>">
+    <div class="barOverflow">
+        <div class="bar"></div>
+        <div class="needle"></div>
+    </div>
+    <span><%= @total_year_to_date %></span>%
+    <p>Year to Date</p>
+    <div class="indicator-container">
+        <div class="indicator">0</div>
+        <div class="indicator">100</div>
+    </div>
+    </div>
+
+    <div class="progress" data-period="this_month" data-progress="<%= @total_this_month %>">
+    <div class="barOverflow">
+        <div class="bar"></div>
+        <div class="needle"></div>
+    </div>
+    <span><%= @total_this_month %></span>%
+    <p>This Month</p>
+    <div class="indicator-container">
+        <div class="indicator">0</div>
+        <div class="indicator">100</div>
+    </div>
+    </div>
+  </div>
+  <br>
+  <div class="top-delayed-projects">
+    <h2>Top 3 Delayed Projects</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Scheduled End</th>
+          <th>Actual End</th>
+          <th>Delay (days)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @top_delayed_projects.each do |data| %>
+          <tr>
+            <td><%= link_to data[:project].name, project_path(data[:project]) %></td>
+            <td><%= formatted_date(date_value(data[:project], "Scheduled End Date")) %></td>
+            <td><%= formatted_date(date_value(data[:project], "Actual End Date")) %></td>
+            <td><%= data[:delay] %> days</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="top-delayed-projects">
+    <h2>Total last Year</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Scheduled End</th>
+          <th>Actual End</th>
+          <th>Delay (days)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <%  @total_last_year[:delayed_projects].each do |data| %>
+          <tr>
+            <td><%= link_to data[:project].name, project_path(data[:project]) %></td>
+            <td><%= formatted_date(date_value(data[:project], "Scheduled End Date")) %></td>
+            <td><%= formatted_date(date_value(data[:project], "Actual End Date")) %></td>
+            <td><%= data[:delay] %> days</td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOMContentLoaded event fired.');
+  document.querySelectorAll('.progress').forEach(progress => {
+    console.log('Found .progress element.');
+    var bar = progress.querySelector(".bar");
+    var val = progress.querySelector("span");
+    var perc = parseInt(val.textContent, 10);
+    console.log(`Initial values - bar: ${bar}, val: ${val}, perc: ${perc}`);
+
+    $({p: 0}).animate({p: perc}, {
+      duration: 3000,
+      easing: "swing",
+      step: function(p) {
+        console.log(`Animating - step value: ${p}`);
+        bar.style.transform = "rotate(" + (45 + (p * 1.8)) + "deg)";
+        val.textContent = Math.floor(p);
+        console.log(`Updated bar transform: ${bar.style.transform}, val textContent: ${val.textContent}`);
+      }
+    });
+
+    progress.addEventListener('click', function() {
+      const period = this.getAttribute('data-period');
+      console.log(`Progress element clicked, data-period: ${period}`);
+      fetchProjects(period);
+    });
+  });
+});
+
+function fetchProjects(period) {
+  console.log(`Fetching projects for period: ${period}`);
+  fetch(`/projects_for_period?period=${period}`)
+    .then(response => {
+      console.log('Fetch response received:', response);
+      if (!response.ok) {
+        throw new Error('Network response was not ok: ' + response.statusText);
+      }
+      return response.json(); // Parse JSON response
+    })
+    .then(data => {
+      console.log('Data parsed from JSON:', data);
+      // Assuming data contains a redirect_url key with the URL to redirect to
+      const redirectUrl = data.redirect_url;
+      if (redirectUrl) {
+        console.log('Redirecting to:', redirectUrl);
+        window.location.href = redirectUrl; // Redirect to the specified URL
+      } else {
+        console.warn('No redirect URL found in the response data.');
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching projects:', error);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log("DOM content loaded");
+
+  var progressElements = document.querySelectorAll('.progress');
+  console.log(`Found ${progressElements.length} progress elements`);
+
+  progressElements.forEach(function(progressElement) {
+    console.log("Processing progress element");
+
+    var progress = parseInt(progressElement.getAttribute('data-progress'), 10);
+    console.log(`Progress value: ${progress}`);
+
+    var bar = progressElement.querySelector('.bar');
+    var needle = progressElement.querySelector('.needle');
+    console.log("Found bar and needle elements");
+
+    // Set the needle rotation
+    var angle = -90 + (progress * 1.8); // Rotate from -90 degrees
+    console.log(`Needle rotation angle: ${angle}`);
+    needle.style.transform = `rotate(${angle}deg)`;
+
+    // Determine color based on progress
+    var red, green, blue;
+
+    if (progress <= 50) {
+        // Dark Red to Yellow
+        red = 128 + Math.floor(127 * (progress / 50));
+        green = Math.floor(255 * (progress / 50));
+    } else {
+        // Yellow to Dark Green
+        red = Math.floor(255 - 127 * ((progress - 50) / 50));
+        green = Math.floor(128 + (progress - 50) * (255 - 128) / 50);
+    }
+
+    blue = 0; // Fixed blue value for this gradient
+
+    // Apply the color to the progress bar
+    var color = `rgb(${red}, ${green}, ${blue})`;
+    console.log(`Applying color: ${color}`);
+    bar.style.borderBottomColor = color;
+    bar.style.borderRightColor = color;
+  });
+});
+
+
+
+</script>

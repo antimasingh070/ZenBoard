@@ -1,0 +1,8 @@
+dn: uid=john.doe,ou=users,dc=mydomain,dc=com
+objectClass: inetOrgPerson
+cn: John Doe
+sn: Doe
+uid: john.doe
+userPassword: P@ssw0rd
+mail: john.doe@mydomain.com
+

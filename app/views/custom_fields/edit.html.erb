@@ -1,0 +1,17 @@
+<%= custom_field_title @custom_field %>
+<%= labelled_form_for :custom_field, @custom_field, :url => custom_field_path(@custom_field), :html => {:method => :put, :id => 'custom_field_form'} do |f| %>
+  <%= render :partial => 'form', :locals => { :f => f } %>
+  <%= hidden_field_tag 'type', @custom_field.type %>
+  <%= hidden_field_tag 'copy', @copy_from.id if @copy_from %>
+<% end %>
+
+<%= javascript_tag do %>
+  $('#custom_field_field_format').change(function(){
+    $.ajax({
+      url: '<%=edit_custom_field_path(@custom_field, :format => 'js') %>',
+      type: 'get',
+      data: $('#custom_field_form').serialize(),
+      complete: toggleDisabledInit
+    });
+  });
+<% end %>

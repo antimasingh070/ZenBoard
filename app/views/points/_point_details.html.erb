@@ -1,0 +1,13 @@
+<div class="point-details">
+  <h5><%= point.description %></h5>
+  <p><strong>Owner:</strong> <%= point.owner_ids %></p>
+  <p><strong>Status:</strong> <%= Mom::STATUS_MAP[point.status] %></p>
+
+  <!-- Remarks -->
+  <h6>Remarks</h6>
+  <%= point.remarks.each do |remark| %>
+    <div class="remark-item">
+      <p><strong><%= remark.author.name %>:</strong> <%= remark.content %></p>
+    </div>
+  <% end %>
+</div>

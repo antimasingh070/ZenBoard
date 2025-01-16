@@ -1,0 +1,9 @@
+<%= title l(:label_business_requirement_edit) %>
+<div class="d-flex justify-content-end"><button type="button" class="btn btn-secondary" onclick="location.href='<%= business_requirement_path(@business_requirement) %>'">Back</button></div><br>
+<div class="d-flex justify-content-end mt-3">
+  <%= button_to 'Send Email', send_email_business_requirement_path(@business_requirement), method: :post, class: 'btn btn-secondary' %>
+</div>
+<%= form_with(model: @business_requirement, html: { multipart: true }) do |f| %>
+    <%= render partial: 'form', locals: { f: f } %>
+  <% end %>
+  

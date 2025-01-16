@@ -1,0 +1,33 @@
+<% def custom_function(field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    return unless custom_field # Exit if custom field not found
+    
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @issue.project&.id, custom_field_id: custom_field.id)
+    return unless custom_value # Exit if custom value not found
+    
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value.value&.to_i)
+    custom_field_enumeration&.name
+end %>
+<% assigned_to_id = @issue.assigned_to_id 
+user = User.find_by(id: assigned_to_id) %>
+Issue Subject: <%= @issue.subject %> 
+Project Name: <%= @issue.project.name %>
+Status: <%= @issue.status.name %>
+Task: <%= @issue.tracker.name %>
+Assignee: <%= user.name %>
+<%= "Priority Level: #{custom_function('Priority Level')}" %>
+Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %>
+Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %>
+
+Project Members:
+<% @members = @issue.project.members %>
+<% @members.each do |member| %>
+  <% role_id = MemberRole.find_by(member_id: member.id)&.role_id %>
+  <% role = Role.find_by(id: role_id) %>
+  <%= "- #{member.user.name} (#{role&.name || 'Not assigned'})" %>
+<% end %>
+
+Please log in to Trackmine to view and manage the issue details.
+Trackmine link: <%= "https://Trackmine.neo.com/#{@issue.id}" %>
+
+Best Regards

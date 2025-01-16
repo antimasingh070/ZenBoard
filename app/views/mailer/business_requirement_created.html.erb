@@ -1,0 +1,79 @@
+
+ <!DOCTYPE html>
+<html>
+  <head>
+    <style>
+
+      *{
+    font-size: 15px;
+  }
+  table {
+    font-family: arial, sans-serif;
+    border-collapse: collapse;
+  }
+  td, th {
+    text-align: left;
+    padding: 8px;
+  }
+    </style>
+  </head>
+  <body>
+    <div >
+      <p>Hello Team,</p>
+     <% owner = User.find_by(id: ActivityLog.find_by(entity_type: "BusinessRequirement", entity_id: @business_requirement.id, field_name: "Create")&.author_id)%>
+      <% if owner.present? %>
+        <p>A new business requirementhas has been successfully created by <%= " #{owner&.firstname} #{owner&.lastname} " %>. PLease find the details below:</p>
+      <% else %>
+        <p>PLease find the business requirement details below:</p>
+      <% end %>
+      <table>
+        <tr>
+          <th>Identifier</th>
+          <td><%= @business_requirement.identifier %></td>
+        </tr>
+        <tr>
+          <th>Description</th>
+          <td><%= @business_requirement.description %></td>
+        </tr>
+        <tr>
+          <th>Requirement Case</th>
+          <td><%= @business_requirement.requirement_case %></td>
+        </tr>
+        <tr>
+          <th>Requirement Received From</th>
+          <td><%= @business_requirement.requirement_received_from.reject(&:blank?).join(", ") %></td>
+        </tr>
+        <tr>
+          <th>Project/Enhancement</th>
+           <td><%= @business_requirement.project_enhancement %></td>
+        </tr>
+        <tr>
+          <th>Cost Benefits</th>
+          <td><%= @business_requirement.cost_benefits %></td>
+        </tr>
+        <tr>
+          <th>Status</th>
+          <td><%= BusinessRequirement::STATUS_MAP[@business_requirement.status] %></td>
+        </tr>
+        <tr>
+          <th>Requirement Submitted Date</th>
+          <td><%= @business_requirement.requirement_submitted_date&.strftime("%d %b %Y") %></td>
+        </tr>
+        <tr>
+          <th>Priority Level</th>
+          <td><%= @business_requirement.priority_level %></td>
+        </tr>
+        <!-- Add more rows as needed for additional attributes -->
+      </table>
+
+      <p>Stakeholder list with role: </p>
+      <% stakeholders = @business_requirement.br_stakeholders %>
+      <% stakeholders.each do |stakeholder| %>
+      <li><strong><%= "#{stakeholder.user.name} (#{stakeholder.role.name})" %></strong></li>
+      <% end %>
+
+      <p>For more details, please visit your business requirement <%= http://localhost:3000/business_requirements>dashboard.</p>
+
+    </div>
+  </body>
+</html>

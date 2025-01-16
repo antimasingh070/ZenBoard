@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    /* Add some styling for the table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 16px;
+      text-align: left;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+
+    th {
+        
+    }
+
+    .header {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    .highlight {
+      font-weight: bold;
+    }
+
+    .remarks {
+      color: #555;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div>  
+
+<table>
+  <thead>
+    <!-- Row for Date -->
+    <tr style="background-color: #99AFD7; color: #333;"> <!-- Light Orange -->
+      <th colspan="1">Date</th>
+      <th colspan="5"><%= Date.today.strftime("%d/%m/%Y") %></th>
+    </tr>
+    <!-- Row for Meeting Objective -->
+    <tr style="background-color: #99AFD7; color: #333;"> <!-- Light Orange -->
+      <th colspan="1">Meeting Objective</th>
+      <th colspan="5"><%= @meeting.title %></th>
+    </tr>
+    <tr style="background-color: #99AFD7; color: #333;"> <!-- Light Orange -->
+      <th colspan="1">Attendees</th>
+      <th colspan="5"><%= User.where(id: @attendees).map(&:name).reject(&:blank?).join(", ") %></th>
+    </tr>
+    <!-- Header Row -->
+    <tr style="background-color: #f2f2f2; font-weight: bold;"> <!-- Light Gray -->
+      <th>Sr. No</th>
+      <th>Action Item</th>
+      <th>Status</th>
+      <th>Owner(s)</th>
+      <th>Timeline</th>
+      <th>Remarks</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @points.each_with_index do |point, index| %>
+      <tr>
+        <td><%= index + 1 %></td>
+        <td><%= point.description %></td>
+        <td><%= Point::STATUS_MAP[point.status] %></td>
+        <td>
+          <% owner_ids = point.owner_ids.reject(&:blank?) %>
+          <% users = User.where(id: owner_ids) %>
+          <%= users.any? ? users.map { |user| "#{user.firstname} #{user.lastname}" }.join(', ') : '' %>
+        </td>
+        <td><%= point.timeline&.strftime("%d/%m/%Y") || 'N/A' %></td>
+        <td>
+          <% if point.remarks.present? %>
+            <ul>
+              <% point.remarks.each do |remark| %>
+                <li class="remarks">
+                  <strong><%= User.find_by(id: remark.author_id)&.firstname %>:</strong> <%= remark.content %>
+                </li>
+              <% end %>
+            </ul>
+          <% else %>
+            No Remarks
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+  
+</body>
+</html>
