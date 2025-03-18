@@ -93,19 +93,87 @@
 
     </div>
     <% end %>
+<style>
+.nav-link {
+  position: relative;
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
+}
 
+.nav-link:hover::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: blue;
+}
+
+.active-tab {
+  font-weight: bold;
+  color: black !important;
+  position: relative;
+}
+
+.active-tab::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #0065ff;
+}
+
+</style>
     <h1><%= page_header_title %></h1>
-   <% if display_main_menu?(@project) %>
-   <% unless controller.controller_name == 'business_requirements' || controller.controller_name == 'activity_logs' %>
-    <div id="main-menu" class="tabs">
-        <%= render_main_menu(@project) %>
-        <div class="tabs-buttons" style="display:none;">
-            <button class="tab-left" onclick="moveTabLeft(this); return false;"></button>
-            <button class="tab-right" onclick="moveTabRight(this); return false;"></button>
+    <% if controller.controller_name == 'welcome' && (params[:action] == "project_score_card" || params[:action] == "reports" || params[:action] == "resource_management") %>
+        <div id="main-menu" class="tabs" style="max-width: 100%; margin: 0 auto;">
+        <ul class="nav nav-tabs" style="display: flex; justify-content: flex-start; gap: 15px;">
+            <li class="nav-item">
+            <%= link_to "Project Score Card", project_score_card_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'project_score_card'}" %>
+            </li>
+            <li class="nav-item">
+            <%= link_to "Reports", reports_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'reports'}" %>
+            </li>
+            <li class="nav-item">
+            <%= link_to "Resource Management", resource_management_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'resource_management'}" %>
+            </li>
+        </ul>
         </div>
-    </div>
+    <% elsif controller.controller_name == "business_requirements" && params[:action] == "show"   %>
+        <div id="main-menu" class="tabs" style="max-width: 100%; margin: 0 auto;">
+        <ul class="nav nav-tabs" style="display: flex; justify-content: flex-start; gap: 15px;">
+            <li class="nav-item">
+                <%= link_to "Overview", business_requirement_path(params[:id]), class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'show'}" %>
+            </li>
+        </ul>
+        </div>
+    <% elsif controller.controller_name == "meetings" %>
+    <div id="main-menu" class="tabs" style="max-width: 100%; margin: 0 auto;">
+        <ul class="nav nav-tabs" style="display: flex; justify-content: flex-start; gap: 15px;">
+            <li class="nav-item">
+                <%= link_to "Overview", business_requirement_path(params[:business_requirement_id]), class: "nav-link text-gray-600 px-3 py-2" %>
+            </li>
+            <li class="nav-item">
+            <%= link_to "Meeting", business_requirement_meeting_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'show'}" %>
+            </li>
+        </ul>
+        </div>
     <% end %>
+  
+    <% unless controller.controller_name == 'business_requirements' || controller.controller_name == 'meetings' || controller.controller_name == 'activity_logs' %>
+        <div id="main-menu" class="tabs">
+            <%= render_main_menu(@project) %>
+            <div class="tabs-buttons" style="display:none;">
+                <button class="tab-left" onclick="moveTabLeft(this); return false;"></button>
+                <button class="tab-right" onclick="moveTabRight(this); return false;"></button>
+            </div>
+        </div>
     <% end %>
+
+ 
 </div>
 
 <div id="main" class="<%= sidebar_content? ? '' : 'nosidebar' %>">

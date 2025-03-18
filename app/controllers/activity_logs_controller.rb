@@ -3,6 +3,25 @@ class ActivityLogsController < ApplicationController
     @entity_types = ActivityLog.distinct.pluck(:entity_type)
     @field_names = ActivityLog.distinct.pluck(:field_name)
     @authors = User.where(id: ActivityLog.distinct.pluck(:author_id)).map { |u| ["#{u.firstname} #{u.lastname}", u.id] }
+    daily_logins = ActivityLog.where(entity_type: "Token")
+                          .group("DATE(created_at)")
+                          .distinct
+                          .count(:author_id)
+
+
+    # Format the data for the chart
+    @chart_data = daily_logins.map { |date, count| { date: date.strftime('%d %b %y'), count: count } }
+    # Determine annotations (e.g., highest login day)
+    highest_day = @chart_data.max_by { |data| data[:count] }
+    @annotations = [
+      {
+        point: {
+          x: @chart_data.index(highest_day),
+          y: highest_day[:count]
+        },
+        text: "Highest Login Day: #{highest_day[:date]}"
+      }
+    ]
     @activity_logs = ActivityLog.order(created_at: :desc).where("created_at >= ?", 1.month.ago).all
 
     if params[:entity_type].present?

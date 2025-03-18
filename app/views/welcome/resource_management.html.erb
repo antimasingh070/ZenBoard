@@ -1,0 +1,107 @@
+<%= javascript_include_tag "https://code.highcharts.com/highcharts.js" %>
+<%= javascript_include_tag "https://code.highcharts.com/modules/annotations.js" %>
+<%
+def project_count(program_manager, project_manager_name, status=nil)
+  program_manager_role_id = Role.find_by(name: "Program Manager").id
+  project_manager_role_id = Role.find_by(name: "Project Manager").id
+  firstname, lastname = program_manager&.split
+  pjm_user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
+  firstname, lastname = project_manager_name.split
+  prm_user_id = User.find_by(firstname: firstname, lastname: lastname).id
+  if status.present? 
+    projects = Project.joins(members: :member_roles).where(members: {user_id: [pjm_user_id, prm_user_id] }, member_roles: {role_id: [program_manager_role_id, project_manager_role_id]}).where(status: status).count
+  else
+    projects = Project.joins(members: :member_roles).where(members: {user_id: [pjm_user_id, prm_user_id] }, member_roles: {role_id: [program_manager_role_id, project_manager_role_id]}).count
+  end
+end 
+
+@chart_data = @project_managers.map do |manager|
+  {
+    name: manager,
+    data: [
+      project_count(params[:manager_filter], manager, Project::STATUS_ACTIVE),
+      project_count(params[:manager_filter], manager, Project::STATUS_HOLD),
+      project_count(params[:manager_filter], manager, Project::STATUS_GO_LIVE),
+      project_count(params[:manager_filter], manager, Project::STATUS_CLOSED),
+      project_count(params[:manager_filter], manager, Project::STATUS_CANCELLED)
+    ]
+  }
+end
+
+@categories = ['Active', 'Hold', 'Go Live', 'Closed', 'Cancelled']
+
+%>
+
+<div class="filter-form">
+    <%= form_with url: resource_management_path, method: :get, local: true do %>
+      <label for="manager_filter">Program Manager:</label>
+      <select name="manager_filter" id="manager_filter">
+        <option value="">All</option>
+        <% @program_managers.each do |manager| %>
+          <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
+        <% end %>
+      </select>
+
+      <%= submit_tag "Filter", class: "filter-button" %>
+  <% end %>
+  </div>
+
+<div id="programManagerChart" style="width: 100%; height: 500px;"></div>
+
+<script>
+
+  const chartData = <%= @chart_data.to_json.html_safe %>;
+  const categories = <%= @categories.to_json.html_safe %>;
+
+  Highcharts.chart('programManagerChart', {
+    chart: {
+      type: 'bar' // Bar chart (horizontal stacked bar)
+    },
+    title: {
+      text: 'Summary for Program Manager'
+    },
+    xAxis: {
+      categories: chartData.map(data => data.name), // Program Manager Names
+      title: {
+        text: 'Project Managers'
+      }
+    },
+    yAxis: {
+      min: 0,
+      title: {
+        text: 'Number of Projects'
+      },
+      stackLabels: {
+        enabled: true,
+        style: {
+          fontWeight: 'bold',
+          color: 'gray'
+        },
+        formatter: function () {
+          return this.total; // Show total for each manager
+        }
+      }
+    },
+    legend: {
+      reversed: true
+    },
+    plotOptions: {
+      series: {
+        stacking: 'normal', // Stacked bar chart
+        dataLabels: {
+          enabled: true
+        }
+      }
+    },
+    tooltip: {
+      formatter: function () {
+        return `<b>${this.series.name}</b><br>${this.key}: ${this.y} projects`;
+      }
+    },
+    series: categories.map((status, index) => ({
+      name: status,
+      data: chartData.map(manager => manager.data[index]), // Status-wise data
+      color: ['#4CAF50', '#FFC107', '#2196F3', '#9E9E9E', '#F44336'][index] // Colors for each status
+    }))
+  });
+</script>

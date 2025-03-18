@@ -558,7 +558,8 @@ module Redmine
       end
 
       def validate_single_value(custom_field, value, customized=nil)
-        if /^\d{4}-\d{2}-\d{2}$/.match?(value) && (value.to_date rescue false)
+        
+        if /\A\d{4}-\d{2}-\d{2}( 00:00:00)?\z/.match?(value.to_date.strftime("%Y-%m-%d")) && (value.to_date rescue false)
           []
         else
           [::I18n.t('activerecord.errors.messages.not_a_date')]

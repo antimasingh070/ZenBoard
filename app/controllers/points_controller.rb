@@ -16,7 +16,8 @@ class PointsController < ApplicationController
       if @point.save
         redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement_id, @mom.meeting), notice: 'Successfully Added.'
       else
-        render :new
+        flash[:error] = "#{@point.errors.full_messages}"
+        return redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting)
       end
     end
   
@@ -32,7 +33,8 @@ class PointsController < ApplicationController
       if @point.update(point_params)
         redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting), notice: 'Successfully updated.'
       else
-        render :edit
+        flash[:error] = "#{@point.errors.full_messages}"
+        return redirect_to business_requirement_meeting_path(@mom.meeting.business_requirement, @mom.meeting)
       end
     end
   

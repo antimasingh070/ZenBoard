@@ -1,0 +1,455 @@
+<%
+
+
+
+
+# Method to calculate working duration between earliest start and latest end date
+def working_duration_across_projects(projects)
+  return "N/A" if projects.blank?
+
+  # Get all "Scheduled Start Dates" and "Scheduled End Dates"
+  start_dates = projects.map { |project| date_value(project, 'Scheduled Start Date') }.compact
+  end_dates = projects.map { |project| date_value(project, 'Scheduled End Date') }.compact
+
+  return "N/A" if start_dates.empty? || end_dates.empty?
+
+  # Convert to Date objects and find min/max dates
+  min_start_date = start_dates.map { |d| Date.parse(d) rescue nil }.compact.min
+  max_end_date = end_dates.map { |d| Date.parse(d) rescue nil }.compact.max
+
+  return "N/A" unless min_start_date && max_end_date
+
+  # Calculate working days between min_start_date and max_end_date
+  working_days = []
+  current_date = min_start_date
+
+  while current_date <= max_end_date
+    working_days << current_date if working_day?(current_date)
+    current_date = current_date.next_day
+  end
+
+  total_days = working_days.count
+  years, remaining_days = total_days.divmod(365)
+  months, remaining_days = remaining_days.divmod(30)
+  weeks, remaining_days = remaining_days.divmod(7)
+  hours = remaining_days * 24
+  minutes = hours * 60
+
+  # Format output
+  formatted_duration = []
+  formatted_duration << "#{years}y" if years.positive?
+  formatted_duration << "#{months}m" if months.positive?
+  formatted_duration << "#{weeks}w" if weeks.positive?
+  formatted_duration << "#{remaining_days}d" if remaining_days.positive?
+  formatted_duration << "#{hours}h" if hours.positive?
+  formatted_duration << "#{minutes}m" if minutes.positive?
+
+  formatted_duration.join(", ")
+end
+
+
+def member_names(project, field_name)
+    role = Role.find_by(name: field_name)
+  
+    member_role_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
+    member_ids = Member.where(project_id: project.id, id: member_role_ids).pluck(:user_id)
+  
+    if member_ids.present?
+      users = User.where(id: member_ids)
+      full_names = users.pluck(:firstname, :lastname)
+      return full_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
+    else
+      return []
+    end
+end  
+
+
+def last_activity_from_all_assigned_task(project_manager, projects, field_name)
+    return "" if projects.blank? || field_name.blank?
+  
+    # Select only projects managed by the given Project Manager
+    manager_projects = projects.select { |project| member_names(project, 'Project Manager').include?(project_manager) }
+    return "" if manager_projects.blank?
+  
+    if field_name == "Project Activity"
+      custom_field = CustomField.find_by(name: field_name)
+      return "" unless custom_field
+  
+      # Split project_manager into firstname and lastname
+      first_name, last_name = project_manager.split(" ", 2)
+  
+      # Find the Project Manager user object
+      project_manager_user = User.find_by(firstname: first_name, lastname: last_name)
+      return "" unless project_manager_user
+  
+      # Fetch the most recently updated issue where the Project Manager is the assignee
+      last_issue = Issue.where(
+        project_id: manager_projects.map(&:id),
+        assigned_to_id: project_manager_user.id
+      ).where.not(status: 5).order(updated_on: :desc).first
+  
+      return "" unless last_issue
+  
+      # Fetch relevant custom value for the last issue
+      custom_value = CustomValue.find_by(
+        customized_type: "Issue",
+        customized_id: last_issue.id,
+        custom_field_id: custom_field.id
+      )
+  
+      # Fetch enumeration if it exists
+      activity_name = CustomFieldEnumeration.find_by(id: custom_value&.value.to_i)&.name if custom_value
+  
+      # Format due date
+      formatted_due_date = last_issue.due_date.strftime("%d %b %y") if last_issue.due_date
+  
+      # Return formatted last activity only if an activity name is found
+      return "#{activity_name} (#{formatted_due_date})" if activity_name.present?
+    end
+  
+    ""
+  end
+  def last_activity_from_all_projects(project_manager, projects, field_name)
+    return "" if projects.blank? || field_name.blank?
+  
+    # Select only projects managed by the given Project Manager
+    manager_projects = projects.select { |project| member_names(project, 'Project Manager').include?(project_manager) }
+    return "" if manager_projects.blank?
+
+    custom_field = CustomField.find_by(name: field_name)
+    return "" unless custom_field
+
+    # Find the project with the latest Scheduled End Date
+    last_project = @projects.compact.max_by do |project|
+        end_date_str = date_value(project, 'Scheduled End Date')
+        next Date.new(0) unless end_date_str.present? # Default to a very old date if missing
+        
+        begin
+        Date.parse(end_date_str) # Convert to Date for comparison
+        rescue ArgumentError
+        Date.new(0) # Handle invalid date strings
+        end
+    end
+    return "" unless last_project
+    # Get the Schedule End Date
+    schedule_end_date  = CustomValue.find_by(customized_type: "Project", customized_id: last_project&.id, custom_field_id: custom_field&.id).value rescue nil
+    return "" unless schedule_end_date
+
+    # Return formatted last activity
+    return "#{schedule_end_date.to_date.strftime('%d %b %y')}" if schedule_end_date.present?
+  end
+  
+
+  def total_work_allocation(project_manager, projects, field_name)
+    return "" if projects.blank? || field_name.blank?
+  
+    # Select only projects managed by the given Project Manager
+    manager_projects = projects.select { |project| member_names(project, 'Project Manager').include?(project_manager) }
+    return "" if manager_projects.blank?
+    custom_field = CustomField.find_by(name: field_name)
+    return "" unless custom_field
+    custom_values = []
+    manager_projects.each do |project| 
+        custom_values << CustomValue.where(customized_type: "Project", customized_id: project.id, custom_field_id: custom_field.id).pluck(:value)
+
+        custom_values
+    end
+    custom_values.reject(&:empty?)
+  end
+
+  
+  def get_project_manager_for_program_manager(program_manager)
+    @projects = Project.all
+    @projects = @projects.where(status: 1, parent_id: nil)
+    @projects = @projects.select { |project| member_names(project, 'Program Manager').include?(program_manager) } 
+    @project_managers = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
+    project_manager_names = @project_managers.flatten
+    users = User.where(
+      firstname: project_manager_names.map { |name| name.split(' ').first },
+      lastname: project_manager_names.map { |name| name.split(' ').last }
+    )
+ 
+    # Filter projects under selected project managers
+    @project_managers_projects = @projects.select do |project|
+      (member_names(project, 'Project Manager') & project_manager_names).any?
+    end
+  
+    @project_count = @project_managers_projects.count
+   
+    data = {
+      project_managers: @project_managers,
+      project_count: @project_count
+    }
+   
+    data # Return data
+  end
+  
+
+%>
+      
+<div class="container">
+    <div class="filters-wrapper" id="filters-container" >
+        <form action="" method="get">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="program_manager_search">Program Manager:</label>
+                    <div class="dropdown">
+                        <input type="text" id="program_manager_search" placeholder="Search..." aria-label="Search Program Managers">
+                        <div class="dropdown-content">
+                            <label><input type="checkbox" name="program_manager_filter[]" value="all"> All</label>
+                            <% @program_managers.each do |manager| %>
+                                <label><input type="checkbox" name="program_manager_filter[]" value="<%= manager %>"> <%= manager %></label>
+                            <% end %>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label for="project_manager_search">Project Manager:</label>
+                    <div class="dropdown">
+                        <input type="text" id="project_manager_search" placeholder="Search..." aria-label="Search Project Managers">
+                        <div class="dropdown-content">
+                            <label><input type="checkbox" name="project_manager_filter[]" value="all"> All</label>
+                            <% @project_managers.each do |manager| %>
+                                <label><input type="checkbox" name="project_manager_filter[]" value="<%= manager %>"> <%= manager %></label>
+                            <% end %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <input type="submit" value="Filter">
+                <button type="button" onclick="clearFilters()">Clear</button>
+                <button type="button" onclick="exportToCsv()">Export CSV</button>
+                <button type="button" onclick="exportToPdf()">Export PDF</button>
+            </div>
+        </form>
+    </div>  
+</div>
+  
+
+<table class="table table-bordered">
+    <thead>
+      <tr>
+        <th>Project Owner</th>
+        <th>Project Manager</th>
+        <th>Project Assigned</th>
+        <th>% Work Allocation</th>
+        <th>Last Activity Due Date (Projects)</th>
+        <th>Last Activity Due Date (Tasks)</th>
+        <th>Total Hours/Month (Project Overview)</th>
+        <th>Total Hours/Month (Assigned Activity)</th>
+      </tr>
+    </thead>
+    <tbody>
+    <% @program_managers.each do |program_manager| %>
+        <% puts "Program Manager: #{program_manager}" %> <!-- Debugging -->
+        <% project_managers_data = get_project_manager_for_program_manager(program_manager) %>
+        <% project_managers = project_managers_data[:project_managers] %>
+        <% puts "Project Managers: #{project_managers}" %> <!-- Debugging -->
+      
+        <% if project_managers.any? %>
+          <% project_managers.each_with_index do |project_manager, index| %>
+            <% puts "Project Manager: #{project_manager}" %> <!-- Debugging -->
+            <% project_manager_projects = @projects.select { |project| member_names(project, 'Project Manager').include?(project_manager) } %>
+            <% project_count = project_manager_projects.count %>
+            <% puts "Project Count: #{project_count}" %> <!-- Debugging -->
+      <% duration = working_duration_across_projects(project_manager_projects) %>
+            <tr>
+              <!-- Program Manager (rowspan for all Project Managers under it) -->
+              <% if index == 0 %>
+                <td rowspan="<%= project_managers.size %>"><%= program_manager %></td>
+              <% end %>
+      
+              <!-- Project Manager and Project Count -->
+              <td><%= project_manager %></td>
+              <td><%= link_to project_count, "http://localhost:3000/it_project_dashboard?show_subprojects=false&function_filter=&function_filter=&status_filter=&function_filter=&manager_filter=#{program_manager}&manager_filter=#{project_manager}&start_date_from=&start_date_to=&end_date_from=&end_date_to=" %></td>
+      
+              <!-- Other columns (dummy data) -->
+              <% total_work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation") %>
+              <td style="font-size: 10px;"><%= total_work_allocation.empty? ? "" : total_work_allocation.flatten.join(", ") %></td>
+              <% last_completed_activity = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date") %>
+              <td style="font-size: 10px;"><%= last_completed_activity %></td>
+              <% last_completed_activity = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity") %>
+              <td style="font-size: 10px;"><%= last_completed_activity %></td>
+              <td style="font-size: 10px;"><%= duration %></td>
+              <td>100</td>
+            </tr>
+          <% end %>
+        <% else %>
+          <!-- If no Project Managers are found for the Program Manager -->
+          <tr>
+            <td><%= program_manager %></td>
+            <td colspan="7">No Project Managers found</td>
+          </tr>
+        <% end %>
+      <% end %>
+  </tbody>
+</table>
+
+<style>
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: Arial, sans-serif;
+    }
+
+    th, td {
+        border: 1px solid #dddddd;
+        padding: 8px;
+        text-align: left;
+        font-size: 13px;
+    }
+
+    th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .container {
+        margin-top: 10px;
+        font-size: 14px; /* Increased for better readability */
+    }
+
+    .filters-wrapper {
+        margin-top: 10px;
+    }
+
+    .dropdown {
+        display: inline-block;
+        width: 100%; /* Full width for responsiveness */
+    }
+
+    .dropdown input[type="text"] {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .dropdown-content {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background: #fff;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        max-height: 200px;
+        overflow-y: auto;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+    }
+
+    .dropdown-content label {
+        display: block;
+        padding: 8px 12px;
+        margin: 0;
+        font-size: 14px;
+        cursor: pointer;
+    }
+
+    .dropdown-content label:hover {
+        background-color: #f7f7f7;
+    }
+
+    .dropdown-content input[type="checkbox"] {
+        margin-right: 8px;
+    }
+
+    .filter-row {
+        display: flex;
+        flex-wrap: wrap; /* Allow wrapping for smaller screens */
+        gap: 10px; /* Consistent spacing */
+        margin-bottom: 10px;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px; /* Ensure minimum width for smaller screens */
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .action-buttons button, .action-buttons input[type="submit"] {
+        padding: 8px 12px;
+        font-size: 14px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        background-color: #007bff;
+        color: white;
+        transition: background-color 0.3s ease;
+    }
+
+    .action-buttons button:hover, .action-buttons input[type="submit"]:hover {
+        background-color: #0056b3;
+    }
+
+    .toggle-btn {
+        display: inline-block;
+        padding: 8px 16px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        background-color: #f1f1f1;
+        color: #333;
+        text-align: center;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .toggle-btn:hover {
+        background-color: #e0e0e0;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .toggle-btn:focus {
+        outline: none;
+        box-shadow: 0 0 5px 2px rgba(0, 0, 255, 0.5);
+    }
+</style>
+
+<script>
+    function toggleDisplay(buttonId, containerId, showText, hideText) {
+        const button = document.getElementById(buttonId);
+        const container = document.getElementById(containerId);
+
+        if (container.style.display === 'none' || container.style.display === '') {
+            container.style.display = 'block';
+            button.textContent = hideText;
+        } else {
+            container.style.display = 'none';
+            button.textContent = showText;
+        }
+    }
+
+    document.getElementById('toggle-filters-btn').addEventListener('click', function () {
+        toggleDisplay('toggle-filters-btn', 'filters-container', 'Hide Filters', 'Show Filters');
+    });
+
+    // Example functions for buttons
+    function clearFilters() {
+        console.log('Filters cleared');
+    }
+
+    function exportToCsv() {
+        console.log('Exporting to CSV');
+    }
+
+    function exportToPdf() {
+        console.log('Exporting to PDF');
+    }
+</script>

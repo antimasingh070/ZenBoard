@@ -206,6 +206,15 @@ module Redmine
         menu.push :help, {:controller => 'welcome', :action => 'help'}, :caption => "Home", :first => true
       end
 
+      MenuManager.map :project_score_card_menu do |menu|
+        menu.push :psc_overview, { controller: 'welcome', action: 'psc_overview' },
+                  caption: 'Overview'
+        menu.push :psc_metrics, { controller: 'welcome', action: 'psc_metrics' },
+                  caption: 'Metrics'
+        menu.push :psc_reports, { controller: 'welcome', action: 'psc_reports' },
+                  caption: 'Reports'
+      end
+      
       MenuManager.map :account_menu do |menu|
         menu.push :login, :signin_path, :if => Proc.new {!User.current.logged?}
         menu.push :register, :register_path,

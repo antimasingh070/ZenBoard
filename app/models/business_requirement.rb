@@ -28,7 +28,7 @@ class BusinessRequirement< ActiveRecord::Base
 
     IDENTIFIER_MAX_LENGTH = 50
     has_many :br_stakeholders, dependent: :destroy
-
+    has_many :status_logs, dependent: :destroy
     has_many :attachments, as: :container, dependent: :destroy
     accepts_nested_attributes_for :attachments, allow_destroy: true
 
@@ -62,7 +62,7 @@ class BusinessRequirement< ActiveRecord::Base
     def add_pmo
       begin
         group = Group.find_by_lastname("PMO")
-        user_ids = group.users.pluck(:id) if group.present?
+        user_ids = group.users.where(status: 1).pluck(:id) if group.present?
         role_id = Role.find_by(name: "PMO")&.id
         user_ids.each do |user_id|
             br_stakeholder = BrStakeholder.find_or_create_by(user_id: user_id, role_id: role_id, business_requirement_id: self.id)

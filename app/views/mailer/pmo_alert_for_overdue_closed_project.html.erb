@@ -1,0 +1,92 @@
+<h1 style="font-family: Arial, sans-serif; color: #333;">Hi All,</h1>
+<% @projects = Project.where(id: @project_ids)
+def date_value(project, field_name)
+    custom_field = CustomField.find_by(name: field_name)
+    custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
+    date_string = custom_value&.value
+  end
+
+  def custom_field_value(project, field_name)
+    if field_name == "Project Activity"
+      custom_field = CustomField.find_by(name: field_name)
+      return "" unless custom_field
+      # Fetch issues with the specific status and tracker ID
+      issues = project.issues.where(status: 5, tracker_id: 2).includes(:custom_values)
+      custom_field_id = CustomField.find_by(name: "Actual End Date")&.id
+
+      if custom_field_id
+        sorted_issues = issues.sort_by do |issue|
+          end_date_value = issue.custom_values.find { |cv| cv.custom_field_id == custom_field_id }&.value
+          begin
+            end_date_value ? Date.parse(end_date_value) : nil
+          rescue ArgumentError
+            # Handle parsing errors by returning nil
+            nil
+          end
+        end
+        last_issue_id = sorted_issues.last&.id
+      end
+      last_issue = sorted_issues.last
+    end
+  end
+
+   %>
+
+<table class="list issue-report" style="width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; margin: 20px 0;">
+    <thead>
+        <tr style="background-color: #f4f4f4; color: #333; font-weight: bold;">
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Issue ID</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Subject</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Tracker</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Project Name</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Revised End Date/Actual End Date</th>
+            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Last Completed Activity Due Date</th>
+            
+        </tr>
+    </thead>
+    <tbody>
+    <% @projects.each do |project| %>
+        <% revised_end_date = date_value(project, "Revised End Date") %>
+        <% actual_end_date = date_value(project, "Revised End Date") %>
+        <% last_completed_activity = custom_field_value(project, "Project Activity") %>
+      
+        <% if last_completed_activity.present? && (revised_end_date.present? || actual_end_date.present?) %>
+          <% 
+            # Convert revised_end_date and actual_end_date to Date objects
+            revised_end_date = revised_end_date.to_date
+            actual_end_date = actual_end_date.to_date
+          %>
+          <% if last_completed_activity.due_date > (revised_end_date || actual_end_date) %>
+            <tr style="background-color: <%= cycle('#ffffff', '#f9f9f9') %>; color: #555;">
+                <td style="border: 1px solid #ddd; padding: 10px;"><%= last_completed_activity.id %></td>
+                <td style="border: 1px solid #ddd; padding: 10px;"><%= last_completed_activity.subject %></td>
+                <td style="border: 1px solid #ddd; padding: 10px;"><%= last_completed_activity.tracker.name %></td>
+                <td style="border: 1px solid #ddd; padding: 10px;"><%= Project.find_by(id: last_completed_activity.project_id).name %></td>
+                <td style="border: 1px solid #ddd; padding: 10px;"><%= "#{revised_end_date.strftime("%d %b %Y")} / #{actual_end_date.strftime("%d %b %Y")}" %></td>
+                <td style="border: 1px solid #ddd; padding: 10px;"><%= last_completed_activity.due_date.strftime("%d %b %Y")  %></td>
+       
+            </tr>
+          <% end %>
+        <% end %>
+      <% end %>
+    </tbody>
+</table>
+
+<p style="font-family: Arial, sans-serif; margin: 20px 0 0; color: #555;">
+    Regards, <br>
+    <strong>PMO</strong>
+</p>
+<span style="font-family: Arial, sans-serif; color: #888;">nknkc</span>
+
+<style>
+    * {
+        font-size: 14px;
+        box-sizing: border-box;
+    }
+    table.list.issue-report {
+        border: 1px solid #ddd;
+    }
+    table.list.issue-report th, table.list.issue-report td {
+        text-align: left;
+    }
+</style>

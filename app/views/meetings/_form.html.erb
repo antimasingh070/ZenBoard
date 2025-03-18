@@ -23,7 +23,7 @@
           <%= hidden_field_tag "meeting[meeting_attendees_attributes][#{index}][id]", attendee.id %>
           <p>
             <label for="attendee_user_id_<%= index %>">Attendee</label>
-            <%= select_tag "meeting[meeting_attendees_attributes][#{index}][user_id]", options_from_collection_for_select(User.all, :id, :name, attendee.user_id), class: 'form-control' %>
+            <%= select_tag "meeting[meeting_attendees_attributes][#{index}][user_id]", options_from_collection_for_select(User.where(status: 1, id: @meeting.business_requirement.br_stakeholders.pluck(:user_id)), :id, :name, attendee.user_id), class: 'form-control' %>
 
             <% @business_requirement =BusinessRequirement.find_by(id: @meeting.business_requirement_id) %>
             <%= link_to 'Remove Attendee', business_requirement_meeting_meeting_attendee_path(@business_requirement, @meeting, attendee), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm' %>
@@ -79,7 +79,8 @@ function exportToCsv() {
           <p>
             <label for="attendee_user_id_${attendeeIndex}">Attendee</label><br>
             <select name="meeting[meeting_attendees_attributes][${attendeeIndex}][user_id]" id="attendee_user_id_${attendeeIndex}" class="form-control">
-              <% User.all.each do |user| %>
+              <% users = User.where(status: 1, id: @meeting.business_requirement.br_stakeholders.pluck(:user_id)) %> 
+              <% users.each do |user| %>
                 <option value="<%= user.id %>"><%= user.name %></option>
               <% end %>
             </select>

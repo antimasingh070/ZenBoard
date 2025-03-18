@@ -36,6 +36,9 @@ root to: 'my#page', as: 'home'
   get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
   get 'project_score_card', to: 'welcome#project_score_card'
+  get 'welcome/psc_overview', to: 'welcome#psc_overview', as: 'psc_overview'
+  get 'welcome/reports', to: 'welcome#reports', as: 'reports'
+  get 'welcome/resource_management', to: 'welcome#resource_management', as: 'resource_management'
   get 'export_all_it', :to => 'welcome#export_all_it'
   get 'export_all_non_it', :to => 'welcome#export_all_non_it'
   get 'help', to: 'welcome#help'
@@ -149,6 +152,9 @@ root to: 'my#page', as: 'home'
   post 'watchers', :to => 'watchers#create'
   post 'watchers/append', :to => 'watchers#append'
   delete 'watchers', :to => 'watchers#destroy'
+  post '/update_charts', to: 'welcome#update_charts'
+  get 'export_projects_to_csv', to: 'welcome#export_projects_to_csv'
+   get 'export_project_score_to_csv', to: 'welcome#export_project_score_to_csv'
   get 'watchers/autocomplete_for_mention', to: 'watchers#autocomplete_for_mention', via: [:get]
   get 'watchers/autocomplete_for_user', :to => 'watchers#autocomplete_for_user'
   # Specific routes for issue watchers API
@@ -160,10 +166,9 @@ root to: 'my#page', as: 'home'
     member do
       post 'send_email'
       post 'add_attachment'
-      get 'accept'
-      patch 'hold'
-      patch 'accept'
-      patch 'decline'
+      match 'hold', :via => [:post, :put]
+      match 'accept', :via => [:post, :put]
+      match 'decline', :via => [:post, :put]
     end
     collection do
       get :export_all  # Define a new route for exporting all data

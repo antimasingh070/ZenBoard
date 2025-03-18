@@ -1,3 +1,62 @@
+<div id="loginChart" style="width: 100%; height: 400px;"></div>
+<%= javascript_include_tag "https://code.highcharts.com/highcharts.js" %>
+<%= javascript_include_tag "https://code.highcharts.com/modules/annotations.js" %>
+
+<script>
+  const loginData = <%= @chart_data.to_json.html_safe %>;
+  const annotations = <%= @annotations.to_json.html_safe %>;
+
+  Highcharts.chart('loginChart', {
+    credits: {
+      enabled: false
+    },
+    chart: {
+      type: 'area' // Makes the area under the line filled
+    },
+    title: {
+      text: 'Daily User Logins'
+    },
+    xAxis: {
+      categories: loginData.map(data => data.date),
+      title: {
+        text: 'Date'
+      }
+    },
+    yAxis: {
+      title: {
+        text: 'Number of Logins'
+      },
+      allowDecimals: false
+    },
+    tooltip: {
+      headerFormat: '<b>Date:</b> {point.key}<br>',
+      pointFormat: '<b>Logins:</b> {point.y}'
+    },
+    series: [{
+      name: 'Logins',
+      data: loginData.map(data => data.count),
+      lineWidth: 2,
+      color: Highcharts.getOptions().colors[0], // Line color
+      fillColor: 'lightblue', // Solid dark red fill (no gradient)
+      threshold: null 
+    }],
+    annotations: [{
+      labels: annotations.map(annotation => ({
+        point: annotation.point,
+        text: annotation.text,
+        backgroundColor: 'rgba(255,255,0,0.8)',
+        style: {
+          color: '#000'
+        }
+      }))
+    }]
+  });
+
+
+</script>
+
+
+
 <div style="width: 100%; max-width: 1400px; max-height: 200px; margin: 5px auto; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
   <div style="padding: 10px;">
     <h5>Filter Activity Logs</h5>

@@ -43,7 +43,7 @@
     <!-- Row for Date -->
     <tr style="background-color: #99AFD7; color: #333;"> <!-- Light Orange -->
       <th colspan="1">Date</th>
-      <th colspan="5"><%= Date.today.strftime("%d/%m/%Y") %></th>
+      <th colspan="5"><%= @meeting.scheduled_at.strftime("%d %b %Y") %></th>
     </tr>
     <!-- Row for Meeting Objective -->
     <tr style="background-color: #99AFD7; color: #333;"> <!-- Light Orange -->

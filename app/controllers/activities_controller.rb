@@ -25,6 +25,7 @@ class ActivitiesController < ApplicationController
   def index
     @days = Setting.activity_days_default.to_i
 
+  
     if params[:from]
       begin; @date_to = params[:from].to_date + 1; rescue; end
     end

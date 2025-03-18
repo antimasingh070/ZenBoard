@@ -1,0 +1,36 @@
+<h2>Project Score Card Overview</h2>
+<p>Yahaan Overview content aayega.</p>
+<div class="project-scorecard"><br>
+<div>
+  <% @project_statuses.each do |status| %>
+    <div id="status-<%= status[:id] %>-table" class="chart-projects" >
+      <h2><%= status[:name] %></h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Project</th>
+            <th>Scheduled End</th>
+            <th>Actual End</th>
+            <th>Rag Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if status[:projects].blank? %>
+            <tr>
+              <td colspan="4" style="text-align: center;">No records to display.</td>
+            </tr>
+          <% else %>
+            <% status[:projects].each do |project| %>
+              <tr>
+                <td><%= link_to project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                <td><%= project[:scheduled_end_date] %></td>
+                <td><%= project[:actual_end_date] %></td>
+                <td></td>
+              </tr>
+            <% end %>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  <% end %>
+  </div>

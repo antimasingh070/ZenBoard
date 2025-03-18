@@ -14,6 +14,10 @@ end
 every :monday, at: '9am' do
   runner "SchedulerReport.send_issue_lists"
 end
+
+every :monday, at: '9am' do
+  runner "SchedulerReport.pmo_alert_for_overdue_closed_project"
+end
 # every :thursday, at: '12am' do
 #   rake 'reports:generate_reports'
 # end

@@ -1,0 +1,285 @@
+<%
+
+
+
+def member_names(project, field_name)
+    role = Role.find_by(name: field_name)
+  
+    member_role_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
+    member_ids = Member.where(project_id: project.id, id: member_role_ids).pluck(:user_id)
+  
+    if member_ids.present?
+      users = User.where(id: member_ids)
+      full_names = users.pluck(:firstname, :lastname)
+      return full_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
+    else
+      return []
+    end
+end  
+
+
+  
+
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Dashboard</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    th, td {
+      border: 1px solid #dddddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    .filters {
+      margin-bottom: 20px;
+    }
+
+    .filters label {
+      margin-right: 10px;
+      font-size: 14px;
+    }
+
+    .filters select {
+      padding: 5px;
+      font-size: 14px;
+      margin-right: 20px;
+    }
+    .project-owner {
+        visibility: visible;
+      }
+    
+      tr:not(:first-child) .project-owner {
+        visibility: hidden;
+      }
+  </style>
+</head>
+<body>
+  <!-- Filters Section -->
+  <div class="filters">
+    <label for="role-filter">Role:</label>
+    <select id="role-filter" multiple>
+      <% @roles.each do |role| %>
+        <option value="<%= role %>"><%= role %></option>
+      <% end %>
+    </select>
+
+    <label for="member-filter">Member:</label>
+    <select id="member-filter" multiple>
+      <!-- Member options will be dynamically populated based on the selected Role -->
+    </select>
+  </div>
+<div style="margin-bottom: 20px;">
+  <button id="export-csv" onclick="exportToCSV()">Export to CSV</button>
+</div>
+
+  <!-- Table Section -->
+ <table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Project Owner</th>
+      <th>Project Manager</th>
+      <th>Project Assigned</th>
+      <th>% Work Allocation</th>
+      <th>Last Activity Due Date (Projects)</th>
+      <th>Last Activity Due Date (Tasks)</th>
+      <th>Total Hours/Month (Project Overview)</th>
+      <th>Total Hours/Month (Assigned Activity)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @program_managers.each do |program_manager| %>
+      <% project_managers_data = get_project_manager_for_program_manager(@projects, program_manager) %>
+      <% project_managers = project_managers_data[:project_managers] %>
+      <% if project_managers.any? %>
+        <% project_managers.each_with_index do |project_manager, index| %>
+          <% project_manager_projects = Project.where(id: project_managers_data[:project_ids]).select { |project| member_names(project, 'Project Manager').include?(project_manager) } %>
+          <% project_count = project_manager_projects.count %>
+          <% duration = working_duration_across_projects(project_manager_projects) %>
+          <% tasks_duration = working_duration_across_assigned_tasks(project_manager_projects, project_manager) %>
+          <tr data-program-manager="<%= program_manager %>" data-project-manager="<%= project_manager %>">
+      
+              <td><%= program_manager %></td>
+       
+            <td><%= project_manager %></td>
+            <td><%= link_to project_count, "http://localhost:3000/it_project_dashboard?show_subprojects=false&function_filter=&function_filter=&status_filter=&function_filter=&manager_filter=#{program_manager}&manager_filter=#{project_manager}&start_date_from=&start_date_to=&end_date_from=&end_date_to=" %></td>
+            <% total_work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation") %>
+            <td style="font-size: 10px;"><%= total_work_allocation.empty? ? "" : total_work_allocation.flatten.join(", ") %></td>
+            <% last_completed_activity = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date") %>
+            <td style="font-size: 10px;"><%= last_completed_activity %></td>
+            <% last_completed_activity = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity") %>
+            <td style="font-size: 10px;"><%= last_completed_activity %></td>
+            <td style="font-size: 10px;"><%= duration %></td>
+            <td style="font-size: 10px;"><%= tasks_duration %></td>
+          </tr>
+        <% end %>
+      <% else %>
+        <tr data-program-manager="<%= program_manager %>">
+          <td class="project-owner"><%= program_manager %></td>
+          <td colspan="7">No Project Managers found</td>
+        </tr>
+      <% end %>
+    <% end %>
+  </tbody>
+</table>
+  <script>
+    // JavaScript function to export table data to CSV with selected filters
+    function exportToCSV() {
+      const selectedRoles = Array.from(document.getElementById('role-filter').selectedOptions).map(option => option.value);
+      const selectedMembers = Array.from(document.getElementById('member-filter').selectedOptions).map(option => option.value);
+
+      // Redirect to export action with the selected filters as query parameters
+      let url = `/export_projects_to_csv?roles=${encodeURIComponent(selectedRoles.join(','))}&members=${encodeURIComponent(selectedMembers.join(','))}`;
+      window.location.href = url; // Trigger CSV export with filters
+    }
+  </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const roleFilter = document.getElementById('role-filter');
+      const memberFilter = document.getElementById('member-filter');
+      const tableRows = document.querySelectorAll('tbody tr');
+
+      // Mapping of Roles to Members
+      const roleToMembers = {
+        <% @roles.each do |role| %>
+          "<%= role %>": <%= raw member_names_by_role(@projects, role).to_json %>,
+        <% end %>
+      };
+
+      // Function to update Member filter options based on selected Roles
+      function updateMemberFilter() {
+        const selectedRoles = Array.from(roleFilter.selectedOptions).map(option => option.value);
+        const allMembers = selectedRoles.flatMap(role => roleToMembers[role] || []);
+
+        // Clear existing options
+        memberFilter.innerHTML = '';
+
+        // Add unique members
+        const uniqueMembers = [...new Set(allMembers)];
+        uniqueMembers.forEach(member => {
+          const option = document.createElement('option');
+          option.value = member;
+          option.textContent = member;
+          memberFilter.appendChild(option);
+        });
+      }
+
+      // Function to filter table rows based on selected Roles and Members
+      function filterTable() {
+        const selectedRoles = Array.from(roleFilter.selectedOptions).map(option => option.value);
+        const selectedMembers = Array.from(memberFilter.selectedOptions).map(option => option.value);
+
+        tableRows.forEach(row => {
+          const rowProgramManager = row.getAttribute('data-program-manager');
+          const rowProjectManager = row.getAttribute('data-project-manager');
+
+          const showRow =
+            (selectedRoles.length === 0 || selectedMembers.some(member => rowProgramManager.includes(member) || rowProjectManager.includes(member)));
+
+          row.style.display = showRow ? '' : 'none';
+        });
+      }
+
+      // Event listeners
+      roleFilter.addEventListener('change', function () {
+        updateMemberFilter();
+        filterTable();
+      });
+
+      memberFilter.addEventListener('change', filterTable);
+
+      // Initialize filters
+      updateMemberFilter();
+      filterTable();
+    });
+  </script>
+
+  <!-- JavaScript for Dynamic Filtering -->
+<script>
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const programManagerFilter = document.getElementById('program-manager-filter');
+    const projectManagerFilter = document.getElementById('project-manager-filter');
+    const tableRows = document.querySelectorAll('tbody tr');
+
+    // Mapping of Program Managers to Project Managers
+    const programToProjectManagers = {
+      <% @program_managers.each do |program_manager| %>
+        "<%= program_manager %>": <%= raw get_project_manager_for_program_manager(@projects, program_manager)[:project_managers].to_json %>,
+      <% end %>
+    };
+
+    // Function to update Project Manager filter options
+    function updateProjectManagerFilter() {
+      const selectedProgramManagers = Array.from(programManagerFilter.selectedOptions).map(option => option.value);
+      const allProjectManagers = selectedProgramManagers.flatMap(pm => programToProjectManagers[pm] || []);
+
+      // Clear existing options
+      projectManagerFilter.innerHTML = '';
+
+      // Add unique project managers
+      const uniqueProjectManagers = [...new Set(allProjectManagers)];
+      uniqueProjectManagers.forEach(pm => {
+        const option = document.createElement('option');
+        option.value = pm;
+        option.textContent = pm;
+        projectManagerFilter.appendChild(option);
+      });
+    }
+
+    // Function to filter table rows based on selected Program Managers and Project Managers
+    function filterTable() {
+      const selectedProgramManagers = Array.from(programManagerFilter.selectedOptions).map(option => option.value);
+      const selectedProjectManagers = Array.from(projectManagerFilter.selectedOptions).map(option => option.value);
+
+      tableRows.forEach(row => {
+        const rowProgramManager = row.getAttribute('data-program-manager');
+        const rowProjectManager = row.getAttribute('data-project-manager');
+
+        const showRow =
+          (selectedProgramManagers.length === 0 || selectedProgramManagers.includes(rowProgramManager)) &&
+          (selectedProjectManagers.length === 0 || selectedProjectManagers.includes(rowProjectManager));
+
+        row.style.display = showRow ? '' : 'none';
+      });
+
+      // Ensure Project Owner cells are visible after filtering
+      document.querySelectorAll('.project-owner').forEach(cell => {
+        cell.style.visibility = 'visible';
+      });
+    }
+
+    // Event listeners
+    programManagerFilter.addEventListener('change', function () {
+      updateProjectManagerFilter();
+      filterTable();
+    });
+
+    projectManagerFilter.addEventListener('change', filterTable);
+
+    // Initialize filters
+    updateProjectManagerFilter();
+    filterTable();
+  });
+</script>
+</body>
+</html>

@@ -37,7 +37,9 @@ class ImportsController < ApplicationController
     @import.user = User.current
     @import.file = params[:file]
     @import.set_default_settings(:project_id => params[:project_id])
-    @import.settings["date_format"] = "%d/%m/%Y"
+    # @import.settings["date_format"] = "%d/%m/%Y"
+    @import.settings["date_format"] =  "%m/%d/%Y"
+
     if @import.save
       redirect_to import_settings_path(@import)
     else

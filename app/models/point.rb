@@ -3,7 +3,7 @@ class Point < ActiveRecord::Base
     belongs_to :mom
     has_many :remarks, dependent: :destroy
   
-    validates :description, presence: true
+    validates :description, :timeline, presence: true
     # validates :status, presence: true
     STATUS_APPROVED     = 1
     STATUS_REJECTED     = 2

@@ -109,11 +109,12 @@ module ActionView
           if custom_field&.name&.in? ["Scheduled Start Date", "Scheduled End Date"]
             if !User.current.admin?
               @members = Member.where(project_id: @project.id)
-              @pmo_present = @members.any? { |member| member.user_id == User.current.id && member.roles.pluck(:name).include?("PMO") }
-              
-              options[:disabled] = true unless @pmo_present
+              @role_present = @members.any? do |member|
+                member.user_id == User.current.id && member.roles.pluck(:name).any? { |role| role.in?(["PMO", "Program Manager"]) }
+              end
+              options[:disabled] = true unless @role_present
             end
-          end
+          end          
         end
         date_field_tag_without_max(name, value, options)
       end

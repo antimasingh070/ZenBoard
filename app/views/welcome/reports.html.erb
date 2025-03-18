@@ -1,0 +1,229 @@
+<%
+
+
+
+def member_names(project, field_name)
+    roles = Role.find_by(name: field_name)
+  
+    member_role_ids = MemberRole.where(role_id: roles.id).pluck(:member_id)
+    member_ids = Member.where(project_id: project.id, id: member_role_ids).pluck(:user_id)
+  
+    if member_ids.present?
+      users = User.where(id: member_ids)
+      full_names = users.pluck(:firstname, :lastname)
+      return full_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
+    else
+      return []
+    end
+end  
+  
+def fetch_project_by_role_and_member_name(selected_role, selected_member)
+  role = Role.find_by(name: selected_role)
+  firstname, lastname = selected_member.to_s.split(' ', 2)
+  user = User.find_by(firstname: firstname, lastname: lastname)
+
+  @projects = @projects.joins(members: :roles).where(roles: { id: role.id }) if role
+  @projects = @projects.joins(:members).where(members: { user_id: user.id }) if user
+  @projects = @projects.joins(members: :roles).where(roles: { id: role.id }, members: { user_id: user.id }) if role && user
+
+  @projects
+end
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Dashboard</title>
+  <style>
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    th, td {
+      border: 1px solid #dddddd;
+      padding: 8px;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    .filters {
+      margin-bottom: 20px;
+    }
+
+    .filters label {
+      margin-right: 10px;
+      font-size: 14px;
+    }
+
+    .filters select {
+      padding: 5px;
+      font-size: 14px;
+      margin-right: 20px;
+    }
+    .project-owner {
+        visibility: visible;
+      }
+    
+      tr:not(:first-child) .project-owner {
+        visibility: hidden;
+      }
+  </style>
+</head>
+<body>
+  <!-- Filters Section -->
+<form action="" method="get" class="filter-form">
+  <div class="filter-container">
+    <!-- Role Filter -->
+    <div class="filter-row">
+      <div class="filter-group">
+        <label for="role_filter">Role:</label>
+        <select name="role_filter" id="role_filter">
+          <option value="">All</option>
+          <% @roles.each do |role| %>
+            <option value="<%= role %>" <%= 'selected' if params[:role_filter] == role %>><%= role %></option>
+          <% end %>
+        </select>
+      </div>
+      <!-- Member Filter -->
+      <div class="filter-group">
+        <label for="member_filter">Member:</label>
+        <select name="member_filter" id="member_filter">
+          <option value="">All</option>
+          <% @members.each do |member| %>
+            <option value="<%= member %>" <%= 'selected' if params[:member_filter] == member %>><%= member %></option>
+          <% end %>
+        </select>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-group">
+    <input type="submit" value="Filter">
+      <button type="button" onclick="clearFilters()" class="btn secondary">Clear</button>
+    </div>
+  </div>
+</form>
+
+<div style="margin-bottom: 20px;">
+  <button id="export-csv" onclick="exportToCSV()">Export to CSV</button>
+</div>
+
+  <!-- Table Section -->
+ <table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Project Owner</th>
+      <th>Project Manager</th>
+      <th>Project Assigned</th>
+      <th>% Work Allocation</th>
+      <th>Last Activity Due Date (Projects)</th>
+      <th>Last Activity Due Date (Tasks)</th>
+      <th>Total Hours/Month (Project Overview)</th>
+      <th>Total Hours/Month (Assigned Activity)</th>
+    </tr>
+  </thead>
+  <tbody>
+          <% @projects = fetch_project_by_role_and_member_name(params[:roles], params[:members] ) %>
+          <% @projects.each do |project| %>
+            <% program_manager = member_names(project, "Program Manager") %>
+            <% project_manager = member_names(project, "Project Manager") %>
+            <% if project.present? %>
+              <% duration = working_duration_across_projects(project) %>
+              <% tasks_duration = working_duration_across_assigned_tasks(project, params[:roles], params[:members]) %>
+            <% else %>
+              <td colspan="2">No project data available</td>
+            <% end %>
+              <td><%= program_manager.join(", ")  %></td>
+        
+              <td><%= project_manager.join(", ") %></td>
+              <td>1</td>
+              <% total_work_allocation = total_work_allocation(params[:roles], params[:members], project, "Work Allocation") %>
+              <td style="font-size: 10px;"><%= total_work_allocation.empty? ? "" : total_work_allocation.flatten.join(", ") %></td>
+              <% last_completed_activity = last_activity_from_all_projects(params[:roles], params[:members], project, "Scheduled End Date") %>
+              <td style="font-size: 10px;"><%= last_completed_activity %></td>
+              <% last_completed_activity = last_activity_from_all_assigned_task(params[:roles], params[:members], project, "Project Activity") %>
+              <td style="font-size: 10px;"><%= last_completed_activity %></td>
+              <td style="font-size: 10px;"><%= duration %></td>
+              <td style="font-size: 10px;"><%= tasks_duration %></td>
+            </tr>
+          <% end %>  
+  </tbody>
+</table>
+</body>
+</html>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    // Initialize dropdowns
+    initializeDropdown("dropdown_content1");
+    initializeDropdown("dropdown_content2");
+
+    // Retain selected checkboxes
+    retainSelectedCheckboxes('roles[]', <%= params[:roles].to_json.html_safe %>);
+    retainSelectedCheckboxes('members[]', <%= params[:members].to_json.html_safe %>);
+  });
+
+  function initializeDropdown(dropdownId) {
+    let dropdown = document.getElementById(dropdownId);
+
+    // Keep dropdown open on click
+    document.querySelector(`#${dropdownId}`).closest(".dropdown").addEventListener("click", function(event) {
+      event.stopPropagation();
+      dropdown.style.display = (dropdown.style.display === "block") ? "none" : "block";
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function(event) {
+      if (!event.target.closest(".dropdown")) {
+        dropdown.style.display = "none";
+      }
+    });
+  }
+
+  function retainSelectedCheckboxes(name, selectedValues) {
+    selectedValues = new Set(selectedValues || []);
+    document.querySelectorAll(`input[name="${name}"]`).forEach(checkbox => {
+      if (selectedValues.has(checkbox.value)) {
+        checkbox.checked = true;
+      }
+    });
+  }
+
+  function filterDropdown(dropdownId) {
+    let input = document.getElementById(`search_input${dropdownId.slice(-1)}`).value.toLowerCase();
+    let options = document.querySelectorAll(`#${dropdownId} label`);
+
+    options.forEach(option => {
+      let text = option.textContent.toLowerCase();
+      option.style.display = text.includes(input) ? "" : "none";
+    });
+  }
+
+  function selectAll(checkbox, name) {
+    let checkboxes = document.querySelectorAll(`input[name="${name}"]`);
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+  }
+
+
+  function clearFilters() {
+    var programManager = document.getElementById('roles');
+    var projectManager = document.getElementById('members');
+    var formGroup = document.getElementById('form-group');
+    if (programManager) programManager.value = '';
+    if (projectManager) projectManager.value = '';
+    if (formGroup) formGroup.click();
+  }
+
+</script>

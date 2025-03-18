@@ -314,7 +314,6 @@ class Mailer < ActionMailer::Base
 
   # Builds a mail for notifying user about an issue update
   def issue_edit(user, journal)
-    # binding.pry
     issue = journal.journalized
     redmine_headers 'Project' => issue.project.identifier,
                     'Issue-Tracker' => issue.tracker.name,
@@ -998,11 +997,10 @@ class Mailer < ActionMailer::Base
     @meeting = Meeting.find_by(id: meeting)
     @points = Point.where(id: points)
     @attendees = User.where(id: attendees)
-   
-    mail_to = User.where(id: attendees).map(&:mail)
+    owner_ids = @points.map(&:owner_ids).flatten.uniq.reject(&:blank?)
+    mail_to = User.where(id: owner_ids + attendees).map(&:mail)
     @business_requirement = @meeting.business_requirement
-    
-    mail :to => "singhantima720@gmail.com", :subject => "MOM"
+    mail :to => "singhantima720@gmail.com", :subject => "BR ID - #{@business_requirement.identifier} #{@business_requirement.project_enhancement} | MOM"
   end 
 
   def self.deliver_send_mom(user, attendees, points, meeting)
@@ -1174,6 +1172,17 @@ class Mailer < ActionMailer::Base
     end
   end 
 
+  def pmo_alert_for_overdue_closed_project(user, project_ids)
+    @project_ids = project_ids  
+    mail(to: "singhantima720@gmail.com", subject: "<PMO> Alert Incorrect Projects Details")
+  end
+
+  def self.deliver_pmo_alert_for_overdue_closed_project(user, project_ids)
+    if Setting.notified_events.include?('pmo_alert_for_overdue_closed_project')
+      pmo_alert_for_overdue_closed_project(user, project_ids).deliver_now
+    end
+  end 
+
   def send_wsr_email(user, project)
     @project = project
     @members = Member.where(project_id: @project.id)
@@ -1210,7 +1219,8 @@ class Mailer < ActionMailer::Base
         @user = User.find(member.user_id)
       end
     end
-
+    assigned_to_ids = @issuues.pluck(:assigned_to_id)
+    mail_to = User.where(id: assigned_to_ids ).map(&:mail)
     # Adjust the recipient of the email based on project or member data
     @recipient_email = @members.pluck(:user_id).map { |user_id| User.find(user_id).mail }.join(",") # Pluck emails of all project members
     mail(to: "singhantima720@gmail.com", subject: "[Trackmine] Pending Activity List: #{@project.name} (due date passed)")

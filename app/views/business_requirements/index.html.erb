@@ -5,8 +5,10 @@
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
-<h1>Business Requirements</h1>
+
+<h1>Dashboard</h1>
 
 <!-- Responsive Business Requirements UI -->
 
@@ -20,66 +22,96 @@
             <!-- Requirement Case Filter -->
             <div class="col-md-4 mb-3 filter-group">
               <label class="filter-label" for="requirement_case">Requirement Case:</label>
-              <select name="requirement_case" id="requirement_case" class="form-control">
-                <option value="">All</option>
-                <% @requirement_case.each do |case_option| %>
-                  <option value="<%= case_option %>" <%= 'selected' if params[:requirement_case] == case_option %>><%= case_option %></option>
-                <% end %>
-              </select>
+              <div class="dropdown">
+                <input type="text" id="search_input1" placeholder="Search...">
+                <div id="dropdown_content1" class="dropdown-content">
+                  <label><input type="checkbox" name="requirement_case[]" value="all"> All</label>
+                  <% if @requirement_case.present? %>
+                    <% @requirement_case.each do |requirement_case| %>
+                      <label><input type="checkbox" name="requirement_case[]" value="<%= requirement_case %>"> <%= requirement_case %></label>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
             </div>
     
             <!-- Requirement Received From -->
             <div class="col-md-4 mb-3 filter-group">
               <label class="filter-label" for="requirement_received_from">Requirement Received From:</label>
-              <select name="requirement_received_from" id="requirement_received_from" class="form-control">
-                <option value="">All</option>
-                <% @requirement_received_from.each do |source| %>
-                  <option value="<%= source %>" <%= 'selected' if params[:requirement_received_from] == source %>><%= source %></option>
-                <% end %>
-              </select>
+              <div class="dropdown">
+                <input type="text" id="search_input2" placeholder="Search...">
+                <div id="dropdown_content2" class="dropdown-content">
+                  <label><input type="checkbox" name="requirement_received_from[]" value="all"> All</label>
+                  <% if @requirement_received_from.present? %>
+                    <% @requirement_received_from.each do |requirement_received_from| %>
+                      <label><input type="checkbox" name="requirement_received_from[]" value="<%= requirement_received_from %>"> <%= requirement_received_from %></label>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
             </div>
     
             <!-- Project/Enhancement -->
             <div class="col-md-4 mb-3 filter-group">
               <label class="filter-label" for="project_enhancement">Project/Enhancement:</label>
-              <select name="project_enhancement" id="project_enhancement" class="form-control">
-                <option value="">All</option>
-                <% @project_enhancement.each do |project| %>
-                  <option value="<%= project %>" <%= 'selected' if params[:project_enhancement] == project %>><%= project %></option>
-                <% end %>
-              </select>
+              <div class="dropdown">
+                <input type="text" id="search_input3" placeholder="Search...">
+                <div id="dropdown_content3" class="dropdown-content">
+                  <label><input type="checkbox" name="project_enhancement[]" value="all"> All</label>
+                  <% if @project_enhancement.present? %>
+                    <% @project_enhancement.each do |project_enhancement| %>
+                      <label><input type="checkbox" name="project_enhancement[]" value="<%= project_enhancement %>"> <%= project_enhancement %></label>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
             </div>
     
             <!-- Priority Level -->
             <div class="col-md-4 mb-3 filter-group">
               <label class="filter-label" for="priority_level">Priority Level:</label>
-              <select name="priority_level" id="priority_level" class="form-control">
-                <option value="">All</option>
-                <% @priority_level.each do |level| %>
-                  <option value="<%= level %>" <%= 'selected' if params[:priority_level] == level %>><%= level %></option>
-                <% end %>
-              </select>
+              <div class="dropdown">
+                <input type="text" id="search_input4" placeholder="Search...">
+                <div id="dropdown_content4" class="dropdown-content">
+                  <label><input type="checkbox" name="priority_level[]" value="all"> All</label>
+                  <% if @priority_level.present? %>
+                    <% @priority_level.each do |priority_level| %>
+                      <label><input type="checkbox" name="priority_level[]" value="<%= priority_level %>"> <%= priority_level %></label>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
             </div>
     
             <!-- Status -->
             <div class="col-md-4 mb-3 filter-group">
               <label class="filter-label" for="status">Status:</label>
-              <select name="status" id="status" class="form-control">
-                <option value="">All</option>
-                <% @statuses.each do |status_option| %>
-                  <option value="<%= status_option %>" <%= 'selected' if params[:status] == status_option %>><%= status_option %></option>
-                <% end %>
-              </select>
+              <div class="dropdown">
+                <input type="text" id="search_input5" placeholder="Search...">
+                <div id="dropdown_content5" class="dropdown-content">
+                  <label><input type="checkbox" name="statuses[]" value="all"> All</label>
+                  <% if @statuses.present? %>
+                    <% @statuses.each do |statuses| %>
+                      <label><input type="checkbox" name="statuses[]" value="<%= statuses %>"> <%= statuses %></label>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
             </div>
 
             <div class="col-md-4 mb-3 filter-group">
               <label class="filter-label" for="status">Project Manager:</label>
-              <select name="project_manager" id="status" class="form-control">
-                <option value="">All</option>
-                <% @project_manager_usernames.each do |username| %>
-                  <option value="<%= username %>" <%= 'selected' if params[:project_manager] == username %>><%= username %></option>
-                <% end %>
-              </select>
+              <div class="dropdown">
+                <input type="text" id="search_input6" placeholder="Search...">
+                <div id="dropdown_content6" class="dropdown-content">
+                  <label><input type="checkbox" name="project_manager_usernames[]" value="all"> All</label>
+                  <% if @project_manager_usernames.present? %>
+                    <% @project_manager_usernames.each do |project_manager_usernames| %>
+                      <label><input type="checkbox" name="project_manager_usernames[]" value="<%= project_manager_usernames %>"> <%= project_manager_usernames %></label>
+                    <% end %>
+                  <% end %>
+                </div>
+              </div>
             </div>
 
     
@@ -108,7 +140,7 @@
       <th class='export-csv'>Project/Enhancement</th>
       <th class='export-csv'>Priority Level</th>
       <th class='export-csv'>Status</th>
-      <th class='export-csv'>Program Manager</th>
+      <th class='export-csv'>Project Manager</th>
       <th colspan="3">Actions</th>
     </tr>
   </thead>
@@ -127,17 +159,17 @@
           <td class='export-csv'><%= business_requirement.priority_level %></td>
           <td class='export-csv'><%= BusinessRequirement::STATUS_MAP[business_requirement.status] %></td>
           <td class='export-csv'>
-          <% grouped_stakeholders = business_requirement.br_stakeholders
-                                                        .group_by { |stakeholder| stakeholder.role.name }
-                                                        .select { |role_name, _| role_name == 'Project Manager' } %>
+            <% grouped_stakeholders = business_requirement.br_stakeholders
+                                                          .group_by { |stakeholder| stakeholder.role.name }
+                                                          .select { |role_name, _| role_name == 'Project Manager' } %>
 
-          <ul>
-            <% grouped_stakeholders.each do |role_name, stakeholders| %>
-              <%= stakeholders.map { |stakeholder| stakeholder.user.name }.join(', ') %>
-              
-            <% end %>
-          </ul>
-        </td>
+            <ul>
+              <% grouped_stakeholders.each do |role_name, stakeholders| %>
+                <%= stakeholders.map { |stakeholder| stakeholder.user.name }.join(', ') %>
+                
+              <% end %>
+            </ul>
+          </td>
 
           <td>
             <%= link_to 'Show', business_requirement_path(business_requirement), class: 'btn btn-info btn-sm', title: 'Show Business Requirement' %>
@@ -152,66 +184,88 @@
             <% pmo_role_present = user_stakeholders.any? { |stakeholder| stakeholder.role.name == 'PMO' } %>
 
             <% if pmo_role_present || User.current.admin? %>
-              <%= link_to 'Accept', '#', class: 'btn btn-success btn-sm', title: 'Accept Business Requirement', data: { toggle: 'modal', target: "#acceptModal-#{business_requirement.id}" } %>
-              <%= link_to 'Decline', decline_business_requirement_path(business_requirement), method: :patch, class: 'btn btn-danger btn-sm', title: 'Decline Business Requirement' %>
-              <%= link_to 'Hold', hold_business_requirement_path(business_requirement), method: :patch, class: 'btn btn-danger btn-sm', title: 'Hold Business Requirement' %>
+               <%= link_to "Accept", "#", class: 'btn btn-success btn-sm', id: "acceptLink", title: "Accept Business Requirement" %>
+              <%= link_to "Hold", "#", class: 'btn btn-primary', id: "holdLink" %>
+              <%= link_to "Decline", "#", class: 'btn btn-primary', id: "declineLink" %>
             <% end %>
             <% end %>
           </td>
         </tr>
-
+        <%= stylesheet_link_tag "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" %>
+        <div id="holdModal" class="modal1">
+          <div class="modal-content1">
+            <span class="close">&times;</span>
+            <h2>Business Requirement on hold</h2>
+            <form id="holdForm" action="<%= hold_business_requirement_path(business_requirement) %>" method="post">
+              <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+              <label for="holdRemarks">Reason to Hold<sup>*</sup>:</label>
+              <textarea id="holdRemarks" name="remarks" required></textarea>
+              <button type="submit">Submit</button>
+            </form>
+          </div>
+        </div>
+        <div id="declineModal" class="modal1">
+          <div class="modal-content1">
+            <span class="close">&times;</span>
+            <h2>Business Requirement on decline</h2>
+            <form id="declineForm" action="<%= decline_business_requirement_path(business_requirement) %>" method="post">
+              <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+              <label for="declineRemarks">Reason to decline<sup>*</sup>:</label>
+              <textarea id="declineRemarks" name="remarks" required></textarea>
+              <button type="submit">Submit</button>
+            </form>
+          </div>
+        </div>
         <!-- Accept Modal -->
-        <div class="modal fade" id="acceptModal-<%= business_requirement.id %>" tabindex="-1" role="dialog" aria-labelledby="acceptModalLabel" aria-hidden="true">
-          <div class="modal-dialog" role="document">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h5 class="modal-title" id="acceptModalLabel">Accept Business Requirement</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                  <span aria-hidden="true">&times;</span>
-                </button>
-              </div>
-              <div class="modal-body">
-                <%= labelled_form_for(business_requirement, url: accept_business_requirement_path(business_requirement), method: :patch, html: { id: "acceptForm-#{business_requirement.id}" }) do |f| %>
-                  <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
-              <%= hidden_field_tag :id, business_requirement.id %>
-
-              <p><%= f.text_field :requirement_case, size: 60, class: 'form-control', placeholder: 'Enter the requirement_case here', required: true if business_requirement.requirement_case.blank? %></p>
-              <p><%= f.text_field :identifier, size: 30, class: 'form-control', placeholder: 'the identifier generate automatically', required: true, disabled: true  if business_requirement.identifier.blank? %></p>
-              <p><%= f.text_area :description, rows: 4, class: 'form-control', placeholder: 'Describe the Business Requirement here', required: true   if business_requirement.description.blank? %></p>
-              <p><%= f.text_field :cost_benefits, rows: 1, class: 'form-control', placeholder: 'Enter the cost benefits here' if business_requirement.cost_benefits.blank? %></p>
-              <p><%= f.select :status, options_for_select(BusinessRequirement::STATUS_MAP.map { |k, v| [v, k] }, business_requirement.status), {}, class: 'form-control' if business_requirement.status.blank? %></p>
-              <p><%= f.text_field :project_sponsor, rows: 1, class: 'form-control', placeholder: 'Enter project sponsor here' if business_requirement.project_sponsor.blank? %></p>
-              <% if business_requirement.project_category.blank? %>
-              <p><%= f.select :project_category, options_for_select([['', '']] + @project_categories.map { |category| [category, category] }, business_requirement.project_category), {}, class: 'form-control', required: true %>
+        <div id="acceptModal" class="modal1">
+          <div class="modal-content2">
+            <span class="close">&times;</span>
+            <h2>Accept Business Requirement</h2>
+            <div class="modal-body" >
+              <form id="acceptForm" action="<%= accept_business_requirement_path(business_requirement) %>" method="post">
+                <%= hidden_field_tag :authenticity_token, form_authenticity_token %>
+                
+                <label for="requirementCase">Requirement Case<sup>*</sup>:</label>
+                <input type="text" id="requirementCase" name="requirement_case" class="form-control" placeholder="Enter the requirement case" required>
+                
+                <label for="identifier">Identifier:</label>
+                <input type="text" id="identifier" name="identifier" class="form-control" placeholder="Generated automatically" disabled>
+                
+                <label for="description">Description<sup>*</sup>:</label>
+                <textarea id="description" name="description" class="form-control" rows="4" placeholder="Describe the Business Requirement" required></textarea>
+                
+                <label for="costBenefits">Cost Benefits:</label>
+                <input type="text" id="costBenefits" name="cost_benefits" class="form-control" placeholder="Enter the cost benefits">
+                
+                <label for="status">Status:</label>
+                <select id="status" name="status" class="form-control">
+                  <%= options_for_select(BusinessRequirement::STATUS_MAP.map { |k, v| [v, k] }) %>
+                </select>
+                
+                <label for="projectSponsor">Project Sponsor:</label>
+                <input type="text" id="projectSponsor" name="project_sponsor" class="form-control" placeholder="Enter project sponsor">
+                
+                <label for="projectCategory">Project Category<sup>*</sup>:</label>
+                <select id="projectCategory" name="project_category" class="form-control" required>
+                  <%= options_for_select([['', '']] + (@project_categories.presence&.map { |c| [c, c] } || []), business_requirement.project_category)  %>
+                </select>
                 <p class="text-danger">This field is required.</p>
-              <% end %></p>
-              <% if business_requirement.priority_level.blank? %>
-              <p><%= f.select :priority_level, options_for_select([['', '']] + @priority_level.map { |level| [level, level] }, business_requirement.priority_level), {}, class: 'form-control', required: true %>
-                <p class="text-danger">This field is required.</p>
-              <% end %></p>
-              <p><%= f.select :template, options_for_select([['', '']] + @template.map { |template| [template, template] }, business_requirement.template), {}, class: 'form-control' if business_requirement.template.blank? %></p>
-              <% if business_requirement.portfolio_category.all?(&:blank?) %>
-              <p><%= f.select :portfolio_category, options_for_select(@portfolio_categories, business_requirement.portfolio_category), {}, { multiple: true, class: 'form-control', prompt: '' } %><p class="text-danger">This field is required.</p>
-              <% end %></p>
-              <% if business_requirement.requirement_received_from.all?(&:blank?) %>
-              <p><%= f.select :requirement_received_from, options_for_select(@requirement_received_from, business_requirement.requirement_received_from), {}, { multiple: true, class: 'form-control', prompt: '' } %><p class="text-danger">This field is required.</p>
-              <% end %></p>
-              <p><%= f.select :application_name, options_for_select(@application_name, business_requirement.application_name), {}, { multiple: true, class: 'form-control', prompt: '' } if business_requirement.application_name.all?(&:blank?) %></p>
-
-              <div class="row">
-                <div class="col-md-6">
-                  <p><%= f.date_field :requirement_submitted_date, required: true, class: 'form-control' if business_requirement.requirement_submitted_date.blank? %></p>
-                  <p><%= f.date_field :scheduled_end_date, class: 'form-control' if business_requirement.scheduled_end_date.blank? %></p>
-                </div>
-              </div>
-              <p><%= f.text_area(:business_need_as_per_business_case, rows: 2, required: true, class: 'form-control', placeholder: 'State the business need here') if business_requirement.business_need_as_per_business_case.blank? %></p>
-              <p><%= f.check_box :is_it_project, label: "Is IT Project?", required: true, class: 'form-check-input' if business_requirement.is_it_project.blank? %></p>
-              <div >
-                <%= f.submit 'Submit', class: 'btn btn-primary' %>
-              </div>
-            <% end %>
-              </div>
-
+                
+                
+                <label for="requirementSubmittedDate">Requirement Submitted Date<sup>*</sup>:</label>
+                <input type="date" id="requirementSubmittedDate" name="requirement_submitted_date" class="form-control" required>
+                
+                <label for="scheduledEndDate">Scheduled End Date:</label>
+                <input type="date" id="scheduledEndDate" name="scheduled_end_date" class="form-control">
+                
+                <label for="businessNeed">Business Need<sup>*</sup>:</label>
+                <textarea id="businessNeed" name="business_need_as_per_business_case" class="form-control" rows="2" placeholder="State the business need here" required></textarea>
+                
+                <label for="isItProject">Is IT Project?<sup>*</sup>:</label>
+                <input type="checkbox" id="isItProject" name="is_it_project" class="form-check-input" required>
+                
+                <button type="submit">Submit</button>
+              </form>
             </div>
           </div>
         </div>
@@ -231,212 +285,524 @@
 <% end %>
 
 <style>
-.container {
-  margin-top: 10px;
-  font-size: 9px;
-  display: flex;
-}
-  .toggle-btn {
+
+  /* Container for dropdown */
+  .dropdown {
+    position: relative;
     display: inline-block;
-    padding: 6px 12px; /* Smaller padding */
+    width: 300px; /* Wider for better readability */
+  }
+
+  #search_input {
+    width: 100px; /* Full width to match dropdown */
+    padding: 8px;
     border: 1px solid #ccc;
-    border-radius: 20px; /* Smaller rounded corners */
-    font-size: 10px; /* Smaller font size */
-    font-weight: 400; /* Reduced font weight */
-    cursor: pointer;
-    background-color: #f1f1f1;
-    color: #333;
-    text-align: center;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Reduced shadow size */
+    border-radius: 4px;
+    box-sizing: border-box;
   }
 
-  .toggle-btn:hover {
-    background-color: #e0e0e0;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Slightly enhanced shadow */
+  .dropdown-content {
+    display: none; /* Default hidden, shown dynamically */
+    position: absolute;
+    top: calc(100% + 4px); /* Slight gap from the input box */
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px; /* Rounded corners for better UI */
+    max-height: 200px; /* Slightly taller for more options */
+    overflow-y: auto; /* Scrollable when content exceeds height */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for better visibility */
+    z-index: 10;
   }
 
-  .toggle-btn:focus {
-    outline: none;
-    box-shadow: 0 0 5px 2px rgba(0, 0, 255, 0.5);
+  .dropdown-content label {
+    display: block;
+    padding: 6px 12px;
+    margin: 0; /* Maintain consistent spacing */
+    font-size: 14px; /* Slightly larger text for readability */
+    cursor: pointer; /* Indicate clickable items */
   }
 
-  #toggle-filters-btn, #toggle-rag-btn {
-    float: right;
-    background-color: #f1f1f1;
+  .dropdown-content label:hover {
+    background-color: #f7f7f7; /* Highlight on hover */
   }
-  *{
-    font-size: 12px;
+
+  .dropdown-content input[type="checkbox"] {
+    margin-right: 8px; /* Space between checkbox and label text */
   }
-  @media (min-width: 768px) {
-    .container-1,
-    .container-2 {
-      width: 45%;
-      margin-left: 2.5%;
+  .container {
+    margin-top: 10px;
+    font-size: 9px;
+    display: flex;
+  }
+    .toggle-btn {
+      display: inline-block;
+      padding: 6px 12px; /* Smaller padding */
+      border: 1px solid #ccc;
+      border-radius: 20px; /* Smaller rounded corners */
+      font-size: 10px; /* Smaller font size */
+      font-weight: 400; /* Reduced font weight */
+      cursor: pointer;
+      background-color: #f1f1f1;
+      color: #333;
+      text-align: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Reduced shadow size */
     }
-
-    .form-container {
+    table {
       width: 100%;
-    }
-  }
-
-  @media (min-width: 1200px) {
-    .container-1,
-    .container-2 {
-      width: 45%;
-      margin-left: 2.5%;
-    }
-
-    .form-container {
-      width: 45%;
-      margin-left: 2.5%;
-    }
-  }  
-  table {
       border-collapse: collapse;
-      width: 100%;
-      font-family: Arial, sans-serif;
-  }
-
-  th, td {
+      margin-top: 20px;
+    }
+    th, td {
       border: 1px solid #dddddd;
-      padding: 8px;
       text-align: left;
-      font-size: 14px;
-  }
-
-  th {
-      background-color: #f9f9f9;
-      font-weight: bold;
-  }
-
-  tr:nth-child(even) {
+      padding: 8px;
+      word-wrap: break-word;
+    }
+    th {
       background-color: #f2f2f2;
+    }
+    .toggle-btn:hover {
+      background-color: #e0e0e0;
+      transform: translateY(-1px);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); /* Slightly enhanced shadow */
+    }
+
+    .toggle-btn:focus {
+      outline: none;
+      box-shadow: 0 0 5px 2px rgba(0, 0, 255, 0.5);
+    }
+
+    #toggle-filters-btn, #toggle-rag-btn {
+      float: right;
+      background-color: #f1f1f1;
+    }
+    *{
+      font-size: 12px;
+    }
+    @media (min-width: 768px) {
+      .container-1,
+      .container-2 {
+        width: 45%;
+        margin-left: 2.5%;
+      }
+
+      .form-container {
+        width: 100%;
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .container-1,
+      .container-2 {
+        width: 45%;
+        margin-left: 2.5%;
+      }
+
+      .form-container {
+        width: 45%;
+        margin-left: 2.5%;
+      }
+    }  
+    table {
+        border-collapse: collapse;
+        width: 100%;
+        font-family: Arial, sans-serif;
+    }
+
+    th, td {
+        border: 1px solid #dddddd;
+        padding: 8px;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    th {
+        background-color: #f9f9f9;
+        font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .btn {
+        padding: 5px 10px;
+        border: none;
+        border-radius: 4px;
+        text-decoration: none;
+        margin: 2px;
+    }
+
+    .btn-custom-success {
+        background-color: #28a745; /* Bootstrap green color */
+        border-color: #28a745;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+
+    .btn-warning {
+        background-color: #ffc107;
+        color: black;
+    }
+
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .btn-sm {
+        font-size: 12px;
+    }
+    .modal1 {
+      display: none; /* Hidden by default */
+      position: fixed; /* Stay in place */
+      z-index: 1; /* Sit on top */
+      left: 0;
+      top: 0;
+      font-weight: bold;
+      width: 100%; /* Full width */
+      height: 100%; /* Full height */
+      overflow: auto; /* Enable scroll if needed */
+      background-color: rgba(0, 0, 0, 0.4); /* Black w/ opacity */
+    }
+  /* Modal Content/Box */
+  .modal-content1 {
+    background-color: #0065ff; /* Blue background */
+    color: #fff; /* White text */
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 29%; /* Smaller width */
+    height: 33%;
+    border-radius: 10px; /* Rounded corners */
+  }
+
+
+  /* Modal Content/Box */
+  .modal-content2 {
+    position: fixed;
+    background-color: #0065ff; /* Blue background */
+    color: #fff; /* White text */
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 29%; /* Smaller width */
+    height: 70%;
+    top: 15%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    border-radius: 10px; /* Rounded corners */
+  }
+  /* Scrollable Body */
+  .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 60vh; /* Adjust as needed */
+    padding-right: 10px; /* Prevent scrollbar overlap */
+  }
+  /* The Close Button */
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+  }
+
+  .close:hover,
+  .close:focus {
+    color: #fff; /* White text on hover */
+    text-decoration: none;
+    cursor: pointer;
+  }
+  #remarks {
+    width: 100%;
+    height: 80px; /* Adjust the height as needed */
+  }
+
+  /* Form Styles */
+  #holdForm, #declineForm, #acceptForm {
+    display: flex;
+    flex-direction: column;
+  }
+
+
+  #holdForm label, #declineForm label,
+  #acceptForm label{
+    margin-bottom: 8px;
+  }
+
+  #holdForm textarea, #declineForm textarea,
+  #acceptForm textarea {
+    margin-bottom: 12px;
+    padding: 8px;
+    border: none;
+    border-radius: 4px;
+    display: flex;
+    width: 360px; /* Set a fixed width */
+    height: 100px; /* Set a fixed height */
+    resize: none; 
+  }
+
+  #holdForm button, #declineForm button, #acceptForm button {
+    background-color: #0051cc;
+    color: #fff;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    align-self: center;
+  }
+
+  #remarks:required:invalid {
+    border-color: #ff0000; /* Red color */
+  }
+
+  #holdForm button:hover, #declineForm button:hover,
+  #acceptForm button:hover {
+    background-color: #0000FF;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table th, table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  table th {
+    background-color: #f4f4f4;
   }
 
   .btn {
-      padding: 5px 10px;
-      border: none;
-      border-radius: 4px;
-      text-decoration: none;
-      margin: 2px;
+    margin-right: 5px;
   }
-
-  .btn-custom-success {
-      background-color: #28a745; /* Bootstrap green color */
-      border-color: #28a745;
-  }
-
-  .btn-primary {
-      background-color: #007bff;
-      color: white;
-  }
-
-  .btn-info {
-      background-color: #17a2b8;
-      color: white;
-  }
-
-  .btn-warning {
-      background-color: #ffc107;
-      color: black;
-  }
-
-  .btn-danger {
-      background-color: #dc3545;
-      color: white;
-  }
-
-  .btn-sm {
-      font-size: 12px;
+  label > sup {
+    color: #ff0000; /* Red color */
+    font-size: 12px; /* Smaller font size */
   }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
 <script>
-  function exportToCsv() {
-      // Utility function to wrap text at a specific width (if needed)
-      const filterParams = new URLSearchParams();
+  document.addEventListener('DOMContentLoaded', function () {
+  console.log("DOM fully loaded and parsed");
+
+  // Get modals and buttons
+  var modals = {
+    hold: document.getElementById("holdModal"),
+    decline: document.getElementById("declineModal"),
+    accept: document.getElementById("acceptModal")
+  };
+
+  var links = {
+    hold: document.getElementById("holdLink"),
+    decline: document.getElementById("declineLink"),
+    accept: document.getElementById("acceptLink") 
+  };
+
+  console.log("Modals:", modals);
+  console.log("Links:", links);
+
+  // Open modals
+  Object.keys(links).forEach(key => {
+    if (links[key] && modals[key]) { // Check if both the link and modal exist
+      links[key].onclick = function () {
+        console.log(key + " link clicked");
+        modals[key].style.display = "block";
+      }
+    } else {
+      console.log(key + " link or modal is null");
+    }
+  });
+
+  // Close modals on span click
+  var spans = document.getElementsByClassName("close");
+  Array.prototype.forEach.call(spans, function (span) {
+    span.onclick = function () {
+      Object.keys(modals).forEach(key => {
+        if (modals[key]) {
+          modals[key].style.display = "none";
+        }
+      });
+    };
+  });
+
+  // Close modals on outside click
+  window.onclick = function (event) {
+    Object.keys(modals).forEach(key => {
+      if (modals[key] && event.target == modals[key]) {
+        modals[key].style.display = "none";
+      }
+    });
+  }
+  });
+</script>
+<script>
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.querySelectorAll(".dropdown").forEach(dropdown => {
+    let input = dropdown.querySelector("input");
+    let dropdownContent = dropdown.querySelector(".dropdown-content");
+
+    // Keep dropdown open when clicked
+    input.addEventListener("click", function(event) {
+      event.stopPropagation();
+      closeAllDropdowns(dropdownContent);
+      dropdownContent.style.display = "block";
+    });
+
+    // Search filter within dropdown
+    input.addEventListener("keyup", function() {
+      let filter = input.value.toLowerCase();
+      dropdown.querySelectorAll("label").forEach(label => {
+        label.style.display = label.textContent.toLowerCase().includes(filter) ? "" : "none";
+      });
+    });
+
+    // Retain selected checkboxes on page reload
+    let fieldName = input.getAttribute("name");
+    let selectedValues = new Set(getSelectedValues(fieldName));
+    dropdown.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+      if (selectedValues.has(checkbox.value)) {
+        checkbox.checked = true;
+      }
+    });
+
+    // Handle "All" checkbox selection
+    let allCheckbox = dropdown.querySelector('input[value="all"]');
+    if (allCheckbox) {
+      allCheckbox.addEventListener("change", function() {
+        let isChecked = this.checked;
+        dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.checked = isChecked;
+        });
+      });
+    }
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", function() {
+    closeAllDropdowns();
+  });
+});
+
+// Function to close all dropdowns
+function closeAllDropdowns(exception = null) {
+  document.querySelectorAll(".dropdown-content").forEach(content => {
+    if (content !== exception) content.style.display = "none";
+  });
+}
+
+// Function to get selected values from URL params
+function getSelectedValues(fieldName) {
+  let params = new URLSearchParams(window.location.search);
+  return params.getAll(fieldName) || [];
+}
+
+// Function to clear all filters
+function clearFilters() {
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  document.querySelectorAll(".dropdown input[type='text']").forEach(input => input.value = "");
+}
+
+
+document.addEventListener("DOMContentLoaded", function() {
+  let checkboxes = document.querySelectorAll("input[type='checkbox']");
+
+  checkboxes.forEach(checkbox => {
+    checkbox.addEventListener("change", function() {
+      let name = this.name;
+      let allCheckbox = document.querySelector(`input[name='${name}'][value='all']`);
+      let otherCheckboxes = document.querySelectorAll(`input[name='${name}']:not([value='all'])`);
+
+      if (this.value === "all") {
+        // If "All" is checked, uncheck all others
+        if (this.checked) {
+          otherCheckboxes.forEach(cb => cb.checked = false);
+        }
+      } else {
+        // If any specific value is selected, uncheck "All"
+        if (this.checked) {
+          allCheckbox.checked = false;
+        }
+      }
+    });
+  });
+});
+
+
+function exportToCsv() {
+  let url = new URL(window.location.href); // Current URL le lo
+  url.pathname = "/business_requirements/export_all"; // Export URL set karo
+    const filterParams = new URLSearchParams(url.search);
     const filters = [
+        'identifier',
         'requirement_case',
         'requirement_received_from',
-        'status',
+        'statuses',
         'priority_level',
         'project_enhancement',
         'portfolio_category',
-        'project_manager'
+        'project_manager_usernames'
     ];
 
     // Populate filter parameters dynamically
     filters.forEach(filter => {
-        const element = document.querySelector(`[name="${filter}"]`);
-        if (element && element.value) {
-            filterParams.append(filter, element.value);
-        }
-    });
-      function wrapText(text, maxWidth) {
-          const words = text.split(' ');
-          let wrappedText = '';
-          let currentLine = '';
-
-          words.forEach(word => {
-              if ((currentLine + word).length > maxWidth) {
-                  wrappedText += currentLine.trim() + '\n';
-                  currentLine = word + ' ';
-              } else {
-                  currentLine += word + ' ';
-              }
-          });
-
-          wrappedText += currentLine.trim();
-          return wrappedText;
-      }
-
-      fetch(`/business_requirements/export_all?${filterParams.toString()}`, { headers: { Accept: 'text/csv' } })
-          .then(response => {
-              if (!response.ok) {
-                  throw new Error('Failed to fetch CSV data');
-              }
-              return response.text(); // Read response as plain text
-          })
-          .then(csvData => {
-              // Ensure CSV columns with multi-word headers remain intact
-              const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8' });
-              saveAs(blob, 'business_requirements.csv');
-          })
-          .catch(error => {
-              console.error('Error exporting data to CSV:', error);
-          });
-  }
-
-
-  document.addEventListener('DOMContentLoaded', function() {
-    // Attach event listener to the form's submit button
-    document.querySelectorAll('form[id^="acceptForm-"]').forEach(function(form) {
-      form.addEventListener('submit', function(event) {
-        let isValid = true;
-        let fields = ['priority_level', 'scheduled_start_date', 'planned_project_go_live_date', 'function', 'portfolio_category', 'project_category'];
+        const elements = document.querySelectorAll(`[name="${filter}[]"]:checked`); // Select all checked values
         
-        fields.forEach(function(fieldId) {
-          let field = form.querySelector(`#${fieldId}`);
-          if (field && !field.value.trim()) {
-            isValid = false;
-            field.classList.add('is-invalid'); // Add error styling (you need to define this class in your CSS)
-          } else {
-            field.classList.remove('is-invalid');
-          }
-        });
-
-        if (!isValid) {
-          event.preventDefault(); // Prevent form submission
-          alert('Please fill in all required fields.');
+        if (elements.length > 0) {
+            elements.forEach(element => {
+                filterParams.append(filter + '[]', element.value); // Ensure array format in URL
+            });
+        } else {
+            const singleElement = document.querySelector(`[name="${filter}"]`);
+            if (singleElement && singleElement.value) {
+                filterParams.append(filter, singleElement.value);
+            }
         }
-      });
     });
-  });
+
+    console.log("Applied Filters:", Object.fromEntries(filterParams)); // Log applied filters
+
+    const exportUrl = `/business_requirements/export_all?${filterParams.toString()}`;
+    console.log("Fetching CSV from:", exportUrl); // Log API request URL
+
+    fetch(exportUrl, { headers: { Accept: 'text/csv' } })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch CSV data');
+            }
+            return response.blob(); // Read response as Blob
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'business_requirements.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        })
+        .catch(error => {
+            console.error('Error exporting data to CSV:', error);
+        });
+}
+
+
 
 </script>
 
@@ -461,5 +827,4 @@
   document.getElementById('toggle-rag-btn').addEventListener('click', function () {
     toggleDisplay('toggle-rag-btn', 'rag-container', 'Hide RAG Status', 'Show RAG Status');
   });
-
 </script>

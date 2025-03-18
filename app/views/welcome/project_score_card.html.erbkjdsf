@@ -1,0 +1,867 @@
+<%= javascript_include_tag "https://code.highcharts.com/highcharts.js" %>
+<%= javascript_include_tag "https://code.highcharts.com/modules/drilldown.js" %>
+<%
+@financial_year_start = Date.new(Date.today.year, 4, 1)  # Default: April 1 of the current year
+@financial_year_end = Date.new(Date.today.year + 1, 3, 31)  # Default: March 31 of the next year
+
+# Adjust for months before April (January, February, March)
+if Date.today.month < 4
+  @financial_year_start = Date.new(Date.today.year - 1, 4, 1)  # Start: April 1 of last year
+  @financial_year_end = Date.new(Date.today.year, 3, 31)  # End: March 31 of this year
+end
+if @total_last_year[:delayed_projects].blank? 
+    pieChartData = { 
+        last_year: [@total_last_year[:percentage], @total_last_year[:percentage]],
+        year_to_date: [@total_year_to_date[:percentage], 100 - @total_year_to_date[:percentage]],
+        this_month: [@total_this_month[:percentage], 100 - @total_this_month[:percentage]]
+    } 
+elsif @total_year_to_date[:delayed_projects].blank? 
+    pieChartData = { 
+      last_year: [@total_last_year[:percentage], 100 - @total_last_year[:percentage]],
+        year_to_date: [@total_year_to_date[:percentage], @total_year_to_date[:percentage]] ,
+        this_month: [@total_this_month[:percentage], 100 - @total_this_month[:percentage]]
+    } 
+elsif @total_this_month[:delayed_projects].blank? 
+    pieChartData = { 
+      last_year: [@total_last_year[:percentage], 100 - @total_last_year[:percentage]],
+        year_to_date: [@total_year_to_date[:percentage], 100 - @total_year_to_date[:percentage]],
+        this_month: [@total_this_month[:percentage], @total_this_month[:percentage]] 
+    } 
+else 
+    pieChartData = { 
+        last_year: [@total_last_year[:percentage], 100 - @total_last_year[:percentage]],
+        year_to_date: [@total_year_to_date[:percentage], 100 - @total_year_to_date[:percentage]],
+        this_month: [@total_this_month[:percentage], 100 - @total_this_month[:percentage]]
+    } 
+end 
+@categories = ['Active', 'Hold', 'Go Live', 'Closed', 'Cancelled']
+%>
+
+
+<%= javascript_include_tag "https://code.highcharts.com/highcharts.js" %>
+<%= javascript_include_tag "https://code.highcharts.com/modules/annotations.js" %>
+
+
+<!-- Flex container to divide the page into two columns -->
+<div style="display: flex; flex-direction: column;">
+  <!-- First Row -->
+  <div style="display: flex; justify-content: space-between;">
+    <!-- First Column (First chart) -->
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+      <div id="container1" style="width: 100%; height: 250px; margin-bottom: 20px;"></div>
+    </div>
+    
+    <!-- Second Column (Second chart) -->
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+      <div id="container2" style="width: 100%; height: 250px; margin-bottom: 20px;"></div>
+    </div>
+    
+    <!-- Third Column (Empty) -->
+    <div style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+      <div id="container3" style="width: 100%; height: 250px; margin-bottom: 20px;"></div>
+    </div>
+
+  </div>
+
+  <!-- Second Row -->
+  <div style="display: flex; justify-content: space-between;">
+    <!-- First Column (First chart) -->
+    <div  id="last-year-chart" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+      <div id="last-year-pie-chart" style="width: 100%; height: 250px; margin-bottom: 20px;"></div>
+    </div>
+    
+    <!-- Second Column (Second chart) -->
+    <div id="year-to-date-chart" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+      <div id="year-to-date-pie-chart" style="width: 100%; height: 250px; margin-bottom: 20px;"></div>
+    </div>
+    
+    <!-- Third Column (Third chart) -->
+    <div id="this-month-chart" style="flex: 1; display: flex; flex-direction: column; align-items: center;">
+      <div id="this-month-pie-chart" style="width: 100%; height: 250px;"></div>
+    </div>
+  </div>
+</div>
+<br><br><br>
+
+<div class="dashboard-container">
+
+
+  <div class="project-scorecard"><br>
+    <div>
+      <% @project_statuses.each do |status| %>
+        <div id="status-<%= status[:id] %>-table" class="chart-projects" style="display: none;">
+          <h2><%= status[:name] %></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if status[:projects].blank? %>
+                <tr>
+                  <td colspan="4" style="text-align: center;">No records to display.</td>
+                </tr>
+              <% else %>
+                <% status[:projects].each do |project| %>
+                  <tr>
+                    <td><%= link_to project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                    <td><%= project[:scheduled_end_date] %></td>
+                    <td><%= project[:actual_end_date] %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    
+      <% @priority_projects.each do |priority| %>
+        <div id="priority-<%= priority[:name].downcase.gsub(" ", "_") %>-table" class="chart-projects" style="display: none;">
+          <h2><%= priority[:name] %></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if priority[:projects].empty? %>
+                <tr>
+                  <td colspan="4" style="text-align: center;">No records to display.</td>
+                </tr>
+              <% else %>
+                <% priority[:projects].each do |project| %>
+                  <tr>
+                    <td><%= link_to project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                    <td><%= project[:scheduled_end_date] %></td>
+                    <td><%= project[:actual_end_date] %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+
+
+      <% @category_projects.each do |category| %>
+        <div id="category-<%= category[:name].downcase %>-table" class="chart-projects" style="display: none;">
+          <h2><%= category[:name] %></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if category[:projects].blank? %>
+                <tr>
+                  <td colspan="4" style="text-align: center;">No records to display.</td>
+                </tr>
+              <% else %>
+                <% category[:projects].each do |project| %>
+                  <tr>
+                    <td><%= link_to project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                    <td><%= project[:scheduled_end_date] %></td>
+                    <td><%= project[:actual_end_date] %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+      <div class="last-year-tables-container">
+        <div class="chart-projects" id="last-year-delayed-table">
+          <h2>Last Year (Delayed)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_last_year[:delayed_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_last_year[:delayed_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="last-year-ontime-table">
+          <h2>Last Year (Ontime)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_last_year[:ontime_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_last_year[:ontime_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="year-to-date-delayed-table">
+          <h2>Year to Date (Delayed)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_year_to_date[:delayed_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_year_to_date[:delayed_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="year-to-date-ontime-table">
+          <h2>Year to Date (Ontime)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_year_to_date[:ontime_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_year_to_date[:ontime_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="this-month-delayed-table">
+          <h2>This Month (Delayed)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_this_month[:delayed_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_this_month[:delayed_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="this-month-ontime-table">
+          <h2>This Month (Ontime)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_this_month[:ontime_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_this_month[:ontime_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        </div>
+        <div class="top-delayed-projects">
+          <h2>Top 3 Delayed Projects</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Delay (days)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @top_delayed_projects.blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @top_delayed_projects.each do |data| %>
+                  <tr>
+                    <td><%= link_to data[:project].name, project_path(data[:project]) %></td>
+                    <td><%= formatted_date(date_value(data[:project], "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data[:project], "Actual End Date")) %></td>
+                    <td><%= data[:delay] %> days</td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+
+    .container {
+      margin-top: 10px;
+      font-size: 13px;
+      display: flex;
+      gap: 2%; /* Reduced space between containers */
+    }
+
+    .container-1 {
+      flex: 0 0 70%; /* Takes up 60% of the parent container */
+    }
+    .dashboard-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 20px;
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+    
+      th, td {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+      }
+    
+      th {
+        background-color: #f2f2f2;
+      }
+      .last-year-tables-container {
+        display: flex;
+        gap: 20px; /* Space between the tables */
+        justify-content: space-around; /* Align tables evenly */
+        flex-wrap: wrap; /* Stack tables on smaller screens */
+      }
+    
+      #last-year-delayed-table,
+      #last-year-ontime-table,
+      #year-to-date-delayed-table,
+      #year-to-date-ontime-table,
+      #this-month-delayed-table, 
+      #this-month-ontime-table {
+        flex: 1; /* Tables take equal width */
+        min-width: 300px; /* Minimum table width */
+        max-width: 600px; /* Optional: Limit maximum width */
+      }
+
+      .chart-projects {
+        display: none;
+        margin-top: 20px;
+      }
+</style>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const filterSelect = document.getElementById("date-filter");
+    const lastYearDelayedTable = document.getElementById("last-year-delayed-table");
+    const lastYearOntimeTable = document.getElementById("last-year-ontime-table");
+    const yearToDateDelayedTable = document.getElementById("year-to-date-delayed-table");
+    const yearToDateOntimeTable = document.getElementById("year-to-date-ontime-table");
+    const thisMonthDelayedTable = document.getElementById("this-month-delayed-table");
+    const thisMonthOntimeTable = document.getElementById("this-month-ontime-table");
+
+    // Hide all tables initially
+    function hideAllTables() {
+      lastYearDelayedTable.style.display = "none";
+      lastYearOntimeTable.style.display = "none";
+      yearToDateDelayedTable.style.display = "none";
+      yearToDateOntimeTable.style.display = "none";
+      thisMonthDelayedTable.style.display = "none";
+      thisMonthOntimeTable.style.display = "none";
+    }
+  });
+
+  // Function to toggle tables based on chart click
+  function toggleTables(filter) {
+    // Hide all tables
+    document.querySelectorAll('.chart-projects').forEach(function(table) {
+      table.style.display = 'none';
+    });
+
+    // Show corresponding tables based on filter
+    switch (filter) {
+      case "last_year":
+        document.getElementById('last-year-ontime-table').style.display = 'block';
+        document.getElementById('last-year-delayed-table').style.display = 'block';
+        break;
+      case "year_to_date":
+        document.getElementById('year-to-date-ontime-table').style.display = 'block';
+          document.getElementById('year-to-date-delayed-table').style.display = 'block';
+        break;
+      case "this_month":
+        document.getElementById('this-month-ontime-table').style.display = 'block';
+        document.getElementById('this-month-delayed-table').style.display = 'block';
+        break;
+    }
+    // Scroll to the first visible table
+    const visibleTable = document.querySelector('.chart-projects[style="display: block;"]');
+    if (visibleTable) {
+      visibleTable.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  // Add event listeners to each pie chart for click functionality
+  document.getElementById('last-year-chart').addEventListener('click', function() {
+    toggleTables("last_year");
+  });
+
+  document.getElementById('year-to-date-chart').addEventListener('click', function() {
+    toggleTables("year_to_date");
+  });
+
+  document.getElementById('this-month-chart').addEventListener('click', function() {
+    toggleTables("this_month");
+  });
+
+ 
+
+  Highcharts.chart('last-year-pie-chart', {
+    chart: {
+      type: 'pie'
+    },
+    title: {
+      text: 'Previous Financial Year'
+    },
+    subtitle: {
+      text: '<strong style="color: black">( <%= "#{2.years.ago.change(month: 4, day: 1).to_date.strftime("%d %b %y")} - #{1.year.ago.change(month: 3, day: 31).to_date.strftime("%d %b %y")}" %>)</strong>'
+    },
+    accessibility: {
+      announceNewData: {
+        enabled: true
+      }
+    },
+    plotOptions: {
+      pie: {
+        allowPointSelect: true,
+        cursor: 'pointer',
+        dataLabels: {
+          enabled: true,
+          format: '{point.name}: {point.percentage:.1f} %'
+        }
+      }
+    },
+    tooltip: {
+      pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+    },
+    series: [{
+      name: 'Project Timeliness',
+      colorByPoint: true,
+      data: [
+        {
+          name: 'Delayed',
+          y: <%= pieChartData[:last_year][0] %>, 
+          color: '#FFA500'
+        },
+        {
+          name: 'On-Time',
+          y: <%= pieChartData[:last_year][1] %>, 
+          color: '#007BFF'
+        }
+      ]
+    }]
+  });
+  Highcharts.chart('year-to-date-pie-chart', {
+    chart: {
+      type: 'pie'
+    },
+    title: {
+      text: 'Current Financial Year'
+    },
+    subtitle: {
+      text: '<strong style="color: black">(<%= "#{@financial_year_start.strftime("%d %b %y")} -#{@financial_year_end.strftime("%d %b %y")}" %>)</strong>'
+    },
+    accessibility: {
+      announceNewData: {
+        enabled: true
+      }
+    },
+    plotOptions: {
+      pie: {
+        allowPointSelect: true,
+        cursor: 'pointer',
+        dataLabels: {
+          enabled: true,
+          format: '{point.name}: {point.percentage:.1f} %'
+        }
+      }
+    },
+    tooltip: {
+      pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+    },
+    series: [{
+      name: 'Project Timeliness',
+      colorByPoint: true,
+      data: [
+        {
+          name: 'Delayed',
+          y: <%= pieChartData[:year_to_date][0] %>, 
+          color: '#FFA500'
+        },
+        {
+          name: 'On-Time',
+          y: <%= pieChartData[:year_to_date][1] %>, 
+          color: '#007BFF'
+        }
+      ]
+    }]
+  });
+  Highcharts.chart('this-month-pie-chart', {
+    chart: {
+      type: 'pie'
+    },
+    title: {
+      text: 'Current Month'
+    },
+    subtitle: {
+      text: '<strong style="color: black">(<%= "#{Time.current.beginning_of_month.to_date.strftime("%d %b %y")} - #{Time.current.end_of_month.to_date.strftime("%d %b %y")}"%>)</strong>'
+    },
+    accessibility: {
+      announceNewData: {
+        enabled: true
+      }
+    },
+    plotOptions: {
+      pie: {
+        allowPointSelect: true,
+        cursor: 'pointer',
+        dataLabels: {
+          enabled: true,
+          format: '{point.name}: {point.percentage:.1f} %'
+        }
+      }
+    },
+    tooltip: {
+      pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+    },
+    series: [{
+      name: 'Project Timeliness',
+      colorByPoint: true,
+      data: [
+        {
+          name: 'Delayed',
+          y: <%= pieChartData[:this_month][0] %>, 
+          color: '#FFA500'
+        },
+        {
+          name: 'On-Time',
+          y: <%= pieChartData[:this_month][1] %>, 
+          color: '#007BFF'
+        }
+      ]
+    }]
+  });
+
+  // First Bar Chart (Category-wise Project Count)
+  Highcharts.chart('container1', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Projects Count by Category'
+    },
+    subtitle: {
+        // text: 'Source: Your data source'
+    },
+    accessibility: {
+        announceNewData: {
+            enabled: true
+        }
+    },
+    xAxis: {
+        type: 'category'
+    },
+    yAxis: {
+        title: {
+            text: 'Total projects count'
+        }
+    },
+    legend: {
+        enabled: false
+    },
+    plotOptions: {
+        series: {
+            cursor: 'pointer',
+            point: {
+              events: {
+                click: function () {
+                  // Hide all project tables
+                  document.querySelectorAll('.chart-projects').forEach(el => el.style.display = 'none');
+                  
+                  // Show the clicked status's table
+                  document.getElementById('category-' + this.name.toLowerCase() + '-table').style.display = 'block';
+                  const tableId = 'category-' + this.name.toLowerCase() + '-table';
+                  const tableElement = document.getElementById(tableId);
+                  if (tableElement) {
+                      tableElement.style.display = 'block';
+
+                      // Scroll to the table
+                      tableElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  } else {
+                      console.warn('Table not found:', tableId);
+                  }
+                }
+              }
+            },
+            borderWidth: 0,
+            dataLabels: {
+                enabled: true,
+                format: '{point.y}'
+            }
+        }
+    },
+
+    tooltip: {
+        headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+        pointFormat: '<span style="color:{point.color}">{point.name}</span>: ' +
+            '<b>{point.y}</b> projects<br/>'
+    },
+
+    series: [{
+        name: 'Project Categories',
+        colorByPoint: true,
+        data: [
+            <% @projects_count_category_wise.each do |category, count| %>
+                {
+                    name: '<%= category.to_s.capitalize %>',
+                    y: <%= count %>
+                },
+            <% end %>
+        ]
+    }]
+  });
+
+  // Second Bar Chart (Status-wise Project Count)
+  Highcharts.chart('container2', {
+    chart: {
+      type: 'column'
+    },
+    title: {
+      text: 'Projects Count by Status'
+    },
+    xAxis: {
+      type: 'category'
+    },
+    yAxis: {
+      title: {
+        text: 'Total projects count'
+      }
+    },
+    legend: {
+      enabled: false
+    },
+    plotOptions: {
+      series: {
+        cursor: 'pointer',
+        point: {
+          events: {
+            click: function () {
+              // Hide all project tables
+              document.querySelectorAll('.chart-projects').forEach(el => el.style.display = 'none');
+
+              // Show the clicked status's table
+              document.getElementById('status-' + this.name.toLowerCase() + '-table').style.display = 'block';
+              const tableId = 'status-' + this.name.toLowerCase() + '-table';
+              const tableElement = document.getElementById(tableId);
+              if (tableElement) {
+                  tableElement.style.display = 'block';
+
+                  // Scroll to the table
+                  tableElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              } else {
+                  console.warn('Table not found:', tableId);
+              }
+            }
+          }
+        },
+        borderWidth: 0,
+        dataLabels: {
+          enabled: true,
+          format: '{point.y}'
+        }
+      }
+    },
+    tooltip: {
+      headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+      pointFormat: '<span style="color:{point.color}">{point.name}</span>: <b>{point.y}</b> projects<br/>'
+    },
+    series: [{
+      name: 'Project Statuses',
+      colorByPoint: true,
+      data: [
+        <% @project_count_status_wise.each do |status, count| %>
+          {
+            name: '<%= status.to_s.capitalize %>',
+            y: <%= count %>
+          },
+        <% end %>
+      ]
+    }]
+  });
+
+   // Second Bar Chart (Status-wise Project Count)
+  Highcharts.chart('container3', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Projects Count by Priority'
+    },
+    subtitle: {
+        // text: 'Source: Your data source'
+    },
+    accessibility: {
+        announceNewData: {
+            enabled: true
+        }
+    },
+    xAxis: {
+        type: 'category'
+    },
+    yAxis: {
+        title: {
+            text: 'Total projects count'
+        }
+    },
+    legend: {
+        enabled: false
+    },
+    plotOptions: {
+        series: {
+            cursor: 'pointer',
+            point: {
+               events: {
+                click: function () {
+                  // Hide all project tables
+                  document.querySelectorAll('.chart-projects').forEach(el => el.style.display = 'none');
+
+                  // Show the clicked status's table
+                  document.getElementById('priority-' + this.name.toLowerCase() + '-table').style.display = 'block';
+                  const tableId = 'priority-' + this.name.toLowerCase() + '-table';
+                  const tableElement = document.getElementById(tableId);
+                  if (tableElement) {
+                      tableElement.style.display = 'block';
+
+                      // Scroll to the table
+                      tableElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  } else {
+                      console.warn('Table not found:', tableId);
+                  }
+                }
+              }
+            },
+            borderWidth: 0,
+            dataLabels: {
+                enabled: true,
+                format: '{point.y}'
+            }
+        }
+    },
+
+    tooltip: {
+        headerFormat: '<span style="font-size:11px">{series.name}</span><br>',
+        pointFormat: '<span style="color:{point.color}">{point.name}</span>: ' +
+            '<b>{point.y}</b> projects<br/>'
+    },
+
+    series: [{
+        name: 'Project Priorities',
+        colorByPoint: true,
+        data: [
+            <% @projects_count_priority_wise.each do |priority, count| %>
+                {
+                    name: '<%= priority.to_s.capitalize %>',
+                    y: <%= count %>
+                },
+            <% end %>
+        ]
+    }]
+  });
+</script>

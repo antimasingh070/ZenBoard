@@ -1,0 +1,798 @@
+
+
+
+<div class="filter-form">
+      <%= form_with url: project_score_card_path, method: :get, local: true do %>
+        <label for="role">Role:</label>
+        <%= select_tag :role, options_from_collection_for_select(Role.all, :name, :name, params[:role]), include_blank: true %>
+
+        <label for="member_name">Member Name:</label>
+        <%= select_tag :member_name, options_for_select(User.pluck(:firstname, :lastname).map { |firstname, lastname| ["#{firstname} #{lastname}", "#{firstname} #{lastname}"] }, params[:member_name]), include_blank: true, class: "searchable-dropdown" %>
+
+        <%= submit_tag "Filter", class: "filter-button" %>
+      <% end %>
+    </div>
+    <!-- Pie Chart Container -->
+      <title>Project Progress</title>
+      <title>Project Status Bar Chart</title>
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      <h1></h1>
+      <div id="bar-wrapper">
+        <div class="bar-container" id="projectStatusChart">
+          <h3 class="pie-chart-title">Project Count Status Wise</h3>
+          <canvas id="projectStatusBarChart" ></canvas>
+        </div>
+        <div class="bar-container" id="projectCategoryChart">
+          <h3 class="pie-chart-title">Project Count Category Wise</h3>
+          <canvas id="projectCategoryBarChart" ></canvas>
+        </div>
+      </div>
+
+
+<script>
+  const projectCategoryData = <%= raw @projects_count_category_wise.to_json %>;
+  const labels1 = Object.keys(projectCategoryData).map(label => label.replace(/_/g, ' '));
+  const data1 = Object.values(projectCategoryData);
+  const ctx_1 = document.getElementById('projectCategoryBarChart').getContext('2d');
+  const projectCategoryBarChart = new Chart(ctx_1, {
+    type: 'bar',
+    data: {
+      labels: labels1,
+      datasets: [{
+        label: 'Count',
+        data: data1,
+        backgroundColor: ['#C05780', '#FFBF65', '#00CDAC', '#E7C582', '#0065A2'],
+        borderColor: ['#0051cc', '#0051cc', '#0051cc', '#0051cc', '#0051cc'],
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        x: {categoryPercentage: 0.5, barPercentage: 0.2 },
+        y: { beginAtZero: true }
+      }
+    }
+  });
+  // Handle clicks on chart bars
+  projectCategoryBarChart.canvas.onclick = function(event) {
+    // Get the clicked bar index
+    const activePoints = projectCategoryBarChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false);
+    
+    if (activePoints.length > 0) {
+      const clickedIndex1 = activePoints[0].index;
+      const selectedCategory = labels[clickedIndex1].toLowerCase().replace(/ /g, "_");
+
+
+      // Find the element for the selected status table
+      const categoryElement = document.getElementById(selectedCategory);
+
+
+      // If the element exists, toggle its visibility
+      if (categoryElement) {
+        // Hide all other tables
+        const allTables1 = document.querySelectorAll('.chart-projects');
+        allTables1.forEach(table => {
+          if (table !== categoryElement) {
+            table.style.display = "none"; // Hide other tables
+          }
+        });
+
+
+        // Toggle the visibility of the selected table
+        categoryElement.style.display = categoryElement.style.display === "none" ? "block" : "none";
+      }
+    }
+  };
+
+
+  const projectData = <%= raw @project_count_status_wise.to_json %>;
+  const labels = Object.keys(projectData).map(label => label.replace(/_/g, ' '));
+  const data = Object.values(projectData);
+  
+  const ctx_2 = document.getElementById('projectStatusBarChart').getContext('2d');
+  const projectStatusBarChart = new Chart(ctx_2, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Count',
+        data: data,
+        backgroundColor: ['#00A5E3', '#00A5E3', '#00A5E3', '#00A5E3', '#00A5E3'],
+        borderColor: ['#0051cc', '#0051cc', '#0051cc', '#0051cc', '#0051cc'],
+        borderWidth: 1
+      }]
+    },
+    
+    options: {
+      scales: {
+        y: { beginAtZero: true }
+      },
+      plugins: {
+      datalabels: {
+        display: true,  // Show data labels
+        color: 'black',  // Color of the labels
+        font: {
+          weight: 'bold',
+          size: 12  // Font size for the labels
+        },
+        anchor: 'end',  // Position the label at the end of the bars
+        align: 'top'  // Align the labels above the bars
+      }
+    }
+    }
+  });
+  
+  // Handle clicks on chart bars
+  projectStatusBarChart.canvas.onclick = function(event) {
+    // Get the clicked bar index
+    const activePoints = projectStatusBarChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false);
+    
+    if (activePoints.length > 0) {
+      const clickedIndex = activePoints[0].index;
+      const selectedStatus = labels[clickedIndex].toLowerCase().replace(/ /g, "_");
+  
+  
+      // Find the element for the selected status table
+      const statusElement = document.getElementById(selectedStatus);
+  
+  
+      // If the element exists, toggle its visibility
+      if (statusElement) {
+        // Hide all other tables
+        const allTables = document.querySelectorAll('.chart-projects');
+        allTables.forEach(table => {
+          if (table !== statusElement) {
+            table.style.display = "none"; // Hide other tables
+          }
+        });
+  
+  
+        // Toggle the visibility of the selected table
+        statusElement.style.display = statusElement.style.display === "none" ? "block" : "none";
+      }
+    }
+  };
+</script>
+     
+     
+<div class="dashboard-container">
+  <div class="project-scorecard"><br>
+    <div>
+      <% @project_statuses.each do |status| %>
+        <div class="chart-projects" id="<%= status[:id] %>" style="display: none;">
+          <h2><%= status[:name] %></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if status[:projects].blank? %>
+                <tr>
+                  <td colspan="4" style="text-align: center;">No records to display.</td>
+                </tr>
+              <% else %>
+                <% status[:projects].each do |project| %>
+                  <tr>
+                    <td><%= link_to  project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                    <td><%= project[:scheduled_end_date] %></td>
+                    <td><%= project[:actual_end_date] %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+      <% @project_statuses.each do |status| %>
+        <div class="chart-projects" id="<%= status[:id] %>" style="display: none;">
+          <h2><%= status[:name] %></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if status[:projects].blank? %>
+                <tr>
+                  <td colspan="4" style="text-align: center;">No records to display.</td>
+                </tr>
+              <% else %>
+                <% status[:projects].each do |project| %>
+                  <tr>
+                    <td><%= link_to  project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                    <td><%= project[:scheduled_end_date] %></td>
+                    <td><%= project[:actual_end_date] %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+     
+     
+      
+<!-- Three Pie Charts -->
+<div id="charts-wrapper">
+  <div class="chart-container" id="last-year-chart">
+    <h3 class="pie-chart-title">Previous Year (<%= "#{2.years.ago.change(month: 4, day: 1).to_date.strftime("%d %b %y")} - #{1.year.ago.change(month: 3, day: 31).to_date.strftime("%d %b %y")}" %>)</h3>
+    <canvas id="last-year-pie-chart"></canvas>
+  </div>
+  <%
+  @financial_year_start = Date.new(Date.today.year, 4, 1)  # Default: April 1 of the current year
+  @financial_year_end = Date.new(Date.today.year + 1, 3, 31)  # Default: March 31 of the next year
+
+  # Adjust for months before April (January, February, March)
+  if Date.today.month < 4
+    @financial_year_start = Date.new(Date.today.year - 1, 4, 1)  # Start: April 1 of last year
+    @financial_year_end = Date.new(Date.today.year, 3, 31)  # End: March 31 of this year
+  end
+  %>
+  <div class="chart-container" id="year-to-date-chart">
+    <h3 class="pie-chart-title">Current Year(<%= "#{@financial_year_start.strftime("%d %b %y")} -#{@financial_year_end.strftime("%d %b %y")}" %>)</h3>
+    <canvas id="year-to-date-pie-chart"></canvas>
+  </div>
+  <div class="chart-container" id="this-month-chart">
+    <h3 class="pie-chart-title">Current Month (<%= "#{Time.current.beginning_of_month.to_date.strftime("%d %b %y")} - #{Time.current.end_of_month.to_date.strftime("%d %b %y")}"%>)</h3>
+    <canvas id="this-month-pie-chart"></canvas>
+  </div>
+</div>
+
+<div class="dashboard-container">
+  <div class="project-scorecard"><br>
+    <div>
+      <% @project_statuses.each do |status| %>
+        <div class="chart-projects" id="<%= status[:id] %>" style="display: none;">
+          <h2><%= status[:name] %></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if status[:projects].blank? %>
+                <tr>
+                  <td colspan="4" style="text-align: center;">No records to display.</td>
+                </tr>
+              <% else %>
+                <% status[:projects].each do |project| %>
+                  <tr>
+                    <td><%= link_to  project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                    <td><%= project[:scheduled_end_date] %></td>
+                    <td><%= project[:actual_end_date] %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+      <% @project_statuses.each do |status| %>
+        <div class="chart-projects" id="<%= status[:id] %>" style="display: none;">
+          <h2><%= status[:name] %></h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if status[:projects].blank? %>
+                <tr>
+                  <td colspan="4" style="text-align: center;">No records to display.</td>
+                </tr>
+              <% else %>
+                <% status[:projects].each do |project| %>
+                  <tr>
+                    <td><%= link_to  project[:name], project_path(Project.find_by(name: project[:name])) %></td>
+                    <td><%= project[:scheduled_end_date] %></td>
+                    <td><%= project[:actual_end_date] %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+      <div class="last-year-tables-container">
+        <div class="chart-projects" id="last-year-delayed-table">
+          <h2>Last Year (Delayed)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_last_year[:delayed_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_last_year[:delayed_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="last-year-ontime-table">
+          <h2>Last Year (Ontime)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_last_year[:ontime_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_last_year[:ontime_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="year-to-date-delayed-table">
+          <h2>Year to Date (Delayed)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_year_to_date[:delayed_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_year_to_date[:delayed_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="year-to-date-ontime-table">
+          <h2>Year to Date (Ontime)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_year_to_date[:ontime_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_year_to_date[:ontime_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="this-month-delayed-table">
+          <h2>This Month (Delayed)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_this_month[:delayed_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_this_month[:delayed_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        <div class="chart-projects" id="this-month-ontime-table">
+          <h2>This Month (Ontime)</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Rag Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @total_this_month[:ontime_projects].blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @total_this_month[:ontime_projects].each do |data| %>
+                  <tr>
+                    <td><%= link_to data.name, project_path(data) %></td>
+                    <td><%= formatted_date(date_value(data, "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data, "Actual End Date")) %></td>
+                    <td></td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+        </div>
+        <div class="top-delayed-projects">
+          <h2>Top 3 Delayed Projects</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Project</th>
+                <th>Scheduled End</th>
+                <th>Actual End</th>
+                <th>Delay (days)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if @top_delayed_projects.blank? %>
+                <tr><td colspan="8" style="text-align: center;">No records to display.</td></tr>
+              <% else %>
+                <% @top_delayed_projects.each do |data| %>
+                  <tr>
+                    <td><%= link_to data[:project].name, project_path(data[:project]) %></td>
+                    <td><%= formatted_date(date_value(data[:project], "Scheduled End Date")) %></td>
+                    <td><%= formatted_date(date_value(data[:project], "Actual End Date")) %></td>
+                    <td><%= data[:delay] %> days</td>
+                  </tr>
+                <% end %>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const filterSelect = document.getElementById("date-filter");
+    const lastYearDelayedTable = document.getElementById("last-year-delayed-table");
+    const lastYearOntimeTable = document.getElementById("last-year-ontime-table");
+    const yearToDateDelayedTable = document.getElementById("year-to-date-delayed-table");
+    const yearToDateOntimeTable = document.getElementById("year-to-date-ontime-table");
+    const thisMonthDelayedTable = document.getElementById("this-month-delayed-table");
+    const thisMonthOntimeTable = document.getElementById("this-month-ontime-table");
+
+    // Hide all tables initially
+    function hideAllTables() {
+      lastYearDelayedTable.style.display = "none";
+      lastYearOntimeTable.style.display = "none";
+      yearToDateDelayedTable.style.display = "none";
+      yearToDateOntimeTable.style.display = "none";
+      thisMonthDelayedTable.style.display = "none";
+      thisMonthOntimeTable.style.display = "none";
+    }
+  });
+
+
+  // JavaScript for rendering pie chart dynamically based on selected filter
+
+  <% if @total_last_year[:delayed_projects].blank? %>
+    const pieChartData = {
+      last_year: [<%= @total_last_year[:percentage] %>, <%= @total_last_year[:percentage] %>]
+    };
+    <% elsif @total_year_to_date[:delayed_projects].blank? %>
+      const pieChartData = {
+        year_to_date: [<%= @total_year_to_date[:percentage] %>, <%= @total_year_to_date[:percentage] %>]
+      };
+    <% elsif @total_this_month[:delayed_projects].blank? %>
+    const pieChartData = {
+      this_month: [<%= @total_this_month[:percentage] %>, <%= @total_this_month[:percentage] %>]
+    };
+    <%  else %>
+      const pieChartData = {
+        last_year: [<%= @total_last_year[:percentage] %>, 100 - <%= @total_last_year[:percentage] %>],
+        year_to_date: [<%= @total_year_to_date[:percentage] %>, 100 - <%= @total_year_to_date[:percentage] %>],
+        this_month: [<%= @total_this_month[:percentage] %>, 100 - <%= @total_this_month[:percentage] %>]
+      };
+    <% end %>
+
+  // Create Pie Chart for Last Year
+  const lastYearCtx = document.getElementById('last-year-pie-chart').getContext('2d');
+    let lastYearPieChart = new Chart(lastYearCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Delayed', 'On-Time'],
+      datasets: [{
+        data: pieChartData.last_year, // default to 'Last Year'
+        backgroundColor: ['#FFA500', '#007BFF'],
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        tooltip: {
+          callbacks: {
+            label: function(tooltipItem) {
+              return tooltipItem.raw + '%';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Create Pie Chart for Year to Date
+  const yearToDateCtx = document.getElementById('year-to-date-pie-chart').getContext('2d');
+    let yearToDatePieChart = new Chart(yearToDateCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Delayed', 'On-Time'],
+      datasets: [{
+        data: pieChartData.year_to_date, // default to 'Year to Date'
+        backgroundColor: ['#FFA500', '#007BFF'],
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        tooltip: {
+          callbacks: {
+            label: function(tooltipItem) {
+              return tooltipItem.raw + '%';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Create Pie Chart for This Month
+  const thisMonthCtx = document.getElementById('this-month-pie-chart').getContext('2d');
+    let thisMonthPieChart = new Chart(thisMonthCtx, {
+    type: 'pie',
+    data: {
+      labels: ['Delayed', 'On-Time'],
+      datasets: [{
+        data: pieChartData.this_month, // default to 'This Month'
+        backgroundColor: ['#FFA500', '#007BFF'],
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          position: 'top',
+        },
+        tooltip: {
+          callbacks: {
+            label: function(tooltipItem) {
+              return tooltipItem.raw + '%';
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Function to toggle tables based on chart click
+  function toggleTables(filter) {
+    // Hide all tables
+    document.querySelectorAll('.chart-projects').forEach(function(table) {
+      table.style.display = 'none';
+    });
+
+    // Show corresponding tables based on filter
+    switch (filter) {
+      case "last_year":
+        document.getElementById('last-year-ontime-table').style.display = 'block';
+        document.getElementById('last-year-delayed-table').style.display = 'block';
+        break;
+      case "year_to_date":
+        document.getElementById('year-to-date-ontime-table').style.display = 'block';
+          document.getElementById('year-to-date-delayed-table').style.display = 'block';
+        break;
+      case "this_month":
+        document.getElementById('this-month-ontime-table').style.display = 'block';
+        document.getElementById('this-month-delayed-table').style.display = 'block';
+        break;
+    }
+  }
+
+  // Add event listeners to each pie chart for click functionality
+  document.getElementById('last-year-chart').addEventListener('click', function() {
+    toggleTables("last_year");
+  });
+
+  document.getElementById('year-to-date-chart').addEventListener('click', function() {
+    toggleTables("year_to_date");
+  });
+
+  document.getElementById('this-month-chart').addEventListener('click', function() {
+    toggleTables("this_month");
+  });
+
+
+</script>
+
+
+<style>
+
+  #bar-wrapper {
+    justify-content: space-around;
+  }
+
+  .bar-container {
+    display: inline-block;
+    max-width: 500px;
+    cursor: pointer;
+    margin: 10px;
+    position: relative;
+    left: 10px;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .chart-container {
+    display: inline-block;
+    max-width: 250px;
+    cursor: pointer;
+    margin: 10px;
+    position: relative;
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .chart-projects {
+    display: none;
+    margin-top: 20px;
+  }
+
+  .pie-chart-title {
+    text-align: center;
+  }
+
+  #charts-wrapper {
+    display: flex;
+    justify-content: space-around;
+  }
+  .last-year-tables-container {
+    display: flex;
+    gap: 20px; /* Space between the tables */
+    justify-content: space-around; /* Align tables evenly */
+    flex-wrap: wrap; /* Stack tables on smaller screens */
+  }
+
+  #last-year-delayed-table,
+  #last-year-ontime-table,
+  #year-to-date-delayed-table,
+  #year-to-date-ontime-table,
+  #this-month-delayed-table, 
+  #this-month-ontime-table {
+    flex: 1; /* Tables take equal width */
+    min-width: 300px; /* Minimum table width */
+    max-width: 600px; /* Optional: Limit maximum width */
+  }
+
+  .bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    # width: 50px !important;  /* Increased size */
+    height: 240px; /* Increased size */
+    border-radius: 50%;
+    box-sizing: border-box;
+    border: 30px solid #eee;
+    border-bottom-color: red; /* Initial color */
+    border-right-color: red; /* Initial color */
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+  }
+
+  th, td {
+    border: 1px solid #dddddd;
+    text-align: left;
+    padding: 8px;
+  }
+
+  th {
+    background-color: #f2f2f2;
+  }
+
+
+  /* General Styles */
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f7fa;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dashboard-container {
+    max-width: 1200px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Filter Section */
+  .filters {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+  }
+
+</style>

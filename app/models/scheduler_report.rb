@@ -40,6 +40,14 @@ class SchedulerReport < ActiveRecord::Base
       )
     end
 
+    def self.pmo_alert_for_overdue_closed_project
+       puts "PMO alert for overdue closed project"
+      projects = Project.where(status: 5, parent_id: nil).where.not(name: "Master Project")
+      user = User.first
+  
+      Mailer.deliver_pmo_alert_for_overdue_closed_project(user, projects.pluck(:id))
+    end
+
     def self.send_issue_lists
       projects = Project.where(status: 1, parent_id: nil)
       user  = User.first
@@ -97,7 +105,6 @@ class SchedulerReport < ActiveRecord::Base
       
         risks = project.issues.where(status_id: 5, tracker_id: tracker.id)
         return if risks.blank?
-       get only that projects which have risk with status id 5 & trackre
         if Setting.notified_events.include?('send_risk')
           Mailer.deliver_send_risk(user, projects)
           generate_report # Ensure this method generates the desired report properly
@@ -110,5 +117,40 @@ class SchedulerReport < ActiveRecord::Base
         custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id)
         custom_field_enumeration = custom_value&.value
         custom_field_enumeration
+      end
+
+      def self.custom_field_value(project, field_name)
+        if field_name == "Project Activity"
+          custom_field = CustomField.find_by(name: field_name)
+          return "" unless custom_field
+      
+          # Fetch issues with the specific status and tracker ID
+          issues = project.issues.where(status: 5, tracker_id: 2).includes(:custom_values)
+          custom_field_id = CustomField.find_by(name: "Actual End Date")&.id
+    
+          if custom_field_id
+            sorted_issues = issues.sort_by do |issue|
+              end_date_value = issue.custom_values.find { |cv| cv.custom_field_id == custom_field_id }&.value
+              begin
+                end_date_value ? Date.parse(end_date_value) : nil
+              rescue ArgumentError
+                # Handle parsing errors by returning nil
+                nil
+              end
+            end
+            last_issue_id = sorted_issues.last&.id
+          end
+          custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: last_issue_id, custom_field_id: custom_field&.id)
+          return "" unless custom_value
+          custom_field_enumeration = CustomFieldEnumeration.find_by(id: custom_value&.value&.to_i)
+          completed_date = ""
+          last_issue = sorted_issues.last
+        end
+      end
+
+      def self.date_value(project, field_name)
+        custom_field = CustomField.find_by(name: field_name)
+        custom_value = CustomValue.find_by(customized_type: "Project", customized_id: project&.id, custom_field_id: custom_field&.id)
+        date_string = custom_value&.value
       end
 end

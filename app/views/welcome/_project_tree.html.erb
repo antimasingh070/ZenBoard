@@ -16,18 +16,21 @@
    <% else %>
     <td style="font-size: 10px;"></td>
    <% end %>
-  <td style="font-size: 10px;">On Track</td>
-  <td style="font-size: 10px;"><%= member_name(project, "Project Manager") %></td>
-  <% last_completed_activity = custom_field_value(project, "Project Activity") %>
-  <td style="font-size: 10px;"><%= last_completed_activity %></td>
-<td style="font-size: 10px;"><%= last_completed_activity %></td>
-<td style="font-size: 10px;"><%= last_completed_activity %></td>
-  <td style="font-size: 10px;"><%= custom_field_value(project, "Portfolio Category") %></td>
-   <td style="font-size: 10px;"><%= custom_field_value(project, "Portfolio Category") %></td>
-  <td style="font-size: 10px;"><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
-  <td style="font-size: 10px; color: white; background-color: <%= date_value(project, "Scheduled End Date").present? ? 'green' : 'inherit' %>;">
-  <%= formatted_date(date_value(project, "Scheduled End Date")) %>
-</td>
+    <td style="font-size: 10px;">On Track</td>
+    <td style="font-size: 10px;"><%= member_name(project, "Project Manager") %></td>
+    <% last_completed_activity = custom_field_value(project, "Project Activity") %>
+    <td style="font-size: 10px;"><%= last_completed_activity %></td>
+    <td style="font-size: 10px;"><%= last_completed_activity %></td>
+    <td style="font-size: 10px;"><%= last_completed_activity %></td>
+    <td style="font-size: 10px;"><%= custom_field_value(project, "Portfolio Category") %></td>
+    <td style="font-size: 10px;"><%= custom_field_value(project, "Portfolio Category") %></td>
+    <% if @filtered_by_pm %>
+    <td style="font-size: 10px;"><%= custom_field_value(project, "Remarks") %></td>
+  <% else %>
+    <td style="font-size: 10px;"><%= formatted_date(date_value(project, "Scheduled Start Date")) %></td>
+    <td style="font-size: 10px; color: white; background-color: <%= date_value(project, "Scheduled End Date").present? ? 'green' : 'inherit' %>;">
+    <%= formatted_date(date_value(project, "Scheduled End Date")) %>
+    </td>
 
 
   <td style="font-size: 10px;"><%= formatted_date(date_value(project, "Planned Project Go Live Date")) %></td>
@@ -58,5 +61,6 @@
       N/A
     <% end %>
   </td>
+  <% end %>
 </tr>
 

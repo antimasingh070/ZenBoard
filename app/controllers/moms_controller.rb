@@ -54,7 +54,7 @@ class MomsController < ApplicationController
     @meeting = @business_requirement.meetings.find(params[:meeting_id])
     @mom = @meeting.mom
     if @mom.update(mom_params)
-      redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Successfully updated.'
+      redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Successfully updated.hjiod'
     else
       render :edit
     end

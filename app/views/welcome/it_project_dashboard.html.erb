@@ -336,13 +336,24 @@ button:hover {
         </div>
 
         <div class="filter-group">
-          <label for="status_filter">Status:</label>
-          <select name="status_filter" id="status_filter">
-            <option value="">All</option>
-            <% @statuses.each do |status| %>
-              <option value="<%= status_id(status) %>" <%= 'selected' if params[:status_filter].to_s == status_id(status).to_s %>><%= status %></option>
-            <% end %>
-          </select>
+          <label for="search_input1" class="filter-label">Status:</label>
+          <div class="dropdown">
+            <input type="text" id="search_input1" class="filter-input" placeholder="Search..." onkeyup="filterDropdown('dropdown_content1')">
+            <div id="dropdown_content1" class="dropdown-content">
+              <label>
+                <input type="checkbox" name="status_filter[]" value="all" onchange="selectAll(this, 'status_filter[]')"> All
+              </label>
+              <% if @statuses.present? %>
+                <% @statuses.each do |status| %>
+                  <label>
+                    <input type="checkbox" name="status_filter[]" value="<%= status_id(status) %>"
+                      <%= params[:status_filter]&.include?(status) ? 'checked' : '' %>>
+                    <%= status %>
+                  </label>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
         </div>
 
         <div class="filter-group">
@@ -366,11 +377,11 @@ button:hover {
       </div>
       <div class="filter-row">
         <div class="filter-group">
-          <label for="manager_filter">Program Manager:</label>
-          <select name="manager_filter" id="manager_filter">
+          <label for="program_manager_filter">Program Manager:</label>
+          <select name="program_manager_filter" id="program_manager_filter">
             <option value="">All</option>
-            <% @managers.each do |manager| %>
-              <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
+            <% @program_managers.each do |program_manager| %>
+              <option value="<%= program_manager %>" <%= 'selected' if params[:program_manager_filter] == program_manager %>><%= program_manager %></option>
             <% end %>
           </select>
         </div>
@@ -447,30 +458,12 @@ button:hover {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
-    <tr>
-      <th rowspan="2" style="width: 10%; white-space: normal; cursor: pointer;" class="sortable">Project Name</th>
-      <th rowspan="2" style="width: 10%; white-space: normal; cursor: pointer;" class="sortable">BR ID</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Status</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Manager</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Lead</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Project Size</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Next Week Planned Activity</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Last Activity Completed</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Portfolio Category</th>
-      <th style="width: 10%; white-space: normal;">Scheduled Start Date <span class="sort-icon" ></span></th>
-      <th style="width: 10%; white-space: normal;">Scheduled End Date <span  class="sort-icon" ></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Go Live date <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Revised End Date <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" class="sortable">Last Activity Due Date <span class="sort-icon"></span></th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Document Uploaded(Uploaded/Mandate)</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Task View(Delayed|Open|Toal)</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >Function Name</th>
-      <th  rowspan="2" style="width: 10%;  white-space: normal;" >% Done</th>
-      <th  rowspan="2" style="width: 100px;  white-space: normal;" class="sortable">Delay (Days)<span class="sort-icon"></span></th>
-    </tr>
+<tr>
+<% @filtered_columns.each do |column| %>
+  <th rowspan="2" style="width: 10%; white-space: normal; cursor: pointer;" class="sortable"><%= column %></th>
+<% end %>
+</tr>
+
   </thead>
   <tbody>
   <% portfolio_category_counts = Hash.new(0) %>
@@ -543,6 +536,7 @@ button:hover {
   var showSubprojectsFalse = document.getElementById('show_subprojects_false');
   var status = document.getElementById('status_filter');
   var manager = document.getElementById('manager_filter');
+  var programManager = document.getElementById('program_manager_filter');
   var function = document.getElementById('function_filter');
   var formGroup = document.getElementById('form-group');
   
@@ -553,6 +547,7 @@ button:hover {
   if (endDateTo) endDateTo.value = '';
   if (status) status.value = '';
   if (manager) manager.value = '';
+  if (programManager) programManager.value = '';
   if (function) function.value = '';
 
   if (showSubprojectsTrue) showSubprojectsTrue.checked = false;
@@ -562,13 +557,13 @@ button:hover {
 
   
     document.getElementById('search_input').addEventListener('input', function() {
-    const query = this.value.toLowerCase();
-    const items = document.querySelectorAll('#dropdown_content label');
-    
-    items.forEach(item => {
-      item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+      const query = this.value.toLowerCase();
+      const items = document.querySelectorAll('#dropdown_content label');
+      
+      items.forEach(item => {
+        item.style.display = item.textContent.toLowerCase().includes(query) ? '' : 'none';
+      });
     });
-  });
 
 </script>
 

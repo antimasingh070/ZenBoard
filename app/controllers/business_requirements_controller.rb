@@ -1,7 +1,8 @@
 class BusinessRequirementsController < ApplicationController
-    before_action :set_business_requirement, only: %i[show edit update destroy accept decline send_email]
+    before_action :set_business_requirement, only: %i[show edit update destroy accept decline send_email meeting]
     helper :attachments
-
+    # before_action :authorize, :only => [:index, :show, :edit, :update, :destroy, :accept, :decline, :send_email, :meeting]
+    # accept_api_auth :index, :show, :edit, :update, :destroy, :accept, :decline, :send_email, :meeting
     def send_email
     
       @business_requirement = BusinessRequirement.find(params[:id])
@@ -29,46 +30,52 @@ class BusinessRequirementsController < ApplicationController
                                                       .where(br_stakeholders: { user_id: User.current.id })
                                                       .uniq
                                  end
-    
+
        # Define and apply filters dynamically
         filters = {
           requirement_case: params[:requirement_case],
           requirement_received_from: params[:requirement_received_from],
-          status: params[:status],
+          status: params[:statuses],
           priority_level: params[:priority_level],
-          project_enhancement: params[:project_enhancement]
+          project_enhancement: params[:project_enhancement],
+          identifier: params[:identifier]
         }
-
         filters.each do |key, value|
-          next unless value.present? # Skip if the filter value is empty or nil
-          status_key = BusinessRequirement::STATUS_MAP.key(value)
-          if key == :requirement_received_from
-            @business_requirements = @business_requirements.select { |br| br.send(key)&.include?(value) }
-          elsif key == :status
-            @business_requirements = @business_requirements.where(key => status_key)
+          next if value.blank? || value == ["all"] # Skip if the filter value is empty or nil
+          status_keys = value.map { |v| BusinessRequirement::STATUS_MAP.key(v) }.compact
+          if  key == :status
+            @business_requirements = @business_requirements.where(key => status_keys) if status_keys.present?
+          elsif key == :requirement_received_from
+            @business_requirements = @business_requirements.select do |br|
+              value.any? { |v| br.send(key)&.include?(v) }
+            end
+          elsif value.is_a?(Array) # Check if multiple values are selected
+            @business_requirements = @business_requirements.where(key => value.reject(&:blank?)) # Remove empty values
           else
-            @business_requirements = @business_requirements.where(key => value) if value.present?
+            @business_requirements = @business_requirements.where(key => value)
+          end
+          # if key == :requirement_received_from
+          #   @business_requirements = @business_requirements.select { |br| br.send(key)&.include?(value) }
+          # elsif key == :status
+          #   @business_requirements = @business_requirements.where(key => status_key)
+          # else
+          #   @business_requirements = @business_requirements.where(key => value) if value.present?
+          # end
+        end
+        if params[:project_manager_usernames].present?
+
+          project_manager_role = Role.find_by(name: "Project Manager")
+          
+          if project_manager_role.present?
+            project_manager_names = params[:project_manager_usernames].map { |name| name.split.map(&:capitalize).join(' ') }
+            
+            user_ids = User.where("CONCAT(firstname, ' ', lastname) IN (?)", project_manager_names).pluck(:id)
+            
+            @business_requirements = @business_requirements.joins(:br_stakeholders)
+                                                          .where(br_stakeholders: { user_id: user_ids, role_id: project_manager_role.id })
           end
         end
-        # Project manager filter optimization
-        if params[:project_manager].present?
-          # Get the role ID for 'Project Manager'
-          project_manager_role = Role.find_by(name: "Project Manager")
-        
-          if project_manager_role.present?
-            # Split and capitalize the project manager name
-            project_manager_name = params[:project_manager].split.map(&:capitalize).join(' ')
-        
-            # Find the user ID(s) matching the name
-            user_ids = User.where("CONCAT(firstname, ' ', lastname) = ?", project_manager_name).pluck(:id)
-        
-            # Filter business requirements where br_stakeholders match the role and user
-            @business_requirements = @business_requirements.joins(:br_stakeholders)
-                                                           .where(br_stakeholders: { user_id: user_ids, role_id: project_manager_role.id })
-          end
-        end        
-
-        # Filter by Project Manager if selected
+  
         # Filter by Project Manager if selected
      
 
@@ -76,6 +83,7 @@ class BusinessRequirementsController < ApplicationController
         # Fetch filtered unique values
         @requirement_case = @business_requirements.map(&:requirement_case).uniq.sort
         @requirement_received_from = @business_requirements.map(&:requirement_received_from).uniq.sort
+        @identifier = @business_requirements.map(&:identifier).uniq.sort
         @statuses = @business_requirements.map { |br| BusinessRequirement::STATUS_MAP[br.status] }.compact.uniq.sort
         @project_manager_usernames = BrStakeholder.includes(:user).where(role_id: Role.find_by(name: "Project Manager")&.id).map { |stakeholder| "#{stakeholder.user.firstname} #{stakeholder.user.lastname}" }
         
@@ -89,7 +97,6 @@ class BusinessRequirementsController < ApplicationController
         @template = fetch_custom_field_names('Template')
         @requirement_received_from = fetch_custom_field_names('Function')
         @application_name = fetch_custom_field_names('Application Name')
-
         # Apply pagination
         @business_requirements = @business_requirements.paginate(page: params[:page], per_page: 5)
       rescue ActiveRecord::RecordNotFound => e
@@ -112,11 +119,13 @@ class BusinessRequirementsController < ApplicationController
                                  BusinessRequirement.joins(:br_stakeholders)
                                                      .where(br_stakeholders: { user_id: User.current.id }).uniq
                                end
-
       # Apply any filters based on parameters, similar to the index method
       @business_requirements = @business_requirements.where(requirement_case: params[:requirement_case]) if params[:requirement_case].present?
       @business_requirements = @business_requirements.where("requirement_received_from LIKE ?", "%- #{params[:requirement_received_from]}\n%") if params[:requirement_received_from].present?
-      @business_requirements = @business_requirements.where(status: BusinessRequirement::STATUS_MAP.key(params[:status])) if params[:status].present?
+      if  params[:statuses].present?
+        status_keys = params[:statuses].map { |v| BusinessRequirement::STATUS_MAP.key(v) }.compact
+        @business_requirements = @business_requirements.where(status: status_keys) if status_keys.present?
+      end
       @business_requirements = @business_requirements.where(priority_level: params[:priority_level]) if params[:priority_level].present?
       @business_requirements = @business_requirements.where(project_enhancement: params[:project_enhancement]) if params[:project_enhancement].present?
       @business_requirements = @business_requirements.where(portfolio_category: params[:portfolio_category]) if params[:portfolio_category].present?
@@ -149,6 +158,14 @@ class BusinessRequirementsController < ApplicationController
     end
 
     def show
+      @project_categories = fetch_custom_field_names('Project Category')
+      @vendor_name = fetch_custom_field_names('Vendor Name')
+      @portfolio_categories = fetch_custom_field_names('Portfolio Category')
+      @priority_level = fetch_custom_field_names('Priority Level')
+      @project_enhancement = fetch_custom_field_names('Project/Enhancement')
+      @template = fetch_custom_field_names('Template')
+      @requirement_received_from = fetch_custom_field_names('Function')
+      @application_name = fetch_custom_field_names('Application Name')
     end
   
     def edit
@@ -198,7 +215,6 @@ class BusinessRequirementsController < ApplicationController
     
     def accept
       @business_requirement = BusinessRequirement.find(params[:id])
-    
       # Check if BusinessRequirement is found and update it
       if @business_requirement && @business_requirement.update(business_requirement_params)
         mandatory_fields = [:is_it_project, :business_need_as_per_business_case, :priority_level, :requirement_submitted_date, :requirement_received_from, :portfolio_category, :project_category]
@@ -207,6 +223,7 @@ class BusinessRequirementsController < ApplicationController
         mandatory_fields.each do |field|
           value = @business_requirement.send(field)
           if field == :portfolio_category || field == :requirement_received_from
+           
             value = value.reject(&:blank?) if value.is_a?(Array)
           end
           if value.blank?
@@ -340,7 +357,7 @@ class BusinessRequirementsController < ApplicationController
     
         # Attach Business Requirement files to the project as documents (Assuming attach_files_to_project is a defined method)
         attach_files_to_project(@business_requirement, @project)
-    
+
         if @project.save
           flash[:success] = 'Business Requirement successfully accepted, updated, and project created.'
           return redirect_to project_path(@project)
@@ -386,6 +403,9 @@ class BusinessRequirementsController < ApplicationController
         render :new
     end
   
+    def meeting
+    end
+
     def update
       if @business_requirement.update(business_requirement_params)
         if @business_requirement.project_enhancement == "Project"
@@ -408,15 +428,28 @@ class BusinessRequirementsController < ApplicationController
     def hold
       @business_requirement = BusinessRequirement.find(params[:id])
       @business_requirement.update(status: 6)
+      @business_requirement.status_logs.create(
+        status: 6,
+        updated_by: User.current.name,   # assuming you're using Devise and the current user is available
+        reason: params[:remarks],         # assuming the reason is passed as a parameter
+        updated_at: Time.current
+      )
       redirect_to business_requirements_url, notice: 'Business Requirement on Hold.'
     end
 
     def decline
       @business_requirement = BusinessRequirement.find(params[:id])
+      # Create a status log when the status is updated
       @business_requirement.update(status: 8)
+      @business_requirement.status_logs.create(
+        status: 8,
+        updated_by: User.current.name,   # assuming you're using Devise and the current user is available
+        reason: params[:remarks],         # assuming the reason is passed as a parameter
+        updated_at: Time.current
+      )
       redirect_to business_requirements_url, notice: 'Business Requirement was rejected.'
     end
-  
+
     private
 
     def generate_csv(business_requirements)
@@ -497,7 +530,6 @@ class BusinessRequirementsController < ApplicationController
         # Get the user_id if such a stakeholder exists
         project_manager_user_id = first_project_manager&.user_id
         issues.each do |issue|
-          binding.pry
           @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: project.id, subject: issue.subject)
           @new_issue.assigned_to_id = project_manager_user_id.present? ? project_manager_user_id : User.current.id
           @new_issue.author = User.current

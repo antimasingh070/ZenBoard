@@ -24,7 +24,8 @@ gem 'listen', '~> 3.0.5'
 gem 'delayed_job_active_record'
 gem 'daemons'
 gem 'delayed_job_web'
-
+gem 'chartkick'
+gem 'groupdate'
 #  Ruby Standard Gems
 gem 'csv', '~> 3.2.6'
 gem 'net-imap', '~> 0.3.4'
@@ -45,6 +46,7 @@ gem 'rqrcode'
 # HTML pipeline and sanitization
 gem "html-pipeline", "~> 2.13.2"
 gem "sanitize", "~> 6.0"
+# gem 'webpacker'
 
 # Optional gem for LDAP authentication
 group :ldap do
@@ -111,7 +113,6 @@ group :test do
   gem 'simplecov', '~> 0.22.0', :require => false
   gem "ffi", platforms: [:mingw, :x64_mingw, :mswin]
   # For running system tests
-  gem 'puma'
   gem "capybara", ">= 3.39"
   if Gem.ruby_version < Gem::Version.new('3.0')
     gem "selenium-webdriver", "<= 4.9.0"

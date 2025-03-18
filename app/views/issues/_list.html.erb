@@ -32,10 +32,13 @@
     </tr>
   <% end %>
 
+
 <tr id="issue-<%= issue.id %>" 
     class="hascontextmenu <%= cycle('odd', 'even') %> <%= issue.css_classes %> <%= level > 0 ? "idnt idnt-#{level}" : nil %>"
     data-due-date="<%= issue.due_date %>" 
-    data-revised-end-date="<%= issue.custom_field_values.find { |v| v.custom_field.name == 'Revised Planned Due Date' }&.value %>">
+    data-revised-end-date="<%= issue.custom_field_values.find { |v| v.custom_field.name == 'Revised Planned Due Date' }&.value %>"
+      actual-end-date="<%= issue.custom_field_values.find { |v| v.custom_field.name == 'Actual End Date' }&.value || '' %>">
+  
   <td class="checkbox hide-when-print"><%= check_box_tag("ids[]", issue.id, false, :id => nil) %></td>
   <% query.inline_columns.each do |column| %>
     <% if column.name == :subject %>
@@ -83,11 +86,18 @@
     document.querySelectorAll('tr.issue').forEach(row => {
       const dueDate = row.getAttribute('data-due-date');
       const revisedEndDate = row.getAttribute('data-revised-end-date');
+      const actualEndDate = row.getAttribute('actual-end-date');
 
-      console.log(`Processing issue row: today=${today}, dueDate=${dueDate}, revisedEndDate=${revisedEndDate}`);
+      console.log(`Processing issue row: today=${today}, dueDate=${dueDate}, revisedEndDate=${revisedEndDate}, actualEndDate=${actualEndDate}`);
 
+      if (actualEndDate && actualEndDate !== "null" && new Date(actualEndDate) > new Date(dueDate)) {
+        console.log("Actual end date is present and greater then due date, highlighting actual end date");
+        const actualEndDate = row.querySelector('.cf_60'); // Update the selector to match the correct element
+        if (actualEndDate) {
+          actualEndDate.classList.add('due-date-overdue'); // Highlight Revised Planned Due Date in red
+        }
       // Case 1: If "Revised Planned Due Date" is present and passed, highlight it (Revised Planned Due Date takes priority)
-      if (revisedEndDate && revisedEndDate !== "null" && new Date(revisedEndDate) <= new Date(today)) {
+        } else if (revisedEndDate && revisedEndDate !== "null" && new Date(revisedEndDate) <= new Date(today)) {
         console.log("Revised end date is present and passed, highlighting revised end date");
         const revisedEndNode = row.querySelector('.cf_59'); // Update the selector to match the correct element
         if (revisedEndNode) {

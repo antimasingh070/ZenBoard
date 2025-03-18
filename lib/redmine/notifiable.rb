@@ -40,6 +40,7 @@ module Redmine
       notifications << Notifiable.new('business_requirement_created')
       notifications << Notifiable.new('meeting_invitation')
       notifications << Notifiable.new('send_mom')
+      notifications << Notifiable.new('pmo_alert_for_overdue_closed_project')
       notifications
     end
   end

@@ -1,0 +1,15 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  business_requirement: one
+  status: 1
+  updated_by: MyString
+  reason: MyText
+  updated_at: 2025-02-03 23:20:50
+
+two:
+  business_requirement: two
+  status: 1
+  updated_by: MyString
+  reason: MyText
+  updated_at: 2025-02-03 23:20:50

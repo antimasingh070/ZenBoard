@@ -1,8 +1,12 @@
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 <!-- Container for the split content layout -->
 <div class="splitcontent">
 
   <!-- Left side: Meeting Details -->
   <div class="splitcontentleft">
+     
     <h2><strong>Meeting Details</strong></h2>
     <div class="detail-item">
       <strong>Title:</strong> <%= @meeting.title %>
@@ -16,16 +20,16 @@
     <div class="detail-item">
       <strong>Note:</strong> <%= @meeting.note %>
     </div>
-
+    <div class="meeting-actions">
     <% if @business_requirement.status != 7 && @business_requirement.status != 8 %>
-      <div class="meeting-actions">
+     
         <%= link_to 'Edit', edit_business_requirement_meeting_path(@business_requirement, @meeting), class: 'btn btn-warning btn-sm' %>
         <%= link_to 'Delete', business_requirement_meeting_path(@business_requirement, @meeting), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm' %>
-        <button class="btn btn-primary btn-sm" onclick="toggleMomForm()">New/Edit MOM</button>
-      </div>
+    
     <% end %>
 
-    <%= link_to 'Back to Meetings', business_requirement_path(@business_requirement), class: 'btn btn-secondary btn-sm' %>
+
+      </div>
   </div>
 
   <!-- Right side: MOM Details and Attendees -->
@@ -54,10 +58,10 @@
       <thead>
         <tr>
           <th class='export-csv'>Sr. No.</th>
-          <th class='export-csv'>Action Item</th>
+          <th class='export-csv'>Action Item <span style="color: red;">*</span></th>
           <th class='export-csv'>Status</th>
           <th class='export-csv'>Owners</th>
-          <th class='export-csv'>Timeline</th>
+          <th class='export-csv'>Timeline <span style="color: red;">*</span></th>
           <th>Action</th>
           <th class='export-csv' style="width: 300px;">Remarks</th> 
         </tr>
@@ -111,7 +115,7 @@
 
               <!-- Timeline Column -->
               <td>
-                  <%= f.date_field :timeline, value: point.timeline&.strftime("%Y-%m-%d"), class: 'form-control' %>
+                  <%= f.date_field :timeline, value: point.timeline&.strftime("%Y-%m-%d"), class: 'form-control' , required: true %>
               </td>
 
               <!-- Action Column -->
@@ -202,8 +206,9 @@
 
               <!-- Timeline Column -->
               <td>
-                <%= f.date_field :timeline, class: 'form-control' %>
+                <%= f.date_field :timeline, class: 'form-control', required: true %>
               </td>
+
               <td>
                 <%= f.submit 'Add', class: 'btn btn-primary' %>
               </td>
@@ -220,11 +225,6 @@
 <%= button_to 'Send Mom', send_mom_email_business_requirement_meeting_mom_path(@business_requirement.id, @meeting.id, @mom.id), method: :post, class: 'btn btn-secondary' %>
 
 </div>
-<!-- JavaScript to Toggle View/Edit Mode -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"></script>
 <script>
 
 function exportToCsv() {

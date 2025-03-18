@@ -775,7 +775,11 @@ module ApplicationHelper
   end
 
   def page_header_title
-    if @project.nil? || @project.new_record?
+    if @business_requirement.present?
+      "#{@business_requirement.requirement_case}"
+    elsif controller.controller_name == "business_requirements"
+      "Business Requirements"
+    elsif @project.nil? || @project.new_record?
       "Trackmine"
     else
       b = []
