@@ -178,7 +178,7 @@ module Redmine
                   }
           # Project Score Card link (only for Program Managers)
         menu.push :project_score_card, { controller: 'welcome', action: 'project_score_card' },
-        caption: 'Project Score Card',
+        caption: 'Summery',
         if: Proc.new { User.current.admin? || User.current.groups.include?(Group.find_by_lastname('PMO')) }
 
         # IT Project Dashboard / Non IT Project Dashboard links (based on current user's projects and custom field)

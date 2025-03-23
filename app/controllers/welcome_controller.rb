@@ -20,7 +20,7 @@
 class WelcomeController < ApplicationController
   self.main_menu = false
   include WelcomeHelper
-  before_action :set_projects, only: [:project_score_card, :reports,  :calculate_delay_percentage, :resource_management, :export_projects_to_csv, :export_project_score_to_csv]
+  before_action :set_projects, only: [:project_score_card,  :calculate_delay_percentage, :resource_management, :export_resource_management_to_csv, :export_project_score_to_csv]
 
   
   skip_before_action :check_if_login_required, only: [:robots]
@@ -41,19 +41,91 @@ class WelcomeController < ApplicationController
       head :not_found
     end
   end
-  
-  def reports
-    
+
+  def resource_management
     @projects = @projects.where(status: 1)
     @roles = Role.all.where.not(name: ["Anonymous", "Non member"]).pluck(:name)
     @members = User.all
+    if params[:roles].present? && params[:members].present?
+      role = Role.where(name: params[:roles])
+      member = User.where(firstname: params[:members].map { |name| name.split(' ').first }, lastname: params[:members].map { |name| name.split(' ').last })
+
+      if role && member
+        member_role_ids = MemberRole.where(role_id: role.pluck(:id)).pluck(:member_id)
+        member_ids = Member.where(id: member_role_ids, user_id: member.pluck(:id)).pluck(:project_id)
+        @projects = @projects.where(id: member_ids)
+        # Extract project owner names for the filtered projects
+        @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
+        @program_managers.compact
+      else
+        return []
+      end
+    else
+      @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
+    end
+  end
+
+  def export_resource_management_to_csv
+    @projects = @projects.where(status: 1)
+    @roles = Role.all.where.not(name: ["Anonymous", "Non member"]).pluck(:name)
+    @members = User.all
+    if params[:roles].present? && params[:members].present?
+      role = Role.where(name: params[:roles])
+      member = User.where(firstname: params[:members].map { |name| name.split(' ').first }, lastname: params[:members].map { |name| name.split(' ').last })
+
+      if role && member
+        member_role_ids = MemberRole.where(role_id: role.pluck(:id)).pluck(:member_id)
+        member_ids = Member.where(id: member_role_ids, user_id: member.pluck(:id)).pluck(:project_id)
+        @projects = @projects.where(id: member_ids)
+        # Extract project owner names for the filtered projects
+        @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
+        @program_managers.compact
+      else
+        return []
+      end
+    else
+      @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
+    end
+    # Generate CSV based on filtered projects
+    csv_data = CSV.generate(headers: true) do |csv|
+      # Adding header row to CSV
+      csv << ["Program Manager", "Project Manager", "Project Assigned", "% Work Allocation", "Last Activity Due Date (Projects)", "Last Activity Due Date (Tasks)", "Total Hours/Month (Project Overview)", "Total Hours/Month (Assigned Activity)"]
+      
+      @program_managers.each do |program_manager|
+        project_managers_data = get_project_manager_for_program_manager(@projects, program_manager)
+        project_managers = project_managers_data[:project_managers]
+        
+        project_managers.each do |project_manager|
+          project_manager_projects = @projects.select { |project| member_names(project, 'Project Manager').include?(project_manager) }
+          project_count = project_manager_projects.count
+          work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation").join(", ")
+          last_activity_due_date_project = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date")
+          last_activity_due_date_task = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity")
+          total_hours_project = working_duration_across_projects(project_manager_projects)
+          total_hours_task = working_duration_across_assigned_tasks(project_manager_projects, project_manager)
+  
+          # Write a row to the CSV
+          csv << [
+            program_manager,
+            project_manager,
+            project_count,
+            work_allocation.empty? ? "" : work_allocation,
+            last_activity_due_date_project,
+            last_activity_due_date_task,
+            total_hours_project,
+            total_hours_task
+          ]
+        end
+      end
+    end
+  
+    # Send the CSV data as a response for download
+    send_data csv_data, filename: "resource_management.csv", type: "text/csv"
   end
 
   def member_names_by_role(projects, role)
     projects.flat_map { |project| member_names(project, role) }.compact.uniq.sort
   end
-
-  def resource_management; end
 
   def export_project_score_to_csv
        # Define project status text
@@ -133,62 +205,6 @@ class WelcomeController < ApplicationController
     send_data csv_data, filename: "#{filter_type}_#{filter_value}.csv", type: "text/csv"
   end
 
-  
-  def export_projects_to_csv
-    # Retrieve selected filters from the query parameters
-    selected_program_managers = params[:program_managers]&.split(',') || []
-    selected_project_managers = params[:project_managers]&.split(',') || []
-    @projects = @projects.select { |project| (Array(selected_program_managers) & member_names(project, 'Program Manager')).any? } if selected_program_managers.present?
-    @projects = @projects.select { |project| (Array(selected_project_managers) & member_names(project, 'Project Manager')).any? } if selected_project_managers.present?
-    # Filter projects based on selected Program Managers
-    filtered_projects = @projects.select do |project|
-      project_managers = member_names(project, 'Project Manager')
-      selected_project_managers.empty? || (project_managers & selected_project_managers).any?
-    end
-  
-    # Filter further based on selected Program Managers
-    filtered_projects = filtered_projects.select do |project|
-      program_manager = member_names(project, 'Program Manager').first # Assuming only one Program Manager
-      selected_program_managers.empty? || selected_program_managers.include?(program_manager)
-    end
-  
-    # Generate CSV based on filtered projects
-    csv_data = CSV.generate(headers: true) do |csv|
-      # Adding header row to CSV
-      csv << ["Program Manager", "Project Manager", "Project Assigned", "% Work Allocation", "Last Activity Due Date (Projects)", "Last Activity Due Date (Tasks)", "Total Hours/Month (Project Overview)", "Total Hours/Month (Assigned Activity)"]
-      
-      selected_program_managers.each do |program_manager|
-        project_managers_data = get_project_manager_for_program_manager(filtered_projects, program_manager)
-        project_managers = project_managers_data[:project_managers]
-        
-        project_managers.each do |project_manager|
-          project_manager_projects = filtered_projects.select { |project| member_names(project, 'Project Manager').include?(project_manager) }
-          project_count = project_manager_projects.count
-          work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation").join(", ")
-          last_activity_due_date_project = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date")
-          last_activity_due_date_task = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity")
-          total_hours_project = working_duration_across_projects(project_manager_projects)
-          total_hours_task = working_duration_across_assigned_tasks(project_manager_projects, project_manager)
-  
-          # Write a row to the CSV
-          csv << [
-            program_manager,
-            project_manager,
-            project_count,
-            work_allocation.empty? ? "" : work_allocation,
-            last_activity_due_date_project,
-            last_activity_due_date_task,
-            total_hours_project,
-            total_hours_task
-          ]
-        end
-      end
-    end
-  
-    # Send the CSV data as a response for download
-    send_data csv_data, filename: "project_dashboard.csv", type: "text/csv"
-  end
-
   def project_score_card
     # Define project status text
     @project_status_text = {
@@ -216,8 +232,17 @@ class WelcomeController < ApplicationController
     priority_level_id = CustomField.find_by(name: "Priority Level")&.id
     @priorities = CustomFieldEnumeration.where(custom_field_id: priority_level_id).pluck(:name) if priority_level_id
     # Fetch closed projects and calculate top delayed projects
-    @closed_projects = @projects.where(status: Project::STATUS_CLOSED)
-    @top_delayed_projects = get_top_delayed_projects(@closed_projects)
+    @it_closed_projects = @projects.where(status: Project::STATUS_CLOSED)
+    @filter_projects = @projects
+    @filter_projects = @filter_projects.select { |project| (Array(params[:program_manager_usernames]) & member_names(project, 'Program Manager')).any? } if params[:program_manager_usernames].present?
+    @filter_projects = @filter_projects.select { |project| (Array( params[:project_manager_usernames]) & member_names(project, 'Project Manager')).any? } if  params[:project_manager_usernames].present?
+
+    @active_projects = @filter_projects.select { |p| p.status == Project::STATUS_ACTIVE }.count
+    @closed_projects = @filter_projects.select { |p| p.status == Project::STATUS_CLOSED }.count
+    @hold_projects = @filter_projects.select { |p| p.status == Project::STATUS_HOLD }.count
+    @cancelled_projects = @filter_projects.select { |p| p.status == Project::STATUS_CANCELLED }.count
+    @go_live_projects = @filter_projects.select { |p| p.status == Project::STATUS_GO_LIVE }.count
+    @top_delayed_projects = get_top_delayed_projects(@it_closed_projects)
 
     # Calculate delay percentages for last year, year-to-date, and this month
     @total_last_year = calculate_delay_percentage(2.years.ago.change(month: 4, day: 1), 1.year.ago.change(month: 3, day: 31))
@@ -300,10 +325,10 @@ class WelcomeController < ApplicationController
     total_projects = 0
     delayed_projects = []
     ontime_projects = []
-    @closed_projects = @projects.select { |project| project.status == Project::STATUS_CLOSED }
-    @closed_projects = @closed_projects.select { |project| (Array(params[:program_manager_usernames]) & member_names(project, 'Program Manager')).any? } if params[:program_manager_usernames].present?
-    @closed_projects = @closed_projects.select { |project| (Array( params[:project_manager_usernames]) & member_names(project, 'Project Manager')).any? } if  params[:project_manager_usernames].present?
-    @closed_projects.each do |project|
+    @it_closed_projects = @projects.select { |project| project.status == Project::STATUS_CLOSED }
+    @it_closed_projects = @it_closed_projects.select { |project| (Array(params[:program_manager_usernames]) & member_names(project, 'Program Manager')).any? } if params[:program_manager_usernames].present?
+    @it_closed_projects = @it_closed_projects.select { |project| (Array( params[:project_manager_usernames]) & member_names(project, 'Project Manager')).any? } if  params[:project_manager_usernames].present?
+    @it_closed_projects.each do |project|
       scheduled_end_date = fetch_custom_field_date(project, 'Scheduled End Date')
       next unless scheduled_end_date && scheduled_end_date.between?(start_date, end_date)
   

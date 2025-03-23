@@ -98,7 +98,7 @@ class BusinessRequirementsController < ApplicationController
         @requirement_received_from = fetch_custom_field_names('Function')
         @application_name = fetch_custom_field_names('Application Name')
         # Apply pagination
-        @business_requirements = @business_requirements.paginate(page: params[:page], per_page: 5)
+        @business_requirements = @business_requirements.order(identifier: :asc).paginate(page: params[:page], per_page: 5)
       rescue ActiveRecord::RecordNotFound => e
         Rails.logger.error "Error fetching records: #{e.message}"
          flash[:error] = ""

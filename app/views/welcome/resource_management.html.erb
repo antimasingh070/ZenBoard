@@ -1,107 +1,357 @@
-<%= javascript_include_tag "https://code.highcharts.com/highcharts.js" %>
-<%= javascript_include_tag "https://code.highcharts.com/modules/annotations.js" %>
-<%
-def project_count(program_manager, project_manager_name, status=nil)
-  program_manager_role_id = Role.find_by(name: "Program Manager").id
-  project_manager_role_id = Role.find_by(name: "Project Manager").id
-  firstname, lastname = program_manager&.split
-  pjm_user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
-  firstname, lastname = project_manager_name.split
-  prm_user_id = User.find_by(firstname: firstname, lastname: lastname).id
-  if status.present? 
-    projects = Project.joins(members: :member_roles).where(members: {user_id: [pjm_user_id, prm_user_id] }, member_roles: {role_id: [program_manager_role_id, project_manager_role_id]}).where(status: status).count
-  else
-    projects = Project.joins(members: :member_roles).where(members: {user_id: [pjm_user_id, prm_user_id] }, member_roles: {role_id: [program_manager_role_id, project_manager_role_id]}).count
-  end
-end 
 
-@chart_data = @project_managers.map do |manager|
-  {
-    name: manager,
-    data: [
-      project_count(params[:manager_filter], manager, Project::STATUS_ACTIVE),
-      project_count(params[:manager_filter], manager, Project::STATUS_HOLD),
-      project_count(params[:manager_filter], manager, Project::STATUS_GO_LIVE),
-      project_count(params[:manager_filter], manager, Project::STATUS_CLOSED),
-      project_count(params[:manager_filter], manager, Project::STATUS_CANCELLED)
-    ]
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Dashboard</title>
+  <style>
+  .filter-form {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
   }
-end
+  .filter-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  /* Filters */
+  .filter-group {
+    flex: 1;
+    min-width: 250px;
+  }
+  
+  .filter-label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+  }
+  
+  .filter-input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  /* Container for dropdown */
+  .dropdown {
+    position: relative;
+    display: inline-block;
+    width: 300px; /* Wider for better readability */
+  }
+  
+  #search_input {
+    width: 100px; /* Full width to match dropdown */
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+  }
+  
+  .dropdown-content {
+    display: none; /* Default hidden, shown dynamically */
+    position: absolute;
+    top: calc(100% + 4px); /* Slight gap from the input box */
+    left: 0;
+    width: 100%;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px; /* Rounded corners for better UI */
+    max-height: 200px; /* Slightly taller for more options */
+    overflow-y: auto; /* Scrollable when content exceeds height */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow for better visibility */
+    z-index: 10;
+  }
+  
+  .dropdown-content label {
+    display: block;
+    padding: 6px 12px;
+    margin: 0; /* Maintain consistent spacing */
+    font-size: 14px; /* Slightly larger text for readability */
+    cursor: pointer; /* Indicate clickable items */
+  }
+  
+  .dropdown-content label:hover {
+    background-color: #f7f7f7; /* Highlight on hover */
+  }
+  
+  .dropdown-content input[type="checkbox"] {
+    margin-right: 8px; /* Space between checkbox and label text */
+  }
+    .button-group {
+      display: flex;
+      gap: 10px; /* Space between Filter and Clear buttons */
+    }
 
-@categories = ['Active', 'Hold', 'Go Live', 'Closed', 'Cancelled']
+    .btn.secondary {
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
 
-%>
+    .btn.secondary:hover {
+      background-color: #e0e0e0;
+    }
 
-<div class="filter-form">
-    <%= form_with url: resource_management_path, method: :get, local: true do %>
-      <label for="manager_filter">Program Manager:</label>
-      <select name="manager_filter" id="manager_filter">
-        <option value="">All</option>
-        <% @program_managers.each do |manager| %>
-          <option value="<%= manager %>" <%= 'selected' if params[:manager_filter] == manager %>><%= manager %></option>
-        <% end %>
-      </select>
+    #export-csv {
+      margin-bottom: 20px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
 
-      <%= submit_tag "Filter", class: "filter-button" %>
-  <% end %>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table th, table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    table th {
+      background-color: #f4f4f4;
+    }
+  </style>
+</head>
+<body>
+  <!-- Filters Section -->
+<form action="" method="get" class="filter-form">
+  <div class="filter-container">
+    <!-- Role Filter -->
+    <div class="filter-group">
+      <label for="search_input1" class="filter-label">Role:</label>
+      <div class="dropdown">
+        <input type="text" id="search_input1" class="filter-input" placeholder="Search..." onkeyup="filterDropdown('dropdown_content1')">
+        <div id="dropdown_content1" class="dropdown-content">
+          <% if @roles.present? %>
+            <% @roles.each do |role| %>
+              <label>
+                <input type="checkbox" name="roles[]" value="<%= role %>"
+                  <%= params[:roles]&.include?(role) ? 'checked' : '' %>>
+                <%= role %>
+              </label>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Member Filter -->
+    <div class="filter-group">
+      <label for="search_input2" class="filter-label">Member:</label>
+      <div class="dropdown">
+        <input type="text" id="search_input2" class="filter-input" placeholder="Search..." onkeyup="filterDropdown('dropdown_content2')">
+        <div id="dropdown_content2" class="dropdown-content">
+          <% if @members.present? %>
+            <% @members.each do |member| %>
+              <label>
+                <input type="checkbox" name="members[]" value="<%= member %>"
+                  <%= params[:members]&.include?(member) ? 'checked' : '' %>>
+                <%= member %>
+              </label>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="button-group">
+    <input type="submit" value="Filter">
+      <button type="button" onclick="clearFilters()" class="btn btn-danger">Clear</button>
+    </div>
   </div>
+</form>
+<br>
+<div style="margin-bottom: 20px;">
+  <button id="export-csv" onclick="exportToCsv()">Export to CSV</button>
+</div>
 
-<div id="programManagerChart" style="width: 100%; height: 500px;"></div>
+  <!-- Table Section -->
+<table class="table table-bordered">
+  <thead>
+    <tr>
+      <th>Project Owner</th>
+      <th>Project Manager</th>
+      <th>Project Assigned</th>
+      <th>% Work Allocation</th>
+      <th>Last Activity Due Date (Projects)</th>
+      <th>Last Activity Due Date (Tasks)</th>
+      <th>Total Hours/Month (Project Overview)</th>
+      <th>Total Hours/Month (Assigned Activity)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @program_managers.each do |program_manager| %>
+      <% project_managers_data = get_project_manager_for_program_manager(@projects, program_manager) %>
+      <% project_managers = project_managers_data[:project_managers] %>
+      <% if project_managers.any? %>
+        <% project_managers.each_with_index do |project_manager, index| %>
+          <% project_manager_projects = Project.where(id: project_managers_data[:project_ids]).select { |project| member_names(project, 'Project Manager').include?(project_manager) } %>
+          <% project_count = project_manager_projects.count %>
+          <% duration = working_duration_across_projects(project_manager_projects) %>
+          <% tasks_duration = working_duration_across_assigned_tasks(project_manager_projects, project_manager) %>
+          <tr data-program-manager="<%= program_manager %>" data-project-manager="<%= project_manager %>">
+      
+              <td><%= program_manager %></td>
+      
+            <td><%= project_manager %></td>
+            <td><%= link_to project_count, "http://localhost:3000/it_project_dashboard?show_subprojects=false&function_filter=&function_filter=&function_filter=&manager_filter=#{project_manager}&program_manager_filter=#{program_manager}&start_date_from=&start_date_to=&end_date_from=&end_date_to=" %></td>
+            <% total_work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation") %>
+            <td style="font-size: 10px;"><%= total_work_allocation.empty? ? "" : total_work_allocation.flatten.join(", ") %></td>
+            <% last_completed_activity = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date") %>
+            <td style="font-size: 10px;"><%= last_completed_activity %></td>
+            <% last_completed_activity = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity") %>
+            <td style="font-size: 10px;"><%= last_completed_activity %></td>
+            <td style="font-size: 10px;"><%= duration %></td>
+            <td style="font-size: 10px;"><%= tasks_duration %></td>
+          </tr>
+        <% end %>
+      <% else %>
+      <% end %>
+    <% end %>
+  </tbody>
+</table>
 
 <script>
 
-  const chartData = <%= @chart_data.to_json.html_safe %>;
-  const categories = <%= @categories.to_json.html_safe %>;
+  document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll(".dropdown").forEach(dropdown => {
+      let input = dropdown.querySelector("input");
+      let dropdownContent = dropdown.querySelector(".dropdown-content");
 
-  Highcharts.chart('programManagerChart', {
-    chart: {
-      type: 'bar' // Bar chart (horizontal stacked bar)
-    },
-    title: {
-      text: 'Summary for Program Manager'
-    },
-    xAxis: {
-      categories: chartData.map(data => data.name), // Program Manager Names
-      title: {
-        text: 'Project Managers'
-      }
-    },
-    yAxis: {
-      min: 0,
-      title: {
-        text: 'Number of Projects'
-      },
-      stackLabels: {
-        enabled: true,
-        style: {
-          fontWeight: 'bold',
-          color: 'gray'
-        },
-        formatter: function () {
-          return this.total; // Show total for each manager
+      // Keep dropdown open when clicked
+      input.addEventListener("click", function(event) {
+        event.stopPropagation();
+        closeAllDropdowns(dropdownContent);
+        dropdownContent.style.display = "block";
+      });
+
+      // Search filter within dropdown
+      input.addEventListener("keyup", function() {
+        let filter = input.value.toLowerCase();
+        dropdown.querySelectorAll("label").forEach(label => {
+          label.style.display = label.textContent.toLowerCase().includes(filter) ? "" : "none";
+        });
+      });
+
+      // Retain selected checkboxes on page reload
+      let fieldName = input.getAttribute("name");
+      let selectedValues = new Set(getSelectedValues(fieldName));
+      dropdown.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        if (selectedValues.has(checkbox.value)) {
+          checkbox.checked = true;
         }
+      });
+
+      // Handle "All" checkbox selection
+      let allCheckbox = dropdown.querySelector('input[value="all"]');
+      if (allCheckbox) {
+        allCheckbox.addEventListener("change", function() {
+          let isChecked = this.checked;
+          dropdown.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = isChecked;
+          });
+        });
       }
-    },
-    legend: {
-      reversed: true
-    },
-    plotOptions: {
-      series: {
-        stacking: 'normal', // Stacked bar chart
-        dataLabels: {
-          enabled: true
-        }
-      }
-    },
-    tooltip: {
-      formatter: function () {
-        return `<b>${this.series.name}</b><br>${this.key}: ${this.y} projects`;
-      }
-    },
-    series: categories.map((status, index) => ({
-      name: status,
-      data: chartData.map(manager => manager.data[index]), // Status-wise data
-      color: ['#4CAF50', '#FFC107', '#2196F3', '#9E9E9E', '#F44336'][index] // Colors for each status
-    }))
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener("click", function() {
+      closeAllDropdowns();
+    });
   });
+
+  // Function to close all dropdowns
+  function closeAllDropdowns(exception = null) {
+    document.querySelectorAll(".dropdown-content").forEach(content => {
+      if (content !== exception) content.style.display = "none";
+    });
+  }
+
+  // Function to get selected values from URL params
+  function getSelectedValues(fieldName) {
+    let params = new URLSearchParams(window.location.search);
+    return params.getAll(fieldName) || [];
+  }
+
+  // Function to clear all filters
+  function clearFilters() {
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll(".dropdown input[type='text']").forEach(input => input.value = "");
+  }
+
+
+  document.addEventListener("DOMContentLoaded", function() {
+    let checkboxes = document.querySelectorAll("input[type='checkbox']");
+
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener("change", function() {
+        let name = this.name;
+        let allCheckbox = document.querySelector(`input[name='${name}'][value='all']`);
+        let otherCheckboxes = document.querySelectorAll(`input[name='${name}']:not([value='all'])`);
+
+        if (this.value === "all") {
+          // If "All" is checked, uncheck all others
+          if (this.checked) {
+            otherCheckboxes.forEach(cb => cb.checked = false);
+          }
+        } else {
+          // If any specific value is selected, uncheck "All"
+          if (this.checked) {
+            allCheckbox.checked = false;
+          }
+        }
+      });
+    });
+  });
+
+
+  function exportToCsv() {
+    let url = new URL(window.location.href); 
+    console.log("Fetching CSV from:", url); 
+    url.pathname = "/welcome/export_resource_management_to_csv"; 
+      const filterParams = new URLSearchParams(url.search);
+      const filters = [
+          'roles',
+          'members'
+      ];
+      console.log("Fetching CSV from:", filterParams);
+      // Populate filter parameters dynamically
+  
+      console.log("Applied Filters:", Object.fromEntries(filterParams)); // Log applied filters
+
+      const exportUrl = `/welcome/export_resource_management_to_csv?${filterParams.toString()}`;
+      console.log("Fetching CSV from:", exportUrl); // Log API request URL
+
+      fetch(exportUrl, { headers: { Accept: 'text/csv' } })
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Failed to fetch CSV data');
+              }
+              return response.blob(); // Read response as Blob
+          })
+          .then(blob => {
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = 'resource_management.csv';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+          })
+          .catch(error => {
+              console.error('Error exporting data to CSV:', error);
+          });
+  }
 </script>
+
+</body>
+</html>

@@ -38,24 +38,24 @@ module WelcomeHelper
     Date.new(Date.today.year, 12, 25)  # Christmas
   ].freeze
 
-  def working_duration_across_assigned_tasks(projects, selected_role, selected_member)
+  def working_duration_across_assigned_tasks(projects, project_manager)
     projects = [projects] unless projects.is_a?(Array)
      # Select only projects managed by the given Project Manager
-     projects = projects.select { |project| member_names(project, selected_role).include?(selected_member) } if selected_member.present?
-     return "NA" if selected_member.blank?
+     projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
+     return "NA" if project_manager.blank?
      return "" if projects.blank?
     field_name = "Project Activity"
     custom_field = CustomField.find_by(name: field_name)
     return "" unless custom_field
 
-    # Split selected_member into firstname and lastname
-    first_name, last_name = selected_member.split(" ", 2)
+    # Split project_manager into firstname and lastname
+    first_name, last_name = project_manager.split(" ", 2)
 
-    # Find the selected_member user object
+    # Find the project_manager user object
     project_user = User.find_by(firstname: first_name, lastname: last_name)
     return "" unless project_user
 
-    # Fetch the most recently updated issue where the selected_member is the assignee
+    # Fetch the most recently updated issue where the project_manager is the assignee
     last_issue = Issue.where(
         project_id: projects.map(&:id),
         assigned_to_id: project_user.id
@@ -96,29 +96,29 @@ module WelcomeHelper
 
 
 
-def last_activity_from_all_assigned_task(selected_role, selected_member, projects, field_name)
+def last_activity_from_all_assigned_task(project_manager, projects, field_name)
   projects = [projects] unless projects.is_a?(Array)
   return "" if projects.blank? || field_name.blank?
-  return "" if selected_member.blank?
+  return "" if project_manager.blank?
   # Select only projects managed by the given Project Manager
-  projects = projects.select { |project| member_names(project, selected_role).include?(selected_member) } if selected_member.present?
+  projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
   return "" if projects.blank?
 
   if field_name == "Project Activity"
     custom_field = CustomField.find_by(name: field_name)
     return "" unless custom_field
 
-    # Split selected_member into firstname and lastname
-    first_name, last_name = selected_member.split(" ", 2)
+    # Split project_manager into firstname and lastname
+    first_name, last_name = project_manager.split(" ", 2)
 
     # Find the Project Manager user object
-    selected_member_user = User.find_by(firstname: first_name, lastname: last_name)
-    return "" unless selected_member_user
+    project_manager_user = User.find_by(firstname: first_name, lastname: last_name)
+    return "" unless project_manager_user
 
     # Fetch the most recently updated issue where the Project Manager is the assignee
     last_issue = Issue.where(
       project_id: projects.map(&:id),
-      assigned_to_id: selected_member_user.id
+      assigned_to_id: project_manager_user.id
     ).where.not(status: 5).order(updated_on: :desc).first
 
     return "" unless last_issue
@@ -143,12 +143,12 @@ def last_activity_from_all_assigned_task(selected_role, selected_member, project
   ""
 end
 
-def last_activity_from_all_projects(selected_role, selected_member, projects, field_name)
+def last_activity_from_all_projects(project_manager, projects, field_name)
   projects = [projects] unless projects.is_a?(Array)
   return "" if projects.blank? || field_name.blank?
-  return "" if selected_member.blank?
+  return "" if project_manager.blank?
   # Select only projects managed by the given Project Manager
-  projects = projects.select { |project| member_names(project, selected_role).include?(selected_member) } if selected_member.present?
+  projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
   return "" if projects.blank?
 
   custom_field = CustomField.find_by(name: field_name)
@@ -175,12 +175,12 @@ def last_activity_from_all_projects(selected_role, selected_member, projects, fi
 end
 
 
-def total_work_allocation(selected_role, selected_member, projects, field_name)
+def total_work_allocation(project_manager, projects, field_name)
   projects = [projects] unless projects.is_a?(Array)
   return "" if projects.blank? || field_name.blank?
-  return "" if selected_member.blank?
+  return "" if project_manager.blank?
   # Select only projects managed by the given Project Manager
-  projects = projects.select { |project| member_names(project, selected_role).include?(selected_member) } if selected_member.present?
+  projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
   return "" if projects.blank?
   custom_field = CustomField.find_by(name: field_name)
   return "" unless custom_field

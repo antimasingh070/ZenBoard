@@ -128,14 +128,11 @@
 
 </style>
     <h1><%= page_header_title %></h1>
-    <% if controller.controller_name == 'welcome' && (params[:action] == "project_score_card" || params[:action] == "reports" || params[:action] == "resource_management") %>
+    <% if controller.controller_name == 'welcome' && (params[:action] == "project_score_card" || params[:action] == "resource_management") %>
         <div id="main-menu" class="tabs" style="max-width: 100%; margin: 0 auto;">
         <ul class="nav nav-tabs" style="display: flex; justify-content: flex-start; gap: 15px;">
             <li class="nav-item">
-            <%= link_to "Project Score Card", project_score_card_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'project_score_card'}" %>
-            </li>
-            <li class="nav-item">
-            <%= link_to "Reports", reports_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'reports'}" %>
+            <%= link_to "Project Dashboard", project_score_card_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'project_score_card'}" %>
             </li>
             <li class="nav-item">
             <%= link_to "Resource Management", resource_management_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'resource_management'}" %>
