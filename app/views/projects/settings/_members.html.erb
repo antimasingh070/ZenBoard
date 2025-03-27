@@ -1,44 +1,235 @@
+
 <% members = @project.memberships.preload(:project).sorted.to_a %>
 
 <% if User.current.admin? %>
-  <div class="contextual"><%= link_to l(:label_administration), users_path, :class => "icon icon-settings" %></div>
+  <div class="contextual">
+    <%= link_to l(:label_administration), users_path, class: "icon icon-settings" %>
+  </div>
 <% end %>
-<p><%= link_to l(:label_member_new), new_project_membership_path(@project), :remote => true, :class => "icon icon-add" %></p>
+
+<p>
+  <%= link_to l(:label_member_new), new_project_membership_path(@project), remote: true, class: "icon icon-add" %>
+</p>
 
 <% if members.any? %>
-<table class="list members">
-  <thead>
-    <tr>
-      <th><%= l(:label_user) %> / <%= l(:label_group) %></th>
-      <th><%= l(:label_role_plural) %></th>
-      <th></th>
-      <%= call_hook(:view_projects_settings_members_table_header, :project => @project) %>
-    </tr>
-  </thead>
-  <tbody>
-  <% members.each do |member| %>
-  <% next if member.new_record? %>
-  <tr id="member-<%= member.id %>" class="member">
-  <td class="name icon icon-<%= member.principal.class.name.downcase %>"><%= link_to_user member.principal %></td>
-  <td class="roles">
-    <span id="member-<%= member.id %>-roles"><%= member.roles.sort.collect(&:to_s).join(', ') %></span>
-    <div id="member-<%= member.id %>-form"></div>
-  </td>
-  <td class="buttons">
-      <%= link_to l(:button_edit),
-                  edit_membership_path(member),
-                  :remote => true,
-                  :class => 'icon icon-edit' %>
-      <%= delete_link membership_path(member),
-                      :remote => true,
-                      :data => (!User.current.admin? && member.include?(User.current) ? {:confirm => l(:text_own_membership_delete_confirmation)} : {}) if member.deletable? %>
-  </td>
-  <%= call_hook(:view_projects_settings_members_table_row, { :project => @project, :member => member}) %>
-  </tr>
-<% end %>
-  </tbody>
-</table>
+  <table class="list members">
+    <thead>
+      <tr>
+        <th><%= l(:label_user) %> / <%= l(:label_group) %></th>
+        <th><%= l(:label_role_plural) %></th>
+        <th>% Work Allocation</th>
+        <th></th>
+        <%= call_hook(:view_projects_settings_members_table_header, project: @project) %>
+      </tr>
+    </thead>
+    <tbody>
+      <% members.each do |member| %>
+        <% next if member.new_record? %>
+        <tr id="member-<%= member.id %>" class="member">
+          <td class="name icon icon-<%= member.principal.class.name.downcase %>">
+            <%= link_to_user member.principal %>
+          </td>
+          <td class="roles">
+            <span id="member-<%= member.id %>-roles">
+              <%= member.roles.sort.collect(&:to_s).join(', ') %>
+            </span>
+            <div id="member-<%= member.id %>-form"></div>
+          </td>
+          <td class="work-allocation">
+            <% if member.roles.any? { |role| role.name == "Project Manager" } %>
+              <!-- Static text, Edit icon, and Details button -->
+            
+              <!-- Editable form (hidden by default) -->
+              <% 
+                user = User.find(member.user_id)
+                project_manager = "#{user.firstname} #{user.lastname}"
+                member_role_ids = MemberRole.where(role_id: Role.find_by(name: "Project Manager")&.id).pluck(:member_id)
+                member_ids = Member.where(id: member_role_ids, user_id: member.user_id).pluck(:project_id)
+                custom_field = CustomField.find_by(name: "Is It Project?")
+                customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "1").pluck(:customized_id)
+          
+                
+                @projects = user.projects.where(id: member_ids, parent_id: nil, status: 1)
+                @projects = @projects.where(id: customized_ids)
+                projects = @projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
+                return "" if projects.blank?
+                
+                firstname, lastname = project_manager.split
+                user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
+                work_allocation_sum = Member.where(user_id: user_id, project_id: @projects.ids).pluck(:work_allocation).compact.sum
+              %>
+              
+              <%= form_with url: work_allocation_path(member), method: :patch, remote: true, class: 'inline-form work-allocation-form',  data: { total_allocation: work_allocation_sum } do |f| %>
+                <%= f.number_field :work_allocation, value: member.work_allocation, class: 'form-control work-allocation-input', placeholder: 'Enter work allocation', step: 1 %>
+                <div id="allocation-warning-<%= member.id %>" class="alert alert-warning" style="display: none; color: red;">
+                  User already has work allocation of <%= work_allocation_sum %>%.
+                </div>
+                <%= f.submit 'Save', class: 'btn btn-sm btn-primary', data: { disable_with: 'Saving...' } %>
+                <span class="icon icon-help info" style="cursor: pointer;" onclick="openModal('<%= member.id %>')"></span>
+              <% end %>
+              
+              <div class="modal fade" id="projectDetailsModal-<%= member.id %>" tabindex="-1" aria-labelledby="projectDetailsModalLabel-<%= member.id %>" aria-hidden="true">
+                <!-- Custom Modal Structure -->
+                <div id="customModal-<%= member.id %>" class="custom-modal">
+                  <div class="custom-modal-content">
+                    <div class="custom-modal-header">
+                      <h5 class="custom-modal-title">Project Details</h5>
+                      <button type="button" class="custom-modal-close" onclick="closeModal('<%= member.id %>')">&times;</button>
+                    </div>
+                    <div class="custom-modal-body">
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Project Name</th>
+                            <th>% Work Allocation</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% @projects.each do |project| %>
+                            <tr>
+                              <td><%= link_to project.name, project_path(project) %></td>
+                              <td><%= Member.find_by(user_id: member.user_id, project_id: project.id)&.work_allocation %></td>
+                            </tr>
+                          <% end %>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="custom-modal-footer">
+                      <button type="button" class="btn btn-secondary" onclick="closeModal('<%= member.id %>')">Close</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  const form = document.querySelector('.work-allocation-form');
+                  if (form) {
+                    const input = form.querySelector('.work-allocation-input');
+                    const warningDiv = form.querySelector('.alert-warning');
+                    const totalAllocation = parseFloat(form.dataset.totalAllocation) || 0;
+                    
+                    input.addEventListener('input', function() {
+                      const newValue = parseFloat(this.value) || 0;
+                      const currentAllocation = totalAllocation - (parseFloat(this.defaultValue) || 0);
+                      const projectedTotal = currentAllocation + newValue;
+                      
+                      if (projectedTotal >= 100) {
+                        warningDiv.style.display = 'block';
+                      } else {
+                        warningDiv.style.display = 'none';
+                      }
+                    });
+                  }
+                });
+              </script>
+            <% else %>
+              <!-- Non-editable text for non-Project Managers -->
+              <span class="work-allocation-value"><strong><%= member.work_allocation %></span>
+            <% end %>
+          </td>
+          
+          <td class="buttons">
+            <%= link_to l(:button_edit), edit_membership_path(member), remote: true, class: 'icon icon-edit' %>
+            <%= delete_link membership_path(member), remote: true, data: (!User.current.admin? && member.include?(User.current) ? { confirm: l(:text_own_membership_delete_confirmation) } : {}) if member.deletable? %>
+          </td>
+          <%= call_hook(:view_projects_settings_members_table_row, project: @project, member: member) %>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
 <% else %>
-<p class="nodata"><%= l(:label_no_data) %></p>
+  <p class="nodata"><%= l(:label_no_data) %></p>
 <% end %>
-<%= link_to l(:button_submit), check_member_project_path(@project), :data => {:confirm => l(:text_project_check_member_confirmation, @project.to_s)}, :method => :post, :class => 'submit' %>
+
+<%= link_to l(:button_submit), check_member_project_path(@project), data: { confirm: l(:text_project_check_member_confirmation, @project.to_s) }, method: :post, class: 'submit' %>
+
+<script>
+// Function to open the modal
+function openModal(memberId) {
+  const modal = document.getElementById(`customModal-${memberId}`);
+  if (modal) {
+    modal.style.display = 'block';
+  }
+}
+
+// Function to close the modal
+function closeModal(memberId) {
+  const modal = document.getElementById(`customModal-${memberId}`);
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Event listener for the "Details" button
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.details-button').forEach(button => {
+    button.addEventListener('click', function() {
+      const memberId = this.closest('.member').id.replace('member-', '');
+      openModal(memberId);
+    });
+  });
+});
+</script>
+
+<style>
+/* User Info Icon Styles */
+.icon-info {
+  color: #007bff; /* Blue color for the icon */
+  font-size: 18px; /* Adjust the size of the icon */
+  margin-left: 8px; /* Add some spacing */
+}
+
+.icon-info:hover {
+  color: #0056b3; /* Darker blue on hover */
+}
+/* Custom Modal Styles */
+.custom-modal {
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1000; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
+}
+
+.custom-modal-content {
+  background-color: #fff;
+  margin: 10% auto; /* 10% from the top and centered */
+  padding: 20px;
+  border: 1px solid #888;
+  width: 50%; /* Could be more or less, depending on screen size */
+  border-radius: 5px;
+}
+
+.custom-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.custom-modal-title {
+  margin: 0;
+}
+
+.custom-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.custom-modal-body {
+  margin-bottom: 20px;
+}
+
+.custom-modal-footer {
+  text-align: right;
+}
+</style>

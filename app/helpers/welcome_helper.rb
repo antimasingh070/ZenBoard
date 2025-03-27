@@ -182,15 +182,12 @@ def total_work_allocation(project_manager, projects, field_name)
   # Select only projects managed by the given Project Manager
   projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
   return "" if projects.blank?
-  custom_field = CustomField.find_by(name: field_name)
-  return "" unless custom_field
-  custom_values = []
-  projects.each do |project| 
-      custom_values << CustomValue.where(customized_type: "Project", customized_id: project.id, custom_field_id: custom_field.id).pluck(:value)
-
-      custom_values
-  end
-  custom_values.reject(&:empty?)
+  # Split the full name into first and last name
+  firstname, lastname = project_manager.split
+  # Find the user by firstname and lastname
+  user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
+  work_allocation = Member.where(user_id: user_id, project_id: @projects.ids).pluck(:work_allocation)
+  work_allocation.compact.sum
 end
 
 # Method to calculate working duration between earliest start and latest end date

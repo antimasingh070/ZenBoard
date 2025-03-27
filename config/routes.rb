@@ -160,6 +160,7 @@ root to: 'my#page', as: 'home'
   # Specific routes for issue watchers API
   post 'issues/:object_id/watchers', :to => 'watchers#create', :object_type => 'issue'
   delete 'issues/:object_id/watchers/:user_id' => 'watchers#destroy', :object_type => 'issue'
+  resources :work_allocations, only: [:update, :destroy]
 
   resources :business_requirements do
     resources :br_stakeholders, only: [:new, :create, :edit, :update, :destroy]
@@ -218,6 +219,10 @@ root to: 'my#page', as: 'home'
 
     shallow do
       resources :memberships, :controller => 'members' do
+        member do
+          patch :update_work_allocation
+          delete :delete_work_allocation
+        end
         collection do
           get 'autocomplete'
         end

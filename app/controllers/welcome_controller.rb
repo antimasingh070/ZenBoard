@@ -54,8 +54,12 @@ class WelcomeController < ApplicationController
         member_role_ids = MemberRole.where(role_id: role.pluck(:id)).pluck(:member_id)
         member_ids = Member.where(id: member_role_ids, user_id: member.pluck(:id)).pluck(:project_id)
         @projects = @projects.where(id: member_ids)
-        # Extract project owner names for the filtered projects
-        @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
+        # Extract project owner names for the filtered project
+        if role.count == 1 && member.count == 1 && role.first.name == "Program Manager"
+          @program_managers = ["#{member.first.firstname} #{member.first.lastname}"]
+        else
+          @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
+        end
         @program_managers.compact
       else
         return []

@@ -201,11 +201,10 @@
           <tr data-program-manager="<%= program_manager %>" data-project-manager="<%= project_manager %>">
       
               <td><%= program_manager %></td>
-      
             <td><%= project_manager %></td>
             <td><%= link_to project_count, "http://localhost:3000/it_project_dashboard?show_subprojects=false&function_filter=&function_filter=&function_filter=&manager_filter=#{project_manager}&program_manager_filter=#{program_manager}&start_date_from=&start_date_to=&end_date_from=&end_date_to=" %></td>
             <% total_work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation") %>
-            <td style="font-size: 10px;"><%= total_work_allocation.empty? ? "" : total_work_allocation.flatten.join(", ") %></td>
+           <td style="color: white; font-size: 10px; background-color: <%= if total_work_allocation > 100 then 'red' else 'green' end %>;"><%= total_work_allocation %>%</td>
             <% last_completed_activity = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date") %>
             <td style="font-size: 10px;"><%= last_completed_activity %></td>
             <% last_completed_activity = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity") %>
