@@ -147,7 +147,7 @@
             </li>
         </ul>
         </div>
-    <% elsif controller.controller_name == "meetings" %>
+    <% elsif controller.controller_name == "meetings"  && params[:action] != "new"  %>
     <div id="main-menu" class="tabs" style="max-width: 100%; margin: 0 auto;">
         <ul class="nav nav-tabs" style="display: flex; justify-content: flex-start; gap: 15px;">
             <li class="nav-item">

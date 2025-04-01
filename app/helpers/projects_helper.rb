@@ -63,7 +63,7 @@ module ProjectsHelper
   def render_project_action_links
     links = (+"").html_safe
     if User.current.allowed_to?(:add_project, nil, :global => true)
-      links << link_to(l(:label_project_new), new_project_path, :class => 'icon icon-add')
+      # links << link_to(l(:label_project_new), new_project_path, :class => 'icon icon-add')
     end
     if User.current.admin?
       links << link_to(l(:label_administration), admin_projects_path, :class => 'icon icon-settings')

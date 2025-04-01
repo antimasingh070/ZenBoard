@@ -1155,15 +1155,44 @@ class Mailer < ActionMailer::Base
       send_dashboard_email(user, projects).deliver_later
     end
   end
- 
+  
   def send_risk(user, project)
     @project = project
-        
+    
     @project_status = STATUS_MAP[project.status] || ""
     mail_data = user_mails(@project)
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
-    mail(to: mail_to, cc: mail_cc, subject: "<PMO> Risk or challenges- #{@project.name}")
+    
+    # Check if project has High or Medium priority
+    priority_field = CustomField.find_by(name: "Priority Level")
+    if priority_field
+      custom_value = CustomValue.find_by(
+        customized_type: "Project",
+        customized_id: project.id,
+        custom_field_id: priority_field.id
+      )
+      
+      if custom_value
+        priority_ids = CustomFieldEnumeration.where(
+          custom_field_id: priority_field.id,
+          name: ["High", "Medium"]
+        ).pluck(:id)
+        
+        if priority_ids.include?(custom_value.value.to_i)
+          # Project has High or Medium priority - include Matthew's email
+          mail(to: (mail_to + ["Mat@gmail.com"]).uniq, 
+               cc: mail_cc, 
+               subject: "<PMO> Risk or challenges - #{@project.name}")
+          return
+        end
+      end
+    end
+    
+    # Default case - send without Matthew's email
+    mail(to: mail_to, 
+         cc: mail_cc, 
+         subject: "<PMO> Risk or challenges - #{@project.name}")
   end
 
   def self.deliver_send_risk(user, project)
