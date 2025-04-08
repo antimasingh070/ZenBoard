@@ -56,24 +56,28 @@ class BusinessRequirement< ActiveRecord::Base
     after_update :log_update_activity
     after_destroy :log_destroy_activity
 
+    after_create :add_pmo_and_tsg
 
-    after_save :add_pmo
-
-    def add_pmo
+    def add_pmo_and_tsg
       begin
-        group = Group.find_by_lastname("PMO")
-        user_ids = group.users.where(status: 1).pluck(:id) if group.present?
-        role_id = Role.find_by(name: "PMO")&.id
-        user_ids.each do |user_id|
-            br_stakeholder = BrStakeholder.find_or_create_by(user_id: user_id, role_id: role_id, business_requirement_id: self.id)
+        group_names = ["PMO", "TSG"]
+    
+        group_names.each do |group_name|
+            group = Group.find_by_lastname(group_name)
+            user_ids = group.users.where(status: 1).pluck(:id) if group.present?
+            role_id = Role.find_by(name: group_name)&.id
+            user_ids.each do |user_id|
+                br_stakeholder = BrStakeholder.find_or_create_by(user_id: user_id, role_id: role_id, business_requirement_id: self.id)
+            end
         end
+        Mailer.deliver_business_requirement_created(User.current, stakeholders.pluck(:user_id), self)
+    
       rescue ActiveRecord::RecordNotFound => e
-        # Handle specific cases when role or project is not found
         Rails.logger.error "Role or Project not found: #{e.message}"
-        flash[:error] = "PMO role not found. Please check your setup."
       rescue StandardError => e
+        Rails.logger.error "Error in add_pmo_and_tsg: #{e.message}"
       end
-    end
+    end    
 
     def has_stakeholders?
         br_stakeholders.any?

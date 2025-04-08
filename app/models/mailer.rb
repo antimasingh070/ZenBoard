@@ -270,6 +270,38 @@ class Mailer < ActionMailer::Base
     end
   end
 
+  def risk_issue_add(user, issue)
+    redmine_headers 'Project' => issue.project.identifier,
+                    'Issue-Tracker' => issue.tracker.name,
+                    'Issue-Id' => issue.id,
+                    'Issue-Author' => issue.author.login,
+                    'Issue-Assignee' => assignee_for_header(issue)
+    redmine_headers 'Issue-Priority' => issue.priority.name if issue.priority
+    message_id issue
+    references issue
+    @author = issue.author
+    @issue = issue
+    @user = user
+    @project = @issue.project
+    mail_data = user_mails(@project)
+    assigned_to_id = @issue.assigned_to_id 
+    assignee = User.find_by(id: assigned_to_id) 
+    mail_to = []
+    mail_to += [@author.mail, assignee.mail]
+    mail_cc = mail_data[:mail_cc].uniq
+    @issue_url = url_for(:controller => 'issues', :action => 'show', :id => issue)
+    subject = "[#{issue.project.name} - #{issue.tracker.name} ##{issue.id}]"
+    subject += " (#{issue.status.name})" if Setting.show_status_changes_in_mail_subject?
+    subject += " #{issue.subject}"
+    mail :to => mail_to.uniq, :cc => mail_cc.uniq, :subject => subject
+  end
+
+  def deliver_risk_issue_add
+    if Setting.notified_events.include?('risk_issue_added')
+      risk_issue_add(user, issue).deliver_later
+    end
+  end
+
   def issue_pending_approval(user, issue)
     redmine_headers 'Project' => issue.project.identifier,
                      'Issue-Tracker' => issue.tracker.name,

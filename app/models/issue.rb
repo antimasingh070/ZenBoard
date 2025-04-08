@@ -2329,6 +2329,8 @@ class Issue < ActiveRecord::Base
         Mailer.deliver_issue_add(User.current, self)
       elsif notify? && Setting.notified_events.include?('issue_added') && self.tracker_id == 2
         Mailer.deliver_issue_add(User.current, self)
+      elsif notify? && Setting.notified_events.include?('risk_issue_added') && self.tracker_id == 4
+        Mailer.deliver_risk_issue_add(User.current, self)
       end
     end
   end

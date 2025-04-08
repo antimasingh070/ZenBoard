@@ -212,7 +212,7 @@ class AttachmentsController < ApplicationController
 
   
   def fetch_jwt_token
-    uri = URI.parse('https://utssag.hdbfssupport.com:5443/1.0/security/getJsonWebToken')
+    uri = URI.parse('httphu://getJsonWebToken')
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
     http.read_timeout = 30
@@ -220,16 +220,16 @@ class AttachmentsController < ApplicationController
 
     request = Net::HTTP::Post.new(uri.path)
     request['Content-Type'] = 'application/json'
-    request['TxnTrackingId'] = '531001'
+    request['TxnTrackingId'] = '531391'
     
     # Hardcoded credentials
     request.basic_auth(
-      '71436443-c6b3-4c28-8a28-2f028602a106', # user_id
-      'dfef949e-b5ba-40e4-9636-95d0521598bc'  # password
+      '8328943rh83r834', # user_id
+      '89839ry389r3hr'  # password
     )
 
     payload = {
-      claimsSet: { sourceCode: 'BOSSPortal' }
+      claimsSet: { sourceCode: 'Anti' }
     }.to_json
 
     request.body = payload
@@ -247,16 +247,16 @@ class AttachmentsController < ApplicationController
   end
 
   def upload_to_dms(attachment, jwt_token)
-    uri = URI.parse('https://utssag.hdbfssupport.com:5443/DMS/1.0/documentUpload')
+    uri = URI.parse('http?guefocumentUpload')
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
     http.read_timeout = 60
     http.open_timeout = 30
 
     request = Net::HTTP::Post.new(uri.path)
-    request['x-Gateway-APIKey'] = 'c272e0e2-70c5-4a7f-90ff-e9c21be6dd77' # Hardcoded API key
+    request['x-Gateway-APIKey'] = 'c272ujidf7' # Hardcoded API key
     request['Authorization'] = "Bearer #{jwt_token}"
-    request['TxnTrackingId'] = '531001'
+    request['TxnTrackingId'] = '531231'
     request['Content-Type'] = 'application/json'
 
     # Read file and encode content
@@ -264,17 +264,17 @@ class AttachmentsController < ApplicationController
     base64_content = Base64.strict_encode64(file_content)
 
     payload = {
-      "REQUESTID" => "BOSS-#{SecureRandom.uuid.upcase[0..8]}",
+      "REQUESTID" => "Anti-#{SecureRandom.uuid.upcase[0..8]}",
       "ARCHIVETYPE" => "EMS",
-      "UNIQUEIDENTIFIER" => "BOSS#{attachment.id}",
-      "PRODUCTCODE" => "BOSS",
+      "UNIQUEIDENTIFIER" => "Anti#{attachment.id}",
+      "PRODUCTCODE" => "Anti",
       "BRANCHCODE" => "",
-      "SOURCE" => "BOSS",
+      "SOURCE" => "Anti",
       "DEPARTMENT" => "BUSINESS",
       "DOCUMENTS" => [
         {
-          "DOCCODE" => "Bossportal",
-          "DOCGROUP" => "Bossportal",
+          "DOCCODE" => "Anti",
+          "DOCGROUP" => "Anti",
           "PAGECOUNT" => 1,
           "SizeofDocument" => file_content.size,
           "CUSTINDEX" => "01",

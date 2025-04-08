@@ -13,6 +13,7 @@ module Redmine
       notifications << Notifiable.new('project_created')
       notifications << Notifiable.new('project_updated')
       notifications << Notifiable.new('project_status')
+      notifications << Notifiable.new('risk_issue_added')
       notifications << Notifiable.new('issue_added')
       notifications << Notifiable.new('issue_updated')
       notifications << Notifiable.new('issue_approved')

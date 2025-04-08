@@ -281,7 +281,7 @@ end
           <th class= "side_status">Subject</th>
           <th class= "side_status">Description</th>
           <th class= "side_status">Identified Date</th>
-          <th class= "side_status" style= "background-color: #ba0b11; color: white">Risk Owner</th>
+          <th class= "side_status" style= "background-color: #ba0b11; color: white">Risk Accountable/resp. person</th>
         </tr>
         <% @count = 1 %>
           <% if @risks.blank? %>
@@ -293,7 +293,7 @@ end
                 <td><%= risk.subject %></td>
                 <td><%= risk.description %></td>
                 <td><%= custom_field_value_issue_date(risk, "Identifier date") %></td>
-                <td><%= custom_field_value_issue_date(risk, "Risk Owner") %></td>
+                <td><%= custom_field_value_issue_date(risk, "Risk Accountable/resp. person") %></td>
               </tr>
               <% @count=@count+1 %>
             <% end %>
