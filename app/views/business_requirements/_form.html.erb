@@ -11,14 +11,14 @@
   </div>
 <% end %>
   
-    <div class="box tabular">
-    <p>
+<div class="box tabular">
+  <p>
     <%= f.label :requirement_case, "Requirement Case" %><sup style="color: red;">*</sup>
     <%= f.text_field :requirement_case, 
-                     size: 60, 
-                     class: 'form-control', 
-                     placeholder: 'Enter the requirement case here', 
-                     required: true %>
+                    size: 60, 
+                    class: 'form-control', 
+                    placeholder: 'Enter the requirement case here', 
+                    required: true %>
   </p>
   
   <p>
@@ -108,7 +108,7 @@
   </p>
   
   <p>
-  <%= f.label :cost_benefits, "Requirement Received From" %> <sup style="color: red;">*</sup>
+    <%= f.label :cost_benefits, "Requirement Received From" %> <sup style="color: red;">*</sup>
 
     <%= f.select :requirement_received_from, 
                  options_for_select(@requirement_received_from, 
@@ -131,42 +131,42 @@
   </p>
   
 
-        <div class="row">
-          <div class="col-md-6">
-            <p><%= f.label :requirement_submitted_date, "Requirement Submitted Date" %><sup style="color: red;">*</sup>
-            <%= f.date_field :requirement_submitted_date, class: 'form-control' %></p>
-          </div>
-          </div>
-          <p>
-          <%= f.label :business_need_as_per_business_case, "Business Need As Per Business Case" %><sup style="color: red;">*</sup>
-          <%= f.text_area :business_need_as_per_business_case, rows: 2, class: 'form-control', placeholder: 'State the business need here' %></p>
-          <p><%= f.label :planned_project_go_live_date, "Planned Project Go Live Date" %>
-          <%= f.date_field :planned_project_go_live_date, class: 'form-control' %></p>
-          <p>
-          <%= f.label :attachments, "Attachments" %><sup style="color: red;">*</sup>
-            <%= f.file_field :attachments, multiple: true %>
-          </p> 
-          <% if !@business_requirement.id.nil? %>
-            <p> <%= f.label :user_id, "stakeholders" %> <%= link_to "Add stakeholder", '#', id: 'add_stakeholder', class: 'btn btn-primary' %></p>
-            <div id="stakeholders" class="stakeholders-list">
-            <% @business_requirement.br_stakeholders.each_with_index do |stakeholder, index| %>
-              <div id="stakeholder_<%= index %>" class="stakeholder-item d-flex justify-content-between align-items-center mb-2">
-                <div class="stakeholder-info">
-                  <strong>Stakeholder <%= index + 1 %>:</strong>
-                  <span><%= stakeholder.user.name if stakeholder.user %>(<%= stakeholder.role.name if stakeholder.role %>)</span> | <%= link_to 'Delete', business_requirement_br_stakeholder_path(@business_requirement, stakeholder), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm' %>
-                </div>
-              </div>
-            <% end %>
-          </div>
-          
-
-
-          <% end %>
-          <div class="card-footer">
-            <%= f.submit 'Save Business Requirement', class: 'btn btn-primary' %>
-          </div>
-        </div>
+  <div class="row">
+    <div class="col-md-6">
+      <p><%= f.label :requirement_submitted_date, "Requirement Submitted Date" %><sup style="color: red;">*</sup>
+      <%= f.date_field :requirement_submitted_date, class: 'form-control' %></p>
     </div>
+  </div>
+  <p>
+    <%= f.label :business_need_as_per_business_case, "Business Need As Per Business Case" %><sup style="color: red;">*</sup>
+    <%= f.text_area :business_need_as_per_business_case, rows: 2, class: 'form-control', placeholder: 'State the business need here' %>
+  </p>
+  <p>
+    <%= f.label :planned_project_go_live_date, "Planned Project Go Live Date" %>
+    <%= f.date_field :planned_project_go_live_date, class: 'form-control' %>
+  </p>
+  <p>
+    <%= f.label :attachments, "Attachments" %><sup style="color: red;">*</sup>
+      <%= f.file_field :attachments, multiple: true %>
+  </p> 
+  <% if !@business_requirement.id.nil? %>
+    <p> <%= f.label :user_id, "stakeholders" %> <%= link_to "Add stakeholder", '#', id: 'add_stakeholder', class: 'btn btn-primary' %></p>
+      <div id="stakeholders" class="stakeholders-list">
+        <% @business_requirement.br_stakeholders.each_with_index do |stakeholder, index| %>
+          <div id="stakeholder_<%= index %>" class="stakeholder-item d-flex justify-content-between align-items-center mb-2">
+            <div class="stakeholder-info">
+              <strong>Stakeholder <%= index + 1 %>:</strong>
+              <span><%= stakeholder.user.name if stakeholder.user %>(<%= stakeholder.role.name if stakeholder.role %>)</span> | <%= link_to 'Delete', business_requirement_br_stakeholder_path(@business_requirement, stakeholder), method: :delete, data: { confirm: 'Are you sure?' }, class: 'btn btn-danger btn-sm' %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </p>
+  <% end %>
+  <div class="card-footer">
+    <%= f.submit 'Save Business Requirement', class: 'btn btn-primary' %>
+  </div>
+</div>
 
 
 <script type="text/javascript">

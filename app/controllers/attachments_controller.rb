@@ -104,13 +104,16 @@ class AttachmentsController < ApplicationController
       head 406
       return
     end
-
+  
     @attachment = Attachment.new(:file => raw_request_body)
     @attachment.author = User.current
     @attachment.filename = params[:filename].presence || Redmine::Utils.random_hex(16)
     @attachment.content_type = params[:content_type].presence
     saved = @attachment.save
 
+    dms_directory = generate_dms_directory    
+    response = upload_to_dms(@attachment)
+          
     respond_to do |format|
       format.js
       format.api do
@@ -206,6 +209,98 @@ class AttachmentsController < ApplicationController
   end
 
   private
+
+  
+  def fetch_jwt_token
+    uri = URI.parse('https://utssag.hdbfssupport.com:5443/1.0/security/getJsonWebToken')
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.read_timeout = 30
+    http.open_timeout = 30
+
+    request = Net::HTTP::Post.new(uri.path)
+    request['Content-Type'] = 'application/json'
+    request['TxnTrackingId'] = '531001'
+    
+    # Hardcoded credentials
+    request.basic_auth(
+      '71436443-c6b3-4c28-8a28-2f028602a106', # user_id
+      'dfef949e-b5ba-40e4-9636-95d0521598bc'  # password
+    )
+
+    payload = {
+      claimsSet: { sourceCode: 'BOSSPortal' }
+    }.to_json
+
+    request.body = payload
+
+    response = http.request(request)
+    if response.is_a?(Net::HTTPSuccess)
+      JSON.parse(response.body)["jwtToken"]
+    else
+      Rails.logger.error "JWT Token Error: #{response.code} - #{response.body}"
+      nil
+    end
+  rescue => e
+    Rails.logger.error "JWT Token Exception: #{e.message}"
+    nil
+  end
+
+  def upload_to_dms(attachment, jwt_token)
+    uri = URI.parse('https://utssag.hdbfssupport.com:5443/DMS/1.0/documentUpload')
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true
+    http.read_timeout = 60
+    http.open_timeout = 30
+
+    request = Net::HTTP::Post.new(uri.path)
+    request['x-Gateway-APIKey'] = 'c272e0e2-70c5-4a7f-90ff-e9c21be6dd77' # Hardcoded API key
+    request['Authorization'] = "Bearer #{jwt_token}"
+    request['TxnTrackingId'] = '531001'
+    request['Content-Type'] = 'application/json'
+
+    # Read file and encode content
+    file_content = File.read(attachment.diskfile, mode: 'rb')
+    base64_content = Base64.strict_encode64(file_content)
+
+    payload = {
+      "REQUESTID" => "BOSS-#{SecureRandom.uuid.upcase[0..8]}",
+      "ARCHIVETYPE" => "EMS",
+      "UNIQUEIDENTIFIER" => "BOSS#{attachment.id}",
+      "PRODUCTCODE" => "BOSS",
+      "BRANCHCODE" => "",
+      "SOURCE" => "BOSS",
+      "DEPARTMENT" => "BUSINESS",
+      "DOCUMENTS" => [
+        {
+          "DOCCODE" => "Bossportal",
+          "DOCGROUP" => "Bossportal",
+          "PAGECOUNT" => 1,
+          "SizeofDocument" => file_content.size,
+          "CUSTINDEX" => "01",
+          "FILENAME" => attachment.filename,
+          "CONTENT" => base64_content
+        }
+      ]
+    }.to_json
+
+    request.body = payload
+
+    response = http.request(request)
+    body = JSON.parse(response.body) rescue {}
+
+    if response.is_a?(Net::HTTPSuccess) && body["status"] == "success"
+      { success: true, document_id: body["documentId"] }
+    else
+      error_msg = body["message"] || "HTTP #{response.code}"
+      Rails.logger.error "DMS Upload Error: #{error_msg}"
+      { success: false, error: error_msg }
+    end
+  rescue => e
+    Rails.logger.error "DMS Upload Exception: #{e.message}"
+    { success: false, error: e.message }
+  end
+end
 
   def find_attachment
     @attachment = Attachment.find(params[:id])

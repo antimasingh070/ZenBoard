@@ -33,6 +33,32 @@ class MemberRole < ActiveRecord::Base
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
+  after_create :add_to_business_requirement
+  after_destroy :remove_from_business_requirement
+
+  def add_to_business_requirement
+    project = Project.find_by(id: Member.find_by(id: self.member_id).project_id)
+    br = BusinessRequirement.find_by(project_identifier: project.identifier)
+    return unless br
+    user_id = Member.find_by(id: self.member_id).user_id
+    br.br_stakeholders.find_or_create_by(
+      user_id: user_id,
+      role_id: self.role_id
+    )
+  end
+
+  def remove_from_business_requirement
+    project = Project.find_by(id: Member.find_by(id: self.member_id).project_id)
+    br = BusinessRequirement.find_by(project_identifier: project.identifier)
+    return unless br
+    user_id = Member.find_by(id: self.member_id).user_id
+    stakeholder = br.br_stakeholders.find_by(
+      user_id: user_id,
+      role_id: self.role_id
+    )
+    stakeholder&.destroy
+  end
+
   def log_create_activity
     ActivityLog.create(
       entity_type: 'MemberRole',

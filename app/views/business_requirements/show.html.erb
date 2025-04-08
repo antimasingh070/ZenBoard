@@ -6,8 +6,8 @@
     <div class="splitcontentleft">
       <h2><strong>Overview</strong></h2>
       <% if @business_requirement.created_at.present? %>
-      <li><span class="label">Created At: <%= @business_requirement.created_at.strftime("%d %b %Y") %></span></li>
-    <% end %>
+        <li><span class="label">Created At: <%= @business_requirement.created_at.strftime("%d %b %Y") %></span></li>
+      <% end %>
     <% owner = User.find_by(id: ActivityLog.find_by(entity_type: "BusinessRequirement", entity_id: @business_requirement.id, field_name: "Create")&.author_id) %>
     <% if owner.present? %>
       <li><span class="label">Created By: <%= "#{owner.firstname} #{owner.lastname}" %></span></li>
@@ -119,6 +119,7 @@
           <%= link_to 'Delete', business_requirement_path(@business_requirement), method: :delete, class: 'btn btn-warning btn-sm', title: 'Delete business_requirementD' %>  |
           <% end %>
         <% end %>
+                  <%= link_to 'Edit', edit_business_requirement_path(@business_requirement), class: 'btn btn-warning btn-sm', title: 'Edit business_requirementD' %> 
         <%= link_to "Hold", "#", class: 'btn btn-primary', id: "holdLink" %>
         <%= link_to "Decline", "#", class: 'btn btn-primary', id: "declineLink" %>
         <%= link_to "Accept", "#", class: 'btn btn-success btn-sm', id: "acceptLink", title: "Accept Business Requirement" %>

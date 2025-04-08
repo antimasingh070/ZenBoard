@@ -130,7 +130,7 @@ class Project < ActiveRecord::Base
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity
-  after_save :add_pmo
+  after_create :add_pmo
 
   def add_pmo
     begin

@@ -139,6 +139,28 @@ class Issue < ActiveRecord::Base
   after_save :update_project_timestamp
   after_destroy :update_project_timestamp
 
+  after_save :update_issue_data_in_project
+
+  def update_issue_data_in_project
+    update_project_date_from_issue("Go Live", "Actual Project Go Live Date")
+    update_project_date_from_issue("Vendor Approval", "Revised End Date")
+  end
+  
+  def update_project_date_from_issue(issue_name, project_field_name)
+ 
+    if self.subject == issue_name
+      field = CustomField.find_by(name: "Actual End Date")
+      project_field = CustomField.find_by(name: project_field_name)
+      return unless field && project_field
+      value = CustomValue.find_by(customized: self, custom_field: field)&.value || self.due_date
+      project = self.project
+      return unless project
+      project_value = CustomValue.find_or_initialize_by(customized: project, custom_field: project_field)
+      project_value.update(value: value)
+    end
+  end
+  
+
   def update_project_timestamp
     project.touch if project.present?
   end
