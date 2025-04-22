@@ -42,7 +42,7 @@
   <td class="checkbox hide-when-print"><%= check_box_tag("ids[]", issue.id, false, :id => nil) %></td>
   <% query.inline_columns.each do |column| %>
     <% if column.name == :subject %>
-      <%= content_tag('td', column_content(column, issue), style: 'text-align: left;') %>attach_files(@
+      <%= content_tag('td', column_content(column, issue), style: 'text-align: left;') %>
     <% else %>
       <%= content_tag('td', column_content(column, issue), :class => column.css_classes) %>
     <% end %>

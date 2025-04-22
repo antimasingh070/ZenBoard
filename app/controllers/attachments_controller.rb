@@ -247,7 +247,6 @@ class AttachmentsController < ApplicationController
   # end
 
   def upload_to_dms(attachment)
-    binding.pry
     uri = URI.parse('http?guefocumentUpload')
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true

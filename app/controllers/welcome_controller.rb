@@ -45,7 +45,6 @@ class WelcomeController < ApplicationController
   def resource_management
     @projects = @projects.where(status: 1)
     @roles = Role.all.where.not(name: ["Anonymous", "Non member"]).pluck(:name)
-    binding.pry
     @members = Member.includes(:user).where(project_id: @project.id)
     if params[:roles].present? && params[:members].present?
       role = Role.where(name: params[:roles])
