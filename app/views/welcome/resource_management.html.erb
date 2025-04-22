@@ -204,7 +204,88 @@
             <td><%= project_manager %></td>
             <td><%= link_to project_count, "http://localhost:3000/it_project_dashboard?show_subprojects=false&function_filter=&function_filter=&function_filter=&manager_filter=#{project_manager}&program_manager_filter=#{program_manager}&start_date_from=&start_date_to=&end_date_from=&end_date_to=" %></td>
             <% total_work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation") %>
-           <td style="color: white; font-size: 10px; background-color: <%= if total_work_allocation > 100 then 'red' else 'green' end %>;"><%= total_work_allocation %>%</td>
+           <td class="work-allocation"><%= total_work_allocation %>%
+
+              <!-- Static text, Edit icon, and Details button -->
+              <!-- Editable form (hidden by default) -->
+              <% 
+                projects = project_manager_projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
+                firstname, lastname = project_manager.split
+                user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
+                member = User.find_by(firstname: firstname, lastname: lastname)
+                work_allocation_sum = Member.where(user_id: user_id, project_id: projects.pluck(:id)).pluck(:work_allocation).compact.sum
+              %>
+             
+                 <span class="icon icon-help info" style="cursor: pointer;" onclick="openModal('<%= member.id %>')"></span>
+              <div class="modal fade" id="projectDetailsModal-<%= member.id %>" tabindex="-1" aria-labelledby="projectDetailsModalLabel-<%= member.id %>" aria-hidden="true">
+                <!-- Custom Modal Structure -->
+                <div id="customModal-<%= member.id %>" class="custom-modal">
+                  <div class="custom-modal-content">
+                    <div class="custom-modal-header">
+                      <h5 class="custom-modal-title">Project Details</h5>
+                      <button type="button" class="custom-modal-close" onclick="closeModal('<%= member.id %>')">&times;</button>
+                    </div>
+                    <div class="custom-modal-body">
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Project Name</th>
+                            <th>% Work Allocation</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <% @projects.each do |project| %>
+                            <tr>
+                              <td><%= link_to project.name, project_path(project) %></td>
+                              <td>
+                                <% member_record = Member.find_by(user_id: member.id, project_id: project.id) %>
+
+                                <%= member_record&.work_allocation %>
+                                <%= form_with url: work_allocation_path(member_record), method: :patch, remote: true, class: 'inline-form work-allocation-form', data: { total_allocation: work_allocation_sum } do |f| %>
+                                  <%= f.number_field :work_allocation, value: member_record&.work_allocation, class: 'form-control work-allocation-input', placeholder: 'Enter work allocation', step: 1 %>
+                                  <div id="allocation-warning-<%= member.id %>" class="alert alert-warning" style="display: none; color: red;">
+                                    User already has work allocation of <%= work_allocation_sum %>%.
+                                  </div>
+                                  <%= f.submit 'Save', class: 'btn btn-sm btn-primary', data: { disable_with: 'Saving...' } %>
+                                  <span class="icon icon-help info" style="cursor: pointer;" onclick="openModal('<%= member.id %>')"></span>
+                                <% end %>
+                              </td>
+                            </tr>
+                          <% end %>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="custom-modal-footer">
+                      <button type="button" class="btn btn-secondary" onclick="closeModal('<%= member.id %>')">Close</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                  const form = document.querySelector('.work-allocation-form');
+                  if (form) {
+                    const input = form.querySelector('.work-allocation-input');
+                    const warningDiv = form.querySelector('.alert-warning');
+                    const totalAllocation = parseFloat(form.dataset.totalAllocation) || 0;
+                    
+                    input.addEventListener('input', function() {
+                      const newValue = parseFloat(this.value) || 0;
+                      const currentAllocation = totalAllocation - (parseFloat(this.defaultValue) || 0);
+                      const projectedTotal = currentAllocation + newValue;
+                      
+                      if (projectedTotal >= 100) {
+                        warningDiv.style.display = 'block';
+                      } else {
+                        warningDiv.style.display = 'none';
+                      }
+                    });
+                  }
+                });
+              </script>
+      
+            </td>
             <% last_completed_activity = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date") %>
             <td style="font-size: 10px;"><%= last_completed_activity %></td>
             <% last_completed_activity = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity") %>
@@ -354,3 +435,93 @@
 
 </body>
 </html>
+
+<script>
+  // Function to open the modal
+  function openModal(memberId) {
+    const modal = document.getElementById(`customModal-${memberId}`);
+    if (modal) {
+      modal.style.display = 'block';
+    }
+  }
+
+  // Function to close the modal
+  function closeModal(memberId) {
+    const modal = document.getElementById(`customModal-${memberId}`);
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  // Event listener for the "Details" button
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.details-button').forEach(button => {
+      button.addEventListener('click', function() {
+        const memberId = this.closest('.member').id.replace('member-', '');
+        openModal(memberId);
+      });
+    });
+  });
+</script>
+
+<style>
+  /* User Info Icon Styles */
+  .icon-info {
+    color: #007bff; /* Blue color for the icon */
+    font-size: 18px; /* Adjust the size of the icon */
+    margin-left: 8px; /* Add some spacing */
+  }
+
+  .icon-info:hover {
+    color: #0056b3; /* Darker blue on hover */
+  }
+  /* Custom Modal Styles */
+  .custom-modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
+  }
+
+  .custom-modal-content {
+    background-color: #fff;
+    margin: 10% auto; /* 10% from the top and centered */
+    padding: 20px;
+    border: 1px solid #888;
+    width: 50%; /* Could be more or less, depending on screen size */
+    border-radius: 5px;
+  }
+
+  .custom-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .custom-modal-title {
+    margin: 0;
+  }
+
+  .custom-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  .custom-modal-body {
+    margin-bottom: 20px;
+  }
+
+  .custom-modal-footer {
+    text-align: right;
+  }
+</style>

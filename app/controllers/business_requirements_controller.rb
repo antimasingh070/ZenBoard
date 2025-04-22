@@ -388,6 +388,13 @@ class BusinessRequirementsController < ApplicationController
         elsif @business_requirement.project_enhancement == "Enhancement"
           @business_requirement.template = "IT Enhancement"
         end
+        required_roles = Role.where(name: ["Project Manager", "Program Manager", "pmo"]).pluck(:id)
+        missing_roles = required_roles - @business_requirement.br_stakeholders.pluck(:role_id).uniq
+        if missing_roles.any?
+          missing_role_names = Role.where(id: missing_roles).pluck(:name)
+          flash[:error] = "The following roles are missing members: #{missing_role_names.join(', ')}."
+          return redirect_to "http://localhost:3000/business_requirements/11/edit"
+        end
         if @business_requirement.save
           # Mailer.deliver_business_requirement_created(User.current, @business_requirement)
           attach_files(@business_requirement)

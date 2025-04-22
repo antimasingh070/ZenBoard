@@ -16,7 +16,7 @@ end %>
     custom_value = CustomValue.find_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field.id)
     custom_value&.value # No need for further processing, return the value directly
 end %>
-[Trackmine] <%= @project.name %> status update by <%= @user.name %>
+[ZenBoard] <%= @project.name %> status update by <%= @user.name %>
 The status of project <%= @project.name %> has been updated from "<%= @old_status_text %>" to "<%= @new_status_text %>" on <%= Time.now.strftime("%B %d, %Y") %>.
 
 Please find below the project details and make the necessary updates/ changes.
@@ -30,7 +30,7 @@ Project Details:
 - Start Date: <%= custom_function_date('Start at') %>
 - End Date: <%= custom_function_date('Due Date') %> 
 
-Trackmine link: <%= "https://Trackmine.neo.com/#{@project.id}" %>
+ZenBoard link: <%= "https://ZenBoard.neo.com/#{@project.id}" %>
 
 Regards,
 

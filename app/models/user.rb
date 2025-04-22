@@ -977,7 +977,7 @@ class User < Principal
     user= User.first
 
   #   users.each do |user|
-      Mailer.deliver_send_issue_pdf(user, '/Users/user/Trackmine/app/issues.pdf')
+      Mailer.deliver_send_issue_pdf(user, '/Users/user/ZenBoard/app/issues.pdf')
   #   end
   end
 

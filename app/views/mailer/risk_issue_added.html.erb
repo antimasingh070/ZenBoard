@@ -17,7 +17,7 @@ end
     if !custom_value.to_s.blank? 
         date = Date.parse(custom_value) 
         formatted_date = date.strftime("%d/%m/%Y")
-    else 
+    else <
         custom_value 
     end 
 end %>
@@ -30,6 +30,10 @@ assignee = User.find_by(id: assigned_to_id) %>
 <p>Task: <%= @issue.tracker.name %></p>
 <p>Assignee: <%= assignee.name %></p>
 <p>Priority Level: <%= Enumeration.find_by(type: "IssuePriority", position: @issue.priority_id).try(:name) %></p>
+<p>Risk owner: <%= custom_field = CustomField.find_by(name: "Risk Owner")
+custom_field_enumeration = CustomFieldEnumeration.find_by(custom_field: custom_field, custom_vlaue: custim_fied: custom_fidl.value)
+custom_field_enumeration.value = custom_field_enumeration
+return custom_field_enumeration.value %></p>
 <p>Start Date: <%= @issue.start_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 <p>revised planned due date: <%= custom_function_date(@issue, "Actual End Date")%></p>

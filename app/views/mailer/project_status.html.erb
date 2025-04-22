@@ -19,7 +19,7 @@ end %>
 <!DOCTYPE html>
 <html>
 <head>
-  <title>[Trackmine] <%= @project.name %> status updated by <%= @user.name %> </title>
+  <title>[ZenBoard] <%= @project.name %> status updated by <%= @user.name %> </title>
 </head>
 <body>
   <h1>Project Status Update: <%= @project.name %></h1>
@@ -34,7 +34,7 @@ end %>
     <li><strong>Planned Go Live Date:</strong>  <%= custom_function_date('Planned Go Live Date')</li>
     <li><strong>Start Date:</strong> <%= custom_function_date('Start at') %></li>
     <li><strong>End Date:</strong> <%= custom_function_date('Due Date') %> </li>
-    <p><a href="<%= https://Trackmine.neo.com/#{@issue.id} %>" class="link">Trackmine</a></p>
+    <p><a href="<%= https://ZenBoard.neo.com/#{@issue.id} %>" class="link">ZenBoard</a></p>
   </ul>
   <p>Regards,</p>
 </body>

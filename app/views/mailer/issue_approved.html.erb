@@ -21,6 +21,6 @@ assignee = User.find_by(id: assigned_to_id) %>
 <p>Due Date: <%= @issue.due_date&.strftime("%Y-%m-%d") || 'Not set' %></p>
 
 
-<p>Please log in to Trackmine to view and manage the issue details.</p>
-<p><a href="https://Trackmine.neo.com/<%= @issue.id %>" class="link">Trackmine</a></p>
+<p>Please log in to ZenBoard to view and manage the issue details.</p>
+<p><a href="https://ZenBoard.neo.com/<%= @issue.id %>" class="link">ZenBoard</a></p>
 <p>Best Regards</p>

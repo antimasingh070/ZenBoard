@@ -181,7 +181,7 @@ class SettingsControllerTest < Redmine::ControllerTest
     ActionMailer::Base.deliveries.clear
     post :edit, :params => {
       :settings => {
-        :app_title => 'TrackMine'
+        :app_title => 'ZenBoard'
       }
     }
     assert_nil (mail = ActionMailer::Base.deliveries.last)

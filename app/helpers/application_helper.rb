@@ -791,12 +791,12 @@ module ApplicationHelper
   end
 
   def page_header_title
-    if @business_requirement.present?
-      "#{@business_requirement.requirement_case}"
-    elsif controller.controller_name == "business_requirements"
+    # if @business_requirement.present?
+    #   "#{@business_requirement.requirement_case}"
+    if controller.controller_name == "business_requirements"
       "Business Requirements"
     elsif @project.nil? || @project.new_record?
-      "Trackmine"
+      "ZenBoard"
     else
       b = []
       ancestors = (@project.root? ? [] : @project.ancestors.visible.to_a)

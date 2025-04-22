@@ -239,6 +239,46 @@ end
   end
 
 
+  def business_requirement_count(business_requirements, type, field_name, program_manager, project_manager, status = nil)
+    # Filter by status if provided
+    business_requirements = business_requirements.select { |br| br.status == status } if status.present?
+  
+    # Filter by Program Manager if present
+    if program_manager.present?
+      program_manager_role = Role.find_by(name: "Program Manager")
+      program_manager_names = program_manager.map { |name| name.split.map(&:capitalize).join(' ') }
+      user_ids = User.where("CONCAT(firstname, ' ', lastname) IN (?)", program_manager_names).pluck(:id)
+  
+      business_requirements = business_requirements.joins(:br_stakeholders)
+                                                   .where(br_stakeholders: { user_id: user_ids, role_id: program_manager_role.id })
+    end
+  
+    # Filter by Project Manager if present
+    if project_manager.present?
+      project_manager_role = Role.find_by(name: "Project Manager")
+      project_manager_names = project_manager.map { |name| name.split.map(&:capitalize).join(' ') }
+      user_ids = User.where("CONCAT(firstname, ' ', lastname) IN (?)", project_manager_names).pluck(:id)
+  
+      business_requirements = business_requirements.joins(:br_stakeholders)
+                                                   .where(br_stakeholders: { user_id: user_ids, role_id: project_manager_role.id })
+    end
+  
+    # Filter by Custom Field
+    if type.present?
+      case field_name
+      when "Project Category"
+        business_requirements = business_requirements.select { |br| Array(br.project_category).include?(type) }
+      when "Priority Level"
+        business_requirements = business_requirements.select { |br| Array(br.priority_level).include?(type) }
+      when "Application Name"
+        business_requirements = business_requirements.select { |br| Array(br.application_name).include?(type) }
+      end
+    end
+  
+    business_requirements.count
+  end
+  
+
   def project_count(projects, type, field_name, program_manager, project_manager, status = nil)
     projects = projects.select { |project| project.status == status } if status.present?
     projects = projects.select { |project| (Array(program_manager) & member_names(project, 'Program Manager')).any? } if program_manager.present?
@@ -247,6 +287,8 @@ end
       projects = projects.select { |project| custom_field_value(project, 'Project Category')&.include?(type) } if type.present?
     elsif field_name == "Priority Level"
       projects = projects.select { |project| custom_field_value(project, 'Priority Level')&.include?(type) } if type.present?
+    elsif field_name == "Application Name"
+      projects = projects.select { |project| custom_field_value(project, 'Application Name')&.include?(type) } if type.present?
     end
     projects.count
 
@@ -264,6 +306,8 @@ def filter_projects_by_status_and_field_name(projects, program_manager_filter, p
     projects = projects.select { |project| custom_field_value(project, 'Project Category')&.include?(type) } if type.present?
   elsif field_name == "Priority Level"
     projects = projects.select { |project| custom_field_value(project, 'Priority Level')&.include?(type) } if type.present?
+  elsif field_name == "Application Name"
+    projects = projects.select { |project| custom_field_value(project, 'Application Name')&.include?(type) } if type.present?
   end
   projects
 end

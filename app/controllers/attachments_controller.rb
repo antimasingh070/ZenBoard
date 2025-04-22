@@ -111,8 +111,8 @@ class AttachmentsController < ApplicationController
     @attachment.content_type = params[:content_type].presence
     saved = @attachment.save
 
-    dms_directory = generate_dms_directory    
-    response = upload_to_dms(@attachment)
+    # dms_directory = generate_dms_directory    
+    # response = upload_to_dms(@attachment)
           
     respond_to do |format|
       format.js
@@ -211,42 +211,43 @@ class AttachmentsController < ApplicationController
   private
 
   
-  def fetch_jwt_token
-    uri = URI.parse('httphu://getJsonWebToken')
-    http = Net::HTTP.new(uri.host, uri.port)
-    http.use_ssl = true
-    http.read_timeout = 30
-    http.open_timeout = 30
+  # def fetch_jwt_token
+  #   uri = URI.parse('httphu://getJsonWebToken')
+  #   http = Net::HTTP.new(uri.host, uri.port)
+  #   http.use_ssl = true
+  #   http.read_timeout = 30
+  #   http.open_timeout = 30
 
-    request = Net::HTTP::Post.new(uri.path)
-    request['Content-Type'] = 'application/json'
-    request['TxnTrackingId'] = '531391'
+  #   request = Net::HTTP::Post.new(uri.path)
+  #   request['Content-Type'] = 'application/json'
+  #   request['TxnTrackingId'] = '531391'
     
-    # Hardcoded credentials
-    request.basic_auth(
-      '8328943rh83r834', # user_id
-      '89839ry389r3hr'  # password
-    )
+  #   # Hardcoded credentials
+  #   request.basic_auth(
+  #     '8328943rh83r834', # user_id
+  #     '89839ry389r3hr'  # password
+  #   )
 
-    payload = {
-      claimsSet: { sourceCode: 'Anti' }
-    }.to_json
+  #   payload = {
+  #     claimsSet: { sourceCode: 'Anti' }
+  #   }.to_json
 
-    request.body = payload
+  #   request.body = payload
 
-    response = http.request(request)
-    if response.is_a?(Net::HTTPSuccess)
-      JSON.parse(response.body)["jwtToken"]
-    else
-      Rails.logger.error "JWT Token Error: #{response.code} - #{response.body}"
-      nil
-    end
-  rescue => e
-    Rails.logger.error "JWT Token Exception: #{e.message}"
-    nil
-  end
+  #   response = http.request(request)
+  #   if response.is_a?(Net::HTTPSuccess)
+  #     JSON.parse(response.body)["jwtToken"]
+  #   else
+  #     Rails.logger.error "JWT Token Error: #{response.code} - #{response.body}"
+  #     nil
+  #   end
+  # rescue => e
+  #   Rails.logger.error "JWT Token Exception: #{e.message}"
+  #   nil
+  # end
 
-  def upload_to_dms(attachment, jwt_token)
+  def upload_to_dms(attachment)
+    binding.pry
     uri = URI.parse('http?guefocumentUpload')
     http = Net::HTTP.new(uri.host, uri.port)
     http.use_ssl = true
@@ -296,11 +297,7 @@ class AttachmentsController < ApplicationController
       Rails.logger.error "DMS Upload Error: #{error_msg}"
       { success: false, error: error_msg }
     end
-  rescue => e
-    Rails.logger.error "DMS Upload Exception: #{e.message}"
-    { success: false, error: e.message }
   end
-end
 
   def find_attachment
     @attachment = Attachment.find(params[:id])

@@ -2,83 +2,163 @@
 <%= javascript_include_tag "https://code.highcharts.com/modules/annotations.js" %>
 
 <%
-@financial_year_start = Date.new(Date.today.year, 4, 1)  # Default: April 1 of the current year
-@financial_year_end = Date.new(Date.today.year + 1, 3, 31)  # Default: March 31 of the next year
+params[:type] ||= "Project" 
+if params[:type] == "Project"
+  @financial_year_start = Date.new(Date.today.year, 4, 1)  # Default: April 1 of the current year
+  @financial_year_end = Date.new(Date.today.year + 1, 3, 31)  # Default: March 31 of the next year
 
-# Adjust for months before April (January, February, March)
-if Date.today.month < 4
-  @financial_year_start = Date.new(Date.today.year - 1, 4, 1)  # Start: April 1 of last year
-  @financial_year_end = Date.new(Date.today.year, 3, 31)  # End: March 31 of this year
-end
-# Initialize pieChartData with default values
-pieChartData = {
-  last_year: [@total_last_year[:percentage], @total_last_year[:percentage]],
-  year_to_date: [@total_year_to_date[:percentage], @total_year_to_date[:percentage]],
-  this_month: [@total_this_month[:percentage], @total_this_month[:percentage]]
-}
+  # Adjust for months before April (January, February, March)
+  if Date.today.month < 4
+    @financial_year_start = Date.new(Date.today.year - 1, 4, 1)  # Start: April 1 of last year
+    @financial_year_end = Date.new(Date.today.year, 3, 31)  # End: March 31 of this year
+  end
 
-# Adjust pieChartData based on delayed_projects
-if (@total_last_year[:delayed_projects].blank? && @total_last_year[:ontime_projects].blank?) 
-  pieChartData[:last_year] = [@total_last_year[:percentage], @total_last_year[:percentage]]
-elsif (@total_last_year[:delayed_projects].present? && @total_last_year[:ontime_projects].present?)
-  pieChartData[:last_year] = [@total_last_year[:percentage], 100 - @total_last_year[:percentage]]
-elsif @total_last_year[:delayed_projects].blank? && @total_last_year[:ontime_projects].present?
-  pieChartData[:last_year] = [100 - @total_last_year[:percentage], @total_last_year[:percentage]]
-elsif @total_last_year[:delayed_projects].present?  && @total_last_year[:ontime_projects].blank?
-  pieChartData[:last_year] = [@total_last_year[:percentage], 100 - @total_last_year[:percentage]]
-end
+  # Initialize pieChartData with default values
+  pieChartData = {
+    last_year: [@total_last_year[:percentage], @total_last_year[:percentage]],
+    year_to_date: [@total_year_to_date[:percentage], @total_year_to_date[:percentage]],
+    this_month: [@total_this_month[:percentage], @total_this_month[:percentage]]
+  }
 
-if (@total_year_to_date[:delayed_projects].blank? &&  @total_year_to_date[:ontime_projects].blank?) 
-  pieChartData[:year_to_date] = [@total_year_to_date[:percentage], @total_year_to_date[:percentage]]
-elsif @total_year_to_date[:delayed_projects].present? &&  @total_year_to_date[:ontime_projects].present?
-  pieChartData[:year_to_date] = [@total_year_to_date[:percentage], 100 - @total_year_to_date[:percentage]]
-elsif @total_year_to_date[:delayed_projects].blank? &&  @total_year_to_date[:ontime_projects].present?
-  pieChartData[:year_to_date] = [100 - @total_year_to_date[:percentage], @total_year_to_date[:percentage]]
-elsif @total_year_to_date[:delayed_projects].present? &&  @total_year_to_date[:ontime_projects].blank?
-  pieChartData[:year_to_date] = [@total_year_to_date[:percentage], 100 - @total_year_to_date[:percentage]]
-end
-if (@total_this_month[:delayed_projects].blank? && @total_this_month[:ontime_projects].blank?) 
-  pieChartData[:this_month] = [@total_this_month[:percentage], @total_this_month[:percentage]]
-elsif (@total_this_month[:delayed_projects].present? && @total_this_month[:ontime_projects].present?)
-  pieChartData[:this_month] = [@total_this_month[:percentage], 100 - @total_this_month[:percentage]]
-elsif @total_this_month[:delayed_projects].blank? && @total_this_month[:ontime_projects].present?
-  pieChartData[:this_month] = [100 - @total_this_month[:percentage], @total_this_month[:percentage]]
-elsif @total_this_month[:delayed_projects].present? && @total_this_month[:ontime_projects].blank?
-  pieChartData[:this_month] = [@total_this_month[:percentage], 100 - @total_this_month[:percentage]]
-end
+  # Adjust pieChartData based on delayed_projects
+  if (@total_last_year[:delayed_projects].blank? && @total_last_year[:ontime_projects].blank?) 
+    pieChartData[:last_year] = [@total_last_year[:percentage], @total_last_year[:percentage]]
+  elsif (@total_last_year[:delayed_projects].present? && @total_last_year[:ontime_projects].present?)
+    pieChartData[:last_year] = [@total_last_year[:percentage], 100 - @total_last_year[:percentage]]
+  elsif @total_last_year[:delayed_projects].blank? && @total_last_year[:ontime_projects].present?
+    pieChartData[:last_year] = [100 - @total_last_year[:percentage], @total_last_year[:percentage]]
+  elsif @total_last_year[:delayed_projects].present?  && @total_last_year[:ontime_projects].blank?
+    pieChartData[:last_year] = [@total_last_year[:percentage], 100 - @total_last_year[:percentage]]
+  end
 
-    # Prepare chart data for Highcharts
-    @chart_data1 = @priorities.to_a.map do |priority|
-  
-      {
-        name: priority,
-        data: [
-          project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_ACTIVE),
-          project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_HOLD),
-          project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_GO_LIVE),
-          project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CLOSED),
-          project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CANCELLED)
-        ]
-      }
-    end
-  
-    @chart_data2 = @categories.to_a.map do |category|
-      {
-        name: category,
-        data: [
-          project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_ACTIVE),
-          project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_HOLD),
-          project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_GO_LIVE), 
-          project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CLOSED),
-          project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CANCELLED)
-        ]
-      }
-    end
+  if (@total_year_to_date[:delayed_projects].blank? &&  @total_year_to_date[:ontime_projects].blank?) 
+    pieChartData[:year_to_date] = [@total_year_to_date[:percentage], @total_year_to_date[:percentage]]
+  elsif @total_year_to_date[:delayed_projects].present? &&  @total_year_to_date[:ontime_projects].present?
+    pieChartData[:year_to_date] = [@total_year_to_date[:percentage], 100 - @total_year_to_date[:percentage]]
+  elsif @total_year_to_date[:delayed_projects].blank? &&  @total_year_to_date[:ontime_projects].present?
+    pieChartData[:year_to_date] = [100 - @total_year_to_date[:percentage], @total_year_to_date[:percentage]]
+  elsif @total_year_to_date[:delayed_projects].present? &&  @total_year_to_date[:ontime_projects].blank?
+    pieChartData[:year_to_date] = [@total_year_to_date[:percentage], 100 - @total_year_to_date[:percentage]]
+  end
+  if (@total_this_month[:delayed_projects].blank? && @total_this_month[:ontime_projects].blank?) 
+    pieChartData[:this_month] = [@total_this_month[:percentage], @total_this_month[:percentage]]
+  elsif (@total_this_month[:delayed_projects].present? && @total_this_month[:ontime_projects].present?)
+    pieChartData[:this_month] = [@total_this_month[:percentage], 100 - @total_this_month[:percentage]]
+  elsif @total_this_month[:delayed_projects].blank? && @total_this_month[:ontime_projects].present?
+    pieChartData[:this_month] = [100 - @total_this_month[:percentage], @total_this_month[:percentage]]
+  elsif @total_this_month[:delayed_projects].present? && @total_this_month[:ontime_projects].blank?
+    pieChartData[:this_month] = [@total_this_month[:percentage], 100 - @total_this_month[:percentage]]
+  end
+
+  # Prepare chart data for Highcharts
+  @chart_data1 = @priorities.to_a.map do |priority|
+
+    {
+      name: priority,
+      data: [
+        project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_ACTIVE),
+        project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_HOLD),
+        project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_GO_LIVE),
+        project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CLOSED),
+        project_count(@projects, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CANCELLED)
+      ]
+    }
+  end
+
+  @chart_data2 = @categories.to_a.map do |category|
+    {
+      name: category,
+      data: [
+        project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_ACTIVE),
+        project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_HOLD),
+        project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_GO_LIVE), 
+        project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CLOSED),
+        project_count(@projects, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CANCELLED)
+      ]
+    }
+  end
+
+    
+  @chart_data3 = @application_names.to_a.map do |application_name|
+    {
+      name: application_name,
+      data: [
+        project_count(@projects, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_ACTIVE),
+        project_count(@projects, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_HOLD),
+        project_count(@projects, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_GO_LIVE), 
+        project_count(@projects, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CLOSED),
+        project_count(@projects, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], Project::STATUS_CANCELLED)
+      ]
+    }
+  end
+else
+  # Prepare chart data for Highcharts
+  @chart_data1 = @priorities.to_a.map do |priority|
+
+    {
+      name: priority,
+      data: [
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_IN_DISCUSSION),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_FINILIZED),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_AWAITING_DETAILS),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_AWATING_BUSINESS_CASE),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_NOT_APPROVED),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_ON_HOLD),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_ACCEPTED),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_CANCELLED),
+        business_requirement_count(@business_requirements, priority, "Priority Level", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_CLOSED)
+      ]
+    }
+  end
+
+  @chart_data2 = @categories.to_a.map do |category|
+    {
+      name: category,
+      data: [
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_IN_DISCUSSION),
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_FINILIZED),
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_AWAITING_DETAILS), 
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_AWATING_BUSINESS_CASE),
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_NOT_APPROVED),
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_ON_HOLD),
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_ACCEPTED),
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_CANCELLED),
+        business_requirement_count(@business_requirements, category, "Project Category", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_CLOSED)
+      ]
+    }
+  end
+
+    
+  @chart_data3 = @application_names.to_a.map do |application_name|
+    {
+      name: application_name,
+      data: [
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_IN_DISCUSSION),
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_FINILIZED),
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_AWAITING_DETAILS), 
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_AWATING_BUSINESS_CASE),
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_NOT_APPROVED),
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_REQUIREMENT_ON_HOLD),
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_ACCEPTED),
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_CANCELLED),
+        business_requirement_count(@business_requirements, application_name, "Application Name", params[:program_manager_usernames], params[:project_manager_usernames], BusinessRequirement::STATUS_CLOSED)
+      ]
+    }
+  end
+end
 %>
 
 
 
 
+
+<div class="mb-4">
+  <label for="type-selector">Select Type:</label>
+  <select id="type-selector" class="form-control" onchange="location = this.value;">
+    <option value="<%= project_score_card_path(type: 'Project') %>" <%= 'selected' if params[:type] == 'Project' %>>Project</option>
+    <option value="<%= project_score_card_path(type: 'Business Requirment') %>" <%= 'selected' if params[:type] == 'Business Requirment' %>>Business Requirement</option>
+  </select>
+</div>
 
 
 
@@ -219,6 +299,7 @@ end
 <div style="display: flex; justify-content: space-between;">
   <div id="categoryChart" style="width: 48%; height: 500px;"></div>
   <div id="priorityChart" style="width: 48%; height: 500px;"></div>
+  <div id="applicationNameChart" style="width: 48%; height: 500px;"></div>
 </div>
 <div style="display: flex; flex-direction: column;">
   
@@ -333,7 +414,53 @@ end
       <% end %>
 
     </div>
-    <div class="chart-projects" id="last-year-delayed-table">
+    <div>
+      <% @application_names.each do |application_name| %>
+        <% @project_status_text.each do |status_key, status_value| %>
+          <div class="chart-projects3" id="application_name-<%= application_name.downcase.gsub(' ', '-') %>-status-<%= status_value.downcase.gsub(' ', '-') %>-table" style="display: none;">
+            <h2><%= application_name %> - <%= status_value %></h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Status</th>
+                  <th>Application Name</th>
+                  <th>Scheduled End</th>
+                  <th>Actual End</th>
+                  <th>RAG Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% projects = filter_projects_by_status_and_field_name(@projects, params[:program_manager_usernames], params[:project_manager_usernames], status_key, application_name, "Application Name") %>
+                <% if projects.blank? %>
+                  <tr>
+                    <td colspan="4" style="text-align: center;">No records to display.</td>
+                  </tr>
+                <% else %>
+                  <% projects.each do |project| %>
+                    <tr>
+                      <td><%= link_to project.name, project_path(project) %></td>
+                      <td><%=  @project_status_text[project.status] %></td>
+                      <td><%= custom_field_value(project, "Application Name") %></td>
+                      <td><%= formatted_date(date_value(project, "Scheduled End Date")) %></td>
+                      <td><%= formatted_date(date_value(project, "Actual End Date")) %></td>
+                      <td></td>
+                    </tr>
+                  <% end %>
+                <% end %>
+              </tbody>
+            </table>
+            <button onclick="exportToCSV('application_name', '<%= application_name.downcase.gsub(' ', '-') %>', '<%= status_value.downcase.gsub(' ', '-') %>')">
+              Export CSV
+            </button>
+          </div>
+        <% end %>
+      <% end %>
+
+    </div>
+    <% params[:type] ||= "Project" %>
+    <% if params[:type] == "Project" %>
+        <div class="chart-projects" id="last-year-delayed-table">
           <h2>Last Year (Delayed)</h2>
           <table>
             <thead>
@@ -526,6 +653,8 @@ end
             </tbody>
           </table>
         </div>
+      <% else %>
+     <% end %>
   </div>
 </div>
 
@@ -533,7 +662,7 @@ end
   function exportToCSV(filterType, filterValue, statusValue = null) {
     let url = `/export_project_score_to_csv?filter_type=${filterType}&filter_value=${filterValue}`;
 
-    // If there's a status value (for category/priority), append it
+    // If there's a status value (for category/priority/application_name), append it
     if (statusValue) {
       url += `&status_value=${statusValue}`;
     }
@@ -543,7 +672,8 @@ end
   }
 </script>
 
-
+<% params[:type] ||= "Project" %>
+<% if params[:type] == "Project" %>
 <script>
 
   document.addEventListener("DOMContentLoaded", function () {
@@ -755,6 +885,8 @@ end
     }]
   });
 </script>
+<% else %>
+<% end %>
 <script>
   const chartData1 = <%= @chart_data1.to_json.html_safe %>;
   const priorities = <%= @priorities.to_json.html_safe %>;
@@ -912,6 +1044,86 @@ end
     series: statuses2.map((status, index) => ({
       name: status,
       data: chartData2.map(data => data.data[index]), 
+      color: ['#4CAF50', '#FFC107', '#2196F3', '#9E9E9E', '#F44336'][index % 5] 
+    }))
+  });
+
+  const chartData3 = <%= @chart_data3.to_json.html_safe %>;
+  const application_names = <%= @application_names.to_json.html_safe %>;
+  const statuses3 = <%= @project_status_text.values.to_json.html_safe %>;
+
+  Highcharts.chart('applicationNameChart', {
+    credits: {
+      enabled: false
+    },
+    chart: {
+      type: 'bar'
+    },
+    title: {
+      text: 'Project Status by Application Name'
+    },
+    xAxis: {
+      categories: application_names, 
+      title: {
+        text: 'Project Application Names'
+      }
+    },
+    yAxis: {
+      min: 0,
+      title: {
+        text: 'Number of Projects'
+      },
+      stackLabels: {
+        enabled: true,
+        style: {
+          fontWeight: 'bold',
+          color: 'gray'
+        }
+      }
+    },
+    legend: {
+      reversed: true
+    },
+    plotOptions: {
+      series: {
+        cursor: 'pointer',
+        point: {
+          events: {
+            click: function () {
+              document.querySelectorAll('.chart-projects3').forEach(el => el.style.display = 'none');
+
+              const application_name = this.category || ""; 
+              const status = this.series.name || ""; 
+
+              console.log("Clicked Application Name:", application_name);
+              console.log("Clicked Status:", status);
+
+              const tableId = `application_name-${application_name.toLowerCase().replace(/ /g, '-')}-status-${status.toLowerCase().replace(/ /g, '-')}-table`;
+              const tableElement = document.getElementById(tableId);
+              if (tableElement) {
+                tableElement.style.display = 'block';
+                tableElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              } else {
+                console.warn('Table not found:', tableId);
+              }
+            }
+          }
+        },
+        borderWidth: 0,
+        dataLabels: {
+          enabled: true,
+          format: '{point.y}'
+        }
+      }
+    },
+    tooltip: {
+      formatter: function () {
+        return `<b>${this.series.name}</b><br>${this.key}: ${this.y} projects`;
+      }
+    },
+    series: statuses3.map((status, index) => ({
+      name: status,
+      data: chartData3.map(data => data.data[index]), 
       color: ['#4CAF50', '#FFC107', '#2196F3', '#9E9E9E', '#F44336'][index % 5] 
     }))
   });

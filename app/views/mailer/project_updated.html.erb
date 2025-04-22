@@ -24,7 +24,7 @@ end %>
   <title>Project Update</title>
 </head>
 <body>
-  <h2>The following updates have been made to the project "<%= @project.name %>" in Trackmine:</h2>
+  <h2>The following updates have been made to the project "<%= @project.name %>" in ZenBoard:</h2>
   <ul>
     <% @updated_fields.each do |field, values| %>
         <% unless values[:before].sort == values[:after].sort %>
@@ -42,8 +42,8 @@ end %>
   <p><strong>Portfolio Category:</strong> <%= custom_function('Portfolio Category') %></p>
   <p><strong>Priority Level:</strong> <%= custom_function('Priority Level') %></p>
 
-  <p>Please log in to Trackmine to view and manage the project details.</p>
-  <p>Trackmine Link: "https://Trackmine.neo.com/#{@issue.id}"</p>
+  <p>Please log in to ZenBoard to view and manage the project details.</p>
+  <p>ZenBoard Link: "https://ZenBoard.neo.com/#{@issue.id}"</p>
 
   <p><strong>Best Regards</strong></p>
 </body>
@@ -83,7 +83,7 @@ end %>
 </head>
 <body>
     <div class="container">
-        <div class="header">Project has been updated in Trackmine:</div>
+        <div class="header">Project has been updated in ZenBoard:</div>
         <p>Project Name: <%= @project.name %></p>
         <p>Start Date: <%= custom_function_date('Start Date') %></p>
         <p>End Date: <%= custom_function_date('End Date') %></p>
@@ -92,8 +92,8 @@ end %>
         <p>Portfolio Category: <%= custom_function('Portfolio Category') %></p>
         <p>Priority Level: <%= custom_function('Priority Level') %></p>
         
-        <p>Please log in to Trackmine to view and manage the project details.</p>
-        <p><a href="" class="link">Trackmine</a></p>
+        <p>Please log in to ZenBoard to view and manage the project details.</p>
+        <p><a href="" class="link">ZenBoard</a></p>
     </div>
 </body>
 </html>

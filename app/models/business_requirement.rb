@@ -42,9 +42,9 @@ class BusinessRequirement< ActiveRecord::Base
     accepts_nested_attributes_for :meetings, allow_destroy: true
     accepts_nested_attributes_for :moms, allow_destroy: true
 
-    validates :requirement_case, :identifier, :description, presence: true
-    validates :identifier, uniqueness: true
-    before_validation :set_unique_identifier, on: [:create, :new]
+    validates :requirement_case, :description, presence: true
+    validates :identifier, uniqueness: true, on: :update
+    after_create :set_identifier_from_id
     safe_attributes 'requirement_case', 'identifier', 'description', 'cost_benefits', 'status',
                     'project_sponsor', 'scheduled_start_date', 'scheduled_end_date',
                     'actual_start_date', 'actual_end_date', 'revised_end_date',
@@ -56,28 +56,36 @@ class BusinessRequirement< ActiveRecord::Base
     after_update :log_update_activity
     after_destroy :log_destroy_activity
 
-    after_create :add_pmo_and_tsg
+    after_save:add_pmo_and_tsg
 
     def add_pmo_and_tsg
-      begin
-        group_names = ["PMO", "TSG"]
+      group_names = %w[PMO TSG]
     
-        group_names.each do |group_name|
-            group = Group.find_by_lastname(group_name)
-            user_ids = group.users.where(status: 1).pluck(:id) if group.present?
-            role_id = Role.find_by(name: group_name)&.id
-            user_ids.each do |user_id|
-                br_stakeholder = BrStakeholder.find_or_create_by(user_id: user_id, role_id: role_id, business_requirement_id: self.id)
-            end
+      group_names.each do |group_name|
+        group = Group.find_by(lastname: group_name)
+        next unless group
+    
+        user_ids = group.users.where(status: 1).pluck(:id)
+        role = Role.find_by(name: group_name)
+        next unless role
+    
+        user_ids.each do |user_id|
+          BrStakeholder.find_or_create_by(
+            user_id: user_id,
+            role_id: role.id,
+            business_requirement_id: id
+          )
         end
-        Mailer.deliver_business_requirement_created(User.current, stakeholders.pluck(:user_id), self)
-    
-      rescue ActiveRecord::RecordNotFound => e
-        Rails.logger.error "Role or Project not found: #{e.message}"
-      rescue StandardError => e
-        Rails.logger.error "Error in add_pmo_and_tsg: #{e.message}"
       end
-    end    
+    
+      Mailer.deliver_business_requirement_created(User.current, stakeholders.pluck(:user_id), self)
+    
+    rescue ActiveRecord::RecordNotFound => e
+      Rails.logger.error "Role or Group not found: #{e.message}"
+    rescue StandardError => e
+      Rails.logger.error "Error in add_pmo_and_tsg: #{e.message}"
+    end
+     
 
     def has_stakeholders?
         br_stakeholders.any?
@@ -134,10 +142,8 @@ class BusinessRequirement< ActiveRecord::Base
         attributes_editable?(user)
     end
 
-    def set_unique_identifier
-        # Generate a unique identifier for new records
-        max_id = BusinessRequirement&.last&.id || 0
-        self.identifier = "BR_#{max_id + 1}"
+    def set_identifier_from_id
+      update_column(:identifier, "BR_#{id}")
     end
 end
   

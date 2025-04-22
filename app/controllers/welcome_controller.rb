@@ -45,7 +45,8 @@ class WelcomeController < ApplicationController
   def resource_management
     @projects = @projects.where(status: 1)
     @roles = Role.all.where.not(name: ["Anonymous", "Non member"]).pluck(:name)
-    @members = User.all
+    binding.pry
+    @members = Member.includes(:user).where(project_id: @project.id)
     if params[:roles].present? && params[:members].present?
       role = Role.where(name: params[:roles])
       member = User.where(firstname: params[:members].map { |name| name.split(' ').first }, lastname: params[:members].map { |name| name.split(' ').last })
@@ -210,49 +211,95 @@ class WelcomeController < ApplicationController
   end
 
   def project_score_card
-    # Define project status text
-    @project_status_text = {
-      Project::STATUS_ACTIVE => 'Active',
-      Project::STATUS_HOLD => "Hold",
-      Project::STATUS_GO_LIVE => 'Go Live',
-      Project::STATUS_CLOSED => 'Closed',
-      Project::STATUS_CANCELLED => "Cancelled"
-    }
-   
-    # Calculate financial year start and end dates
-    today = Date.today
-    @financial_year_start, @financial_year_end = if today.month < 4
-      [Date.new(today.year - 1, 4, 1), Date.new(today.year, 3, 31)]
-    else
-      [Date.new(today.year, 4, 1), Date.new(today.year + 1, 3, 31)]
-    end
-    # Fetch program managers and project managers
-    @program_manager_usernames = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
-    @project_manager_usernames = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
-  # Fetch project categories and priorities from custom fields
-    project_category_id = CustomField.find_by(name: "Project Category")&.id
-    @categories = CustomFieldEnumeration.where(custom_field_id: project_category_id).pluck(:name) if project_category_id
+    params[:type] ||= "Project" 
+    if params[:type] == "Project"
 
-    priority_level_id = CustomField.find_by(name: "Priority Level")&.id
-    @priorities = CustomFieldEnumeration.where(custom_field_id: priority_level_id).pluck(:name) if priority_level_id
-    # Fetch closed projects and calculate top delayed projects
-    @it_closed_projects = @projects.where(status: Project::STATUS_CLOSED)
-    @filter_projects = @projects
-    @filter_projects = @filter_projects.select { |project| (Array(params[:program_manager_usernames]) & member_names(project, 'Program Manager')).any? } if params[:program_manager_usernames].present?
-    @filter_projects = @filter_projects.select { |project| (Array( params[:project_manager_usernames]) & member_names(project, 'Project Manager')).any? } if  params[:project_manager_usernames].present?
-
-    @active_projects = @filter_projects.select { |p| p.status == Project::STATUS_ACTIVE }.count
-    @closed_projects = @filter_projects.select { |p| p.status == Project::STATUS_CLOSED }.count
-    @hold_projects = @filter_projects.select { |p| p.status == Project::STATUS_HOLD }.count
-    @cancelled_projects = @filter_projects.select { |p| p.status == Project::STATUS_CANCELLED }.count
-    @go_live_projects = @filter_projects.select { |p| p.status == Project::STATUS_GO_LIVE }.count
-    @top_delayed_projects = get_top_delayed_projects(@it_closed_projects)
-
-    # Calculate delay percentages for last year, year-to-date, and this month
-    @total_last_year = calculate_delay_percentage(2.years.ago.change(month: 4, day: 1), 1.year.ago.change(month: 3, day: 31))
-    @total_year_to_date = calculate_delay_percentage(@financial_year_start, @financial_year_end)
-    @total_this_month = calculate_delay_percentage(Time.current.beginning_of_month, Time.current.end_of_month)
+      # Define project status text
+      @project_status_text = {
+        Project::STATUS_ACTIVE => 'Active',
+        Project::STATUS_HOLD => "Hold",
+        Project::STATUS_GO_LIVE => 'Go Live',
+        Project::STATUS_CLOSED => 'Closed',
+        Project::STATUS_CANCELLED => "Cancelled"
+      }
     
+      # Calculate financial year start and end dates
+      today = Date.today
+      @financial_year_start, @financial_year_end = if today.month < 4
+        [Date.new(today.year - 1, 4, 1), Date.new(today.year, 3, 31)]
+      else
+        [Date.new(today.year, 4, 1), Date.new(today.year + 1, 3, 31)]
+      end
+      # Fetch program managers and project managers
+      @program_manager_usernames = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
+      @project_manager_usernames = @projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
+    # Fetch project categories and priorities from custom fields
+      project_category_id = CustomField.find_by(name: "Project Category")&.id
+      @categories = CustomFieldEnumeration.where(custom_field_id: project_category_id).pluck(:name) if project_category_id
+
+      priority_level_id = CustomField.find_by(name: "Priority Level")&.id
+      @priorities = CustomFieldEnumeration.where(custom_field_id: priority_level_id).pluck(:name) if priority_level_id
+      application_name_id = CustomField.find_by(name: "Application Name")&.id
+      @application_names = CustomFieldEnumeration.where(custom_field_id: application_name_id).pluck(:name) if application_name_id
+      # Fetch closed projects and calculate top delayed projects
+      @it_closed_projects = @projects.where(status: Project::STATUS_CLOSED)
+      @filter_projects = @projects
+      @filter_projects = @filter_projects.select { |project| (Array(params[:program_manager_usernames]) & member_names(project, 'Program Manager')).any? } if params[:program_manager_usernames].present?
+      @filter_projects = @filter_projects.select { |project| (Array( params[:project_manager_usernames]) & member_names(project, 'Project Manager')).any? } if  params[:project_manager_usernames].present?
+
+      @active_projects = @filter_projects.select { |p| p.status == Project::STATUS_ACTIVE }.count
+      @closed_projects = @filter_projects.select { |p| p.status == Project::STATUS_CLOSED }.count
+      @hold_projects = @filter_projects.select { |p| p.status == Project::STATUS_HOLD }.count
+      @cancelled_projects = @filter_projects.select { |p| p.status == Project::STATUS_CANCELLED }.count
+      @go_live_projects = @filter_projects.select { |p| p.status == Project::STATUS_GO_LIVE }.count
+      @top_delayed_projects = get_top_delayed_projects(@it_closed_projects)
+
+      # Calculate delay percentages for last year, year-to-date, and this month
+      @total_last_year = calculate_delay_percentage(2.years.ago.change(month: 4, day: 1), 1.year.ago.change(month: 3, day: 31))
+      @total_year_to_date = calculate_delay_percentage(@financial_year_start, @financial_year_end)
+      @total_this_month = calculate_delay_percentage(Time.current.beginning_of_month, Time.current.end_of_month)
+    elsif params[:type] == "Business Requirment"
+      @project_status_text = {
+        BusinessRequirement::STATUS_IN_DISCUSSION => 'In Discussion',
+        BusinessRequirement::STATUS_REQUIREMENT_FINILIZED => 'Requirement Finalized',
+        BusinessRequirement::STATUS_AWAITING_DETAILS => 'Awaiting Details',
+        BusinessRequirement::STATUS_AWATING_BUSINESS_CASE => 'Awaiting Business Case',
+        BusinessRequirement::STATUS_REQUIREMENT_NOT_APPROVED => 'Requirement Not Approved',
+        BusinessRequirement::STATUS_REQUIREMENT_ON_HOLD => 'Requirement On Hold',
+        BusinessRequirement::STATUS_ACCEPTED => 'Accepted',
+        BusinessRequirement::STATUS_CANCELLED   => 'Cancelled',
+        BusinessRequirement::STATUS_CLOSED => 'Closed'
+      }
+      @business_requirements = BusinessRequirement.all
+      @project_manager_usernames = BrStakeholder.includes(:user).where(role_id: Role.find_by(name: "Project Manager")&.id).map { |stakeholder| "#{stakeholder.user.firstname} #{stakeholder.user.lastname}" }
+      @program_manager_usernames = BrStakeholder.includes(:user).where(role_id: Role.find_by(name: "Program Manager")&.id).map { |stakeholder| "#{stakeholder.user.firstname} #{stakeholder.user.lastname}" }
+      @categories = @business_requirements.pluck(:project_category).flatten.reject { |val| val.blank? }.uniq
+      @priorities = @business_requirements.pluck(:priority_level).flatten.reject { |val| val.blank? }.uniq
+      @application_names = @business_requirements.pluck(:application_name).flatten.reject { |val| val.blank? }.uniq
+      if params[:program_manager_usernames].present?
+        program_manager_role = Role.find_by(name: "Program Manager")
+        program_manager_names = params[:program_manager_usernames].map { |name| name.split.map(&:capitalize).join(' ') }
+        user_ids = User.where("CONCAT(firstname, ' ', lastname) IN (?)", program_manager_names).pluck(:id)
+    
+        @business_requirements = @business_requirements.joins(:br_stakeholders)
+                                                     .where(br_stakeholders: { user_id: user_ids, role_id: program_manager_role.id })
+      end
+    
+      # Filter by Project Manager if present
+      if params[:project_manager_usernames].present?
+        project_manager_role = Role.find_by(name: "Project Manager")
+        project_manager_names = params[:project_manager_usernames].map { |name| name.split.map(&:capitalize).join(' ') }
+        user_ids = User.where("CONCAT(firstname, ' ', lastname) IN (?)", project_manager_names).pluck(:id)
+    
+        @business_requirements = @business_requirements.joins(:br_stakeholders)
+                                                     .where(br_stakeholders: { user_id: user_ids, role_id: project_manager_role.id })
+      end
+      @active_projects = @business_requirements.select { |p| p.status == BusinessRequirement::STATUS_IN_DISCUSSION }.count
+      @closed_projects = @business_requirements.select { |p| p.status == BusinessRequirement::STATUS_ACCEPTED }.count
+      @hold_projects = @business_requirements.select { |p| p.status == BusinessRequirement::STATUS_CANCELLED }.count
+      @cancelled_projects = @business_requirements.select { |p| p.status == BusinessRequirement::STATUS_REQUIREMENT_FINILIZED }.count
+      @go_live_projects = @business_requirements.select { |p| p.status == BusinessRequirement::STATUS_AWATING_BUSINESS_CASE}.count
+    end
   end
   
   def it_project_ids

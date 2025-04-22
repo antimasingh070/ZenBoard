@@ -134,7 +134,7 @@
         <div id="main-menu" class="tabs" style="max-width: 100%; margin: 0 auto;">
         <ul class="nav nav-tabs" style="display: flex; justify-content: flex-start; gap: 15px;">
             <li class="nav-item">
-            <%= link_to "Project Dashboard", project_score_card_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'project_score_card'}" %>
+            <%= link_to "Project Dashboard", project_score_card_path(type: 'Project'), class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:type] == 'Project'}" %>
             </li>
             <li class="nav-item">
             <%= link_to "Resource Management", resource_management_path, class: "nav-link text-gray-600 px-3 py-2 #{'active-tab' if params[:action] == 'resource_management'}" %>

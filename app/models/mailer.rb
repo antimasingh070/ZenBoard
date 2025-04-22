@@ -406,10 +406,11 @@ class Mailer < ActionMailer::Base
   # Builds a mail to user about a new document.
   def document_added(user, document)
     redmine_headers 'Project' => document.project.identifier
-    @author = author
+    # @author = author
     @document = document
     @user = user
     @document_url = url_for(:controller => 'documents', :action => 'show', :id => document)
+
     mail :to => user,
       :subject => "[#{document.project.name}] #{l(:label_document_new)}: #{document.title}"
   end
@@ -480,7 +481,7 @@ class Mailer < ActionMailer::Base
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
-    mail :to => mail_to,  cc: mail_cc, :subject => "[Trackmine] Project NEWS: #{news.project.name}  #{news.project.identifier}"
+    mail :to => mail_to,  cc: mail_cc, :subject => "[ZenBoard] Project NEWS: #{news.project.name}  #{news.project.identifier}"
   end
   
   # Notifies users about new news
@@ -510,7 +511,7 @@ class Mailer < ActionMailer::Base
     @user = user
     @news_url = url_for(:controller => 'news', :action => 'show', :id => news)
     mail :to => user,
-     :subject => "Re: [Trackmine] Project NEWS: #{news.project.name} #{news.project.identifier}"
+     :subject => "Re: [ZenBoard] Project NEWS: #{news.project.name} #{news.project.identifier}"
   end
 
   # Notifies users about a new comment on a news
@@ -927,13 +928,13 @@ class Mailer < ActionMailer::Base
   def mail(headers={}, &block)
     # Add a display name to the From field if Setting.mail_from does not
     # include it
-    headers[:from] = "Trackmine <antima.singh@gmail.com>"
+    headers[:from] = "ZenBoard <antima.singh@gmail.com>"
     begin
       mail_from = Mail::Address.new(Setting.mail_from)
       if mail_from.display_name.blank? && mail_from.comments.blank?
         # mail_from.display_name =
         #   @author&.logged? ? @author.name : Setting.app_title
-        mail_from.display_name = "Trackmine"
+        mail_from.display_name = "ZenBoard"
       end
       from = mail_from.format
       list_id = "<#{mail_from.address.to_s.tr('@', '.')}>"
@@ -978,7 +979,7 @@ class Mailer < ActionMailer::Base
     if @references_objects
       headers[:references] = @references_objects.collect {|o| "<#{self.class.references_for(o, @user)}>"}.join(' ')
     end
-    headers[:from] = "Trackmine <no-reply@example.com>"
+    headers[:from] = "ZenBoard <no-reply@example.com>"
     if block
       super headers, &block
     else
@@ -1118,7 +1119,7 @@ class Mailer < ActionMailer::Base
     mail_data = user_mails(@project)
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
-    mail_subject = "[Trackmine] #{project.name} has been updated from \"#{@old_status_text}\" to \"#{@new_status_text}\" on #{Time.now.strftime("%B %d, %Y")}"
+    mail_subject = "[ZenBoard] #{project.name} has been updated from \"#{@old_status_text}\" to \"#{@new_status_text}\" on #{Time.now.strftime("%B %d, %Y")}"
   
     mail(to: mail_to, cc: mail_cc, subject: mail_subject)
   end
@@ -1138,7 +1139,7 @@ class Mailer < ActionMailer::Base
     mail_data = user_mails(@project)
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
-    mail(to: mail_to, cc: mail_cc, subject: "[Trackmine] Project: #{project.name} #{project.identifier}")    
+    mail(to: mail_to, cc: mail_cc, subject: "[ZenBoard] Project: #{project.name} #{project.identifier}")    
   end
 
   def self.deliver_membership_added_email(user, user_ids, role_ids, project)
@@ -1155,7 +1156,7 @@ class Mailer < ActionMailer::Base
     mail_to = mail_data[:mail_to].uniq
     mail_cc = mail_data[:mail_cc].uniq
     mail(to: mail_to, cc: mail_cc, 
-      :subject => "[Trackmine] Project Stackholders changes in: #{@project.name}  #{@project.identifier} ")
+      :subject => "[ZenBoard] Project Stackholders changes in: #{@project.name}  #{@project.identifier} ")
   end
 
   def self.deliver_membership_deleted_email(user, role, project)
@@ -1284,7 +1285,7 @@ class Mailer < ActionMailer::Base
     mail_to = User.where(id: assigned_to_ids ).map(&:mail)
     # Adjust the recipient of the email based on project or member data
     @recipient_email = @members.pluck(:user_id).map { |user_id| User.find(user_id).mail }.join(",") # Pluck emails of all project members
-    mail(to: "singhantima720@gmail.com", subject: "[Trackmine] Pending Activity List: #{@project.name} (due date passed)")
+    mail(to: "singhantima720@gmail.com", subject: "[ZenBoard] Pending Activity List: #{@project.name} (due date passed)")
   end
 
   def self.deliver_send_issue_list(user, project,overdue_issues)

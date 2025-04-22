@@ -5,6 +5,10 @@
   <div class="splitcontent">
     <div class="splitcontentleft">
       <h2><strong>Overview</strong></h2>
+      <% if @business_requirement.description.present? %>
+        <span> <%= textilizable @business_requirement.description %></span>
+      <% end %>
+
       <% if @business_requirement.created_at.present? %>
         <li><span class="label">Created At: <%= @business_requirement.created_at.strftime("%d %b %Y") %></span></li>
       <% end %>
@@ -24,9 +28,7 @@
       <li><span class="label">Project Identifier: <%=  link_to @business_requirement.requirement_case, project_path(@business_requirement.project_identifier) %></span></li>
     <% end %>
     
-    <% if @business_requirement.description.present? %>
-      <li><span class="label">Description: <%= @business_requirement.description %></span></li>
-    <% end %>
+  
     
     <% if @business_requirement.cost_benefits.present? %>
       <li><span class="label">Cost Benefits: <%= @business_requirement.cost_benefits %></span></li>
