@@ -166,17 +166,17 @@ module Redmine
                   :if => Proc.new {User.current.logged?}
         menu.push :projects, {:controller => 'projects', :action => 'index'},
                   :caption => :label_project_plural
-        menu.push :business_requirements, 
-                  { controller: 'business_requirements', action: 'index' }, 
+        menu.push :business_requirements,
+                  { controller: 'business_requirements', action: 'index' },
                   caption: :label_br_plural,
-                  if: Proc.new { 
+                  if: Proc.new {
                     User.current.admin? ||
                     BusinessRequirement.joins(:br_stakeholders).exists?(br_stakeholders: { user_id: User.current.id })
-                  }    
-        menu.push :users, {:controller => 'users', :action => 'index'}, :caption => :label_user_plural, :if => Proc.new {
-                    User.current.groups.include?(Group.find_by_lastname('UAM'))
                   }
-          # Project Score Card link (only for Program Managers)
+        menu.push :users, {:controller => 'users', :action => 'index'}, :caption => :label_user_plural, :if => Proc.new {
+                                                                                                                 User.current.groups.include?(Group.find_by_lastname('UAM'))
+                                                                                                               }
+        # Project Score Card link (only for Program Managers)
         menu.push :project_score_card, { controller: 'welcome', action: 'project_score_card' },
         caption: 'Summery',
         if: Proc.new { User.current.admin? || User.current.groups.include?(Group.find_by_lastname('PMO')) }
@@ -191,13 +191,12 @@ module Redmine
         it_project_present = custom_values.any? { |cv| cv.value == "1" }
         non_it_project_present = custom_values.any? { |cv| cv.value == "0" }
 
-
-          menu.push :it_project_dashboard, { controller: 'welcome', action: 'it_project_dashboard' },
-              caption: 'IT Project Dashboard', 
-              if: Proc.new {User.current.admin? || it_project_present }
-          menu.push :non_it_project_dashboard, { controller: 'welcome', action: 'non_it_project_dashboard' },
-              caption: 'Non IT Project Dashboard', 
-              if: Proc.new { User.current.admin? || non_it_project_present }
+        menu.push :it_project_dashboard, { controller: 'welcome', action: 'it_project_dashboard' },
+            caption: 'IT Project Dashboard',
+            if: Proc.new {User.current.admin? || it_project_present }
+        menu.push :non_it_project_dashboard, { controller: 'welcome', action: 'non_it_project_dashboard' },
+            caption: 'Non IT Project Dashboard',
+            if: Proc.new { User.current.admin? || non_it_project_present }
 
         menu.push :activity_logs, {:controller => 'activity_logs', :action => 'index'},
                   :caption => "Activity Logs", :if => Proc.new {User.current.admin?}
@@ -214,7 +213,7 @@ module Redmine
         menu.push :psc_reports, { controller: 'welcome', action: 'psc_reports' },
                   caption: 'Reports'
       end
-      
+
       MenuManager.map :account_menu do |menu|
         menu.push :login, :signin_path, :if => Proc.new {!User.current.logged?}
         menu.push :register, :register_path,

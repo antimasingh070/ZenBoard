@@ -105,16 +105,16 @@ module ActionView
         if action_name == "settings"
           target = name.match(/\[(\d+)\]/)&.captures&.first&.to_i
           custom_field = CustomField.find_by_id(target)
-          
+
           if custom_field&.name&.in? ["Scheduled Start Date", "Scheduled End Date"]
-            if !User.current.admin?
+            unless User.current.admin?
               @members = Member.where(project_id: @project.id)
               @role_present = @members.any? do |member|
                 member.user_id == User.current.id && member.roles.pluck(:name).any? { |role| role.in?(["PMO", "Program Manager"]) }
               end
               options[:disabled] = true unless @role_present
             end
-          end          
+          end
         end
         date_field_tag_without_max(name, value, options)
       end

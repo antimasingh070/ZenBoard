@@ -32,7 +32,6 @@ module ApplicationHelper
   extend Forwardable
   def_delegators :wiki_helper, :wikitoolbar_for, :heads_for_wiki_formatter
 
-
   def member_names(project, field_name)
     role = Role.find_by(name: field_name)
 
@@ -46,7 +45,7 @@ module ApplicationHelper
     else
       return []
     end
-  end  
+  end
 
   # Return true if user is authorized for controller/action, otherwise false
   def authorize_for(controller, action)
@@ -81,11 +80,7 @@ module ApplicationHelper
   end
 
   def project_style(project, indent)
-    if indent > 0
-      ""
-    else
-      ""
-    end
+    ""
   end
 
   # Displays a link to user's account page if active
@@ -619,14 +614,14 @@ module ApplicationHelper
                        :class => 'autocomplete',
                        :data => {:automcomplete_url => url},
                        :autocomplete => 'off')
-  
+
     # Links for "All Projects", "IT Dashboard", and "Non-IT Dashboard"
     all = link_to(l(:label_project_all), projects_path(:jump => current_menu_item),
                   :class => (@project.nil? && controller.class.main_menu ? 'selected' : nil))
     it_dashboard = link_to('Jump to IT Dashboard', it_project_dashboard_path, class: 'dashboard-link')
     non_it_dashboard = link_to('Jump to Non-IT Dashboard', non_it_project_dashboard_path, class: 'dashboard-link')
-    +
-    content_tag('div', it_dashboard, class: 'drdn-items it-dashboard selection') +
+    content_tag('div', it_dashboard, class: 'drdn-items it-dashboard selection')
+
     content_tag('div', non_it_dashboard, class: 'drdn-items non-it-dashboard selection')
     # Content for the dropdown
     content =
@@ -638,7 +633,7 @@ module ApplicationHelper
                     content_tag('div', it_dashboard, :class => 'drdn-items it-dashboard selection') +
                     content_tag('div', non_it_dashboard, :class => 'drdn-items non-it-dashboard selection'),
                     :class => 'drdn-content')
-                    content_tag('div', trigger + content, :id => "project-jump", :class => "drdn")
+    content_tag('div', trigger + content, :id => "project-jump", :class => "drdn")
   end
 
   def project_tree_options_for_select(projects, options = {})

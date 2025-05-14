@@ -167,7 +167,6 @@ class User < Principal
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
-
   def log_create_activity
     ActivityLog.create(
       entity_type: 'User',
@@ -957,7 +956,6 @@ class User < Principal
     User.where("created_on < ? AND status = ?", Time.now - age, STATUS_REGISTERED).destroy_all
   end
 
-
   protected
 
   def validate_password_length
@@ -976,9 +974,9 @@ class User < Principal
   def self.send_issue_email
     user= User.first
 
-  #   users.each do |user|
-      Mailer.deliver_send_issue_pdf(user, '/Users/user/ZenBoard/app/issues.pdf')
-  #   end
+    #   users.each do |user|
+    Mailer.deliver_send_issue_pdf(user, '/Users/user/ZenBoard/app/issues.pdf')
+    #   end
   end
 
   def self.send_dashboard_email
@@ -989,17 +987,16 @@ class User < Principal
   end
 
   def self.send_wsr_emails
-      projects = Project.where(status: 1, parent_id: nil)
-      projects.each do  |project|
-        Mailer.deliver_send_wsr_email(project)
-      end
+    projects = Project.where(status: 1, parent_id: nil)
+    projects.each do  |project|
+      Mailer.deliver_send_wsr_email(project)
+    end
   end
 
-  def self.custom_field_value_date(user,issue, field_name) 
-    custom_field = CustomField.find_by(name: field_name) 
+  def self.custom_field_value_date(user, issue, field_name)
+    custom_field = CustomField.find_by(name: field_name)
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: issue&.id, custom_field_id: custom_field&.id)
-    custom_field_enumeration = custom_value&.value
-    custom_field_enumeration
+    custom_value&.value
   end
 
   private

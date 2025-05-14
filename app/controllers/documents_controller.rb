@@ -27,7 +27,6 @@ class DocumentsController < ApplicationController
 
   helper :attachments
   helper :custom_fields
-  
 
   def index
     @sort_by = %w(category date title author).include?(params[:sort_by]) ? params[:sort_by] : 'category'
@@ -72,7 +71,7 @@ class DocumentsController < ApplicationController
   def create_document
     @document = @project.documents.build(document_params)
     @document.save_attachments(params[:attachments])  # Assuming this method handles attachments
-  
+
     respond_to do |format|
       if @document.save
         format.html do
@@ -88,7 +87,6 @@ class DocumentsController < ApplicationController
       end
     end
   end
-  
 
   def edit
   end
@@ -124,5 +122,4 @@ class DocumentsController < ApplicationController
   def document_params
     params.require(:document).permit(:title, :description, :category_id, :is_private, :project_id, :created_on)
   end
-
 end

@@ -20,13 +20,12 @@
 class CustomValue < ActiveRecord::Base
   belongs_to :custom_field
   belongs_to :customized, :polymorphic => true
-  before_update :log_custom_field_changes
-  after_save :custom_field_after_save_custom_value
-  validates :reason, length: { maximum: 100, tokenizer: ->(str) { str.scan(/\w+/) }, too_long: "is limited to %{count} words" }
   after_create :log_create_activity
+  before_update :log_custom_field_changes
   after_update :log_update_activity
   after_destroy :log_destroy_activity
-
+  after_save :custom_field_after_save_custom_value
+  validates :reason, length: { maximum: 100, tokenizer: ->(str) { str.scan(/\w+/) }, too_long: "is limited to %{count} words" }
 
   def log_create_activity
     activity_log = ActivityLog.create(
@@ -44,14 +43,14 @@ class CustomValue < ActiveRecord::Base
     saved_changes.each do |field_name, values|
       old_value = values[0].to_s
       new_value = values[1].to_s
-  
+
       # Handle specific field conversions if needed
       case field_name
       when 'custom_field_id'
         old_value = CustomField.find_by(id: values[0])&.name if values[0].present?
         new_value = CustomField.find_by(id: values[1])&.name if values[1].present?
       end
-  
+
       # Create ActivityLog entry
       ActivityLog.create(
         entity_type: 'CustomValue',
@@ -62,7 +61,7 @@ class CustomValue < ActiveRecord::Base
         author_id: User.current.id
       )
     end
-  end  
+  end
 
   def log_destroy_activity
     activity_log = ActivityLog.create(
@@ -125,7 +124,7 @@ class CustomValue < ActiveRecord::Base
       { id: self.customized_id, type: self.customized_type }
     end
   end
-  
+
   def initialize(attributes=nil, *args)
     super
     if new_record? && custom_field && !attributes.key?(:value) && (customized.nil? || customized.set_custom_field_default?(self))

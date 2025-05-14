@@ -48,7 +48,6 @@ class Token < ActiveRecord::Base
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
-
   def log_create_activity
     ActivityLog.create(
       entity_type: 'Token',

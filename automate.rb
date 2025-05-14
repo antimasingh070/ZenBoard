@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'selenium-webdriver'
 require 'mail'
 require 'nokogiri'
@@ -16,7 +18,7 @@ username_field = driver.find_element(id: 'username')
 password_field = driver.find_element(id: 'password')
 
 username_field.send_keys('admin')
-password_field.send_keys('Gola1234@') 
+password_field.send_keys('Gola1234@')
 login_button = driver.find_element(id: 'login-submit')
 login_button.click
 

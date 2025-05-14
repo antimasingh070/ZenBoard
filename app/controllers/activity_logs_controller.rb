@@ -1,13 +1,14 @@
+# frozen_string_literal: true
+
 class ActivityLogsController < ApplicationController
   def index
     @entity_types = ActivityLog.distinct.pluck(:entity_type)
     @field_names = ActivityLog.distinct.pluck(:field_name)
-    @authors = User.where(id: ActivityLog.distinct.pluck(:author_id)).map { |u| ["#{u.firstname} #{u.lastname}", u.id] }
+    @authors = User.where(id: ActivityLog.distinct.select(:author_id)).map { |u| ["#{u.firstname} #{u.lastname}", u.id] }
     daily_logins = ActivityLog.where(entity_type: "Token")
                           .group("DATE(created_at)")
                           .distinct
                           .count(:author_id)
-
 
     # Format the data for the chart
     @chart_data = daily_logins.map { |date, count| { date: date.strftime('%d %b %y'), count: count } }
@@ -38,7 +39,7 @@ class ActivityLogsController < ApplicationController
     if params[:start_date].present? && params[:end_date].present?
       @activity_logs = @activity_logs.where(created_at: params[:start_date]..params[:end_date])
     elsif params[:start_date].present?
-      
+
       @activity_logs = @activity_logs.where('created_at >= ?', params[:start_date])
     elsif params[:end_date].present?
       @activity_logs = @activity_logs.where('created_at <= ?', params[:end_date])
@@ -47,8 +48,7 @@ class ActivityLogsController < ApplicationController
       search_term = "%#{params[:search]}%"
       @activity_logs = @activity_logs.where("old_value LIKE ? OR new_value LIKE ?", search_term, search_term)
     end
-    
-  
+
     @activity_logs = @activity_logs.paginate(page: params[:page], per_page: 10)
   end
 end

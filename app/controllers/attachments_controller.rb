@@ -104,16 +104,16 @@ class AttachmentsController < ApplicationController
       head 406
       return
     end
-  
+
     @attachment = Attachment.new(:file => raw_request_body)
     @attachment.author = User.current
     @attachment.filename = params[:filename].presence || Redmine::Utils.random_hex(16)
     @attachment.content_type = params[:content_type].presence
     saved = @attachment.save
 
-    # dms_directory = generate_dms_directory    
+    # dms_directory = generate_dms_directory
     # response = upload_to_dms(@attachment)
-          
+
     respond_to do |format|
       format.js
       format.api do
@@ -210,7 +210,6 @@ class AttachmentsController < ApplicationController
 
   private
 
-  
   # def fetch_jwt_token
   #   uri = URI.parse('httphu://getJsonWebToken')
   #   http = Net::HTTP.new(uri.host, uri.port)
@@ -221,7 +220,7 @@ class AttachmentsController < ApplicationController
   #   request = Net::HTTP::Post.new(uri.path)
   #   request['Content-Type'] = 'application/json'
   #   request['TxnTrackingId'] = '531391'
-    
+
   #   # Hardcoded credentials
   #   request.basic_auth(
   #     '8328943rh83r834', # user_id
@@ -287,7 +286,11 @@ class AttachmentsController < ApplicationController
     request.body = payload
 
     response = http.request(request)
-    body = JSON.parse(response.body) rescue {}
+    body = begin
+      JSON.parse(response.body)
+    rescue
+      {}
+    end
 
     if response.is_a?(Net::HTTPSuccess) && body["status"] == "success"
       { success: true, document_id: body["documentId"] }

@@ -89,7 +89,6 @@ class CustomFieldEnumeration < ActiveRecord::Base
     { id: self.custom_field_id, name: CustomField.find_by(id: self.custom_field_id)&.name }
   end
 
-
   def to_s
     name.to_s
   end

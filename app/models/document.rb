@@ -55,8 +55,8 @@ class Document < ActiveRecord::Base
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
-  after_save :update_project_timestamp
   after_destroy :update_project_timestamp
+  after_save :update_project_timestamp
 
   def update_project_timestamp
     project.touch if project.present?

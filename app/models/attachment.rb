@@ -90,12 +90,9 @@ class Attachment < ActiveRecord::Base
 
   safe_attributes 'filename', 'content_type', 'description'
 
-
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity
-
-
 
   def log_create_activity
     ActivityLog.create(

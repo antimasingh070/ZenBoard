@@ -52,7 +52,6 @@
                 @projects = user.projects.where(id: member_ids, parent_id: nil, status: 1)
                 @projects = @projects.where(id: customized_ids)
                 projects = @projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
-                return "" if projects.blank?
                 
                 firstname, lastname = project_manager.split
                 user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
@@ -85,11 +84,15 @@
                           </tr>
                         </thead>
                         <tbody>
-                          <% @projects.each do |project| %>
-                            <tr>
-                              <td><%= link_to project.name, project_path(project) %></td>
-                              <td><%= Member.find_by(user_id: member.user_id, project_id: project.id)&.work_allocation %></td>
-                            </tr>
+                          <% if @projects.blank? %>
+                          <tr><td colspan="2">No Records to Display</td></tr>
+                          <% else %>
+                            <% @projects.each do |project| %>
+                              <tr>
+                                <td><%= link_to project.name, project_path(project) %></td>
+                                <td><%= Member.find_by(user_id: member.user_id, project_id: project.id)&.work_allocation %></td>
+                              </tr>
+                            <% end %>
                           <% end %>
                         </tbody>
                       </table>

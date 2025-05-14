@@ -22,7 +22,7 @@ class AuthSourcesController < ApplicationController
   self.main_menu = false
   menu_item :ldap_authentication
 
-  before_action :require_admin, only: [:create, :update], unless: Proc.new { User.current.groups.include?(Group.find_by_lastname('UAM')) }
+  before_action :require_admin, only: [:create, :update], unless: proc { User.current.groups.include?(Group.find_by_lastname('UAM')) }
   before_action :build_new_auth_source, :only => [:new, :create]
   before_action :find_auth_source, :only => [:edit, :update, :test_connection, :destroy]
   require_sudo_mode :update, :destroy

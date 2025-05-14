@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-ruby '3.2.2'
+ruby '3.3.0'
 gem 'omniauth'
 gem 'rails', '6.1.7.6'
 gem 'rouge', '~> 4.2.0'
@@ -47,7 +47,7 @@ gem 'rqrcode'
 gem "html-pipeline", "~> 2.13.2"
 gem "sanitize", "~> 6.0"
 # gem 'webpacker'
-
+gem 'pg', '~> 1.5.3'
 # Optional gem for LDAP authentication
 group :ldap do
   gem 'net-ldap', '~> 0.17.0'

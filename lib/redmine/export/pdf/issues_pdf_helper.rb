@@ -547,7 +547,7 @@ module Redmine
           return heights.max
         end
 
-         # Renders MultiCells and returns the maximum height used
+        # Renders MultiCells and returns the maximum height used
         def issues_to_pdf_write_cells(pdf, col_values, col_widths, row_height, head=false)
           current_date = Date.today
           col_values.each_with_index do |column, i|
@@ -563,7 +563,7 @@ module Redmine
                 end
               end
             end
-        
+
             pdf.SetTextColor(255, 0, 0) if make_text_red
             content = head ? column.caption : column.to_s.strip
             pdf.RDMMultiCell(col_widths[i], row_height, content, 1, '', 1, 0)

@@ -82,7 +82,6 @@ class TimeEntry < ActiveRecord::Base
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
-
   def log_create_activity
     activity_log = ActivityLog.create(
       entity_type: 'TimeEntry',
@@ -93,6 +92,7 @@ class TimeEntry < ActiveRecord::Base
       author_id: User.current.id
     )
   end
+
   # changes_hash
   def log_update_activity
     saved_changes.each do |field_name, values|
@@ -117,6 +117,7 @@ class TimeEntry < ActiveRecord::Base
       author_id: User.current.id
     )
   end
+
   # Returns a SQL conditions string used to find all time entries visible by the specified user
   def self.visible_condition(user, options={})
     Project.allowed_to_condition(user, :view_time_entries, options) do |role, user|

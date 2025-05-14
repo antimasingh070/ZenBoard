@@ -24,7 +24,6 @@ class WorkflowTransition < WorkflowRule
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
-
   def workflow_transition_details
     {
       id: self.id,

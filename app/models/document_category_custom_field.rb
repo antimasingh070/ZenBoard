@@ -18,7 +18,6 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 class DocumentCategoryCustomField < CustomField
-
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity

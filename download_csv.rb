@@ -1,11 +1,13 @@
+# frozen_string_literal: true
+
 require 'selenium-webdriver'
 require 'rmagick'
 
 # Set up Selenium WebDriver with headless mode for Chrome
 options = Selenium::WebDriver::Chrome::Options.new
-options.add_argument('--headless')  
-options.add_argument('--disable-gpu')  
-options.add_argument('--window-size=1280x800') 
+options.add_argument('--headless')
+options.add_argument('--disable-gpu')
+options.add_argument('--window-size=1280x800')
 
 driver = Selenium::WebDriver.for :chrome, options: options
 

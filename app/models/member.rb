@@ -23,14 +23,15 @@ class Member < ActiveRecord::Base
   has_many :member_roles, :dependent => :destroy
   has_many :roles, lambda {distinct}, :through => :member_roles
   belongs_to :project
-  validates :work_allocation, 
-  numericality: { only_integer: true }, 
-  allow_nil: true, 
+  validates :work_allocation,
+  numericality: { only_integer: true },
   allow_blank: true
   validates_presence_of :principal, :project
   validates_uniqueness_of :user_id, :scope => :project_id, :case_sensitive => true
   validate :validate_role
 
+  after_create :log_create_activity
+  after_update :log_update_activity
   before_destroy :set_issue_category_nil, :remove_from_project_default_assigned_to
 
   scope :active, (lambda do
@@ -49,11 +50,9 @@ class Member < ActiveRecord::Base
 
   alias :base_reload :reload
 
-  after_create :log_create_activity
-  after_update :log_update_activity
   after_destroy :log_destroy_activity
-  after_save :update_project_timestamp
   after_destroy :update_project_timestamp
+  after_save :update_project_timestamp
 
   def update_project_timestamp
     project.touch if project.present?

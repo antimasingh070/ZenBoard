@@ -249,11 +249,11 @@ class AccountController < ApplicationController
     when "Sunday"
       custom_field = CustomField.find_by(name: 'wsr_date')
       user = User.first
-        custom_values = user.custom_values.where(custom_field: custom_field)
-        if custom_values.any? { |cv| cv.value.to_date == current_date }
-          return
-        end
-    
+      custom_values = user.custom_values.where(custom_field: custom_field)
+      if custom_values.any? { |cv| cv.value.to_date == current_date }
+        return
+      end
+
       deliver_wsr_on_login(user)
       user.custom_field_values = { custom_field.id => current_date + 1 }
       user.save
@@ -267,7 +267,7 @@ class AccountController < ApplicationController
       Mailer.deliver_send_wsr_email(user, project)
     end
   end
-  
+
   def prevent_twofa_session_replay
     renew_twofa_session(@user)
   end

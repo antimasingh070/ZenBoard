@@ -19,7 +19,7 @@
 
 Rails.application.routes.draw do
   require 'delayed_job_web'
-mount DelayedJobWeb => '/delayed_job'
+  mount DelayedJobWeb => '/delayed_job'
 
   namespace :api do
     namespace :v1 do
@@ -28,11 +28,11 @@ mount DelayedJobWeb => '/delayed_job'
       resources :users
     end
   end
-  
 
 
 
-root to: 'my#page', as: 'home'
+
+  root to: 'my#page', as: 'home'
   get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
   get 'project_score_card', to: 'welcome#project_score_card'
@@ -44,7 +44,7 @@ root to: 'my#page', as: 'home'
   get 'help', to: 'welcome#help'
   get 'download_help_documents/:id', to: 'welcome#download_help_documents', as: 'download_help_documents'
   get '/projects_for_period', to: 'welcome#projects_for_period'
-  get '/fetch_members', to: 'welcome#fetch_members' 
+  get '/fetch_members', to: 'welcome#fetch_members'
   # get 'activity_logs', :to => 'activity_log#activity_logs'
   get 'projects/:id/activity_log', to: 'projects#activity_log', as: 'project_activity_log'
   get 'issues/:id/activity_log', to: 'issues#activity_log', as: 'issue_activity_log'
@@ -153,8 +153,8 @@ root to: 'my#page', as: 'home'
   post 'watchers/append', :to => 'watchers#append'
   delete 'watchers', :to => 'watchers#destroy'
   post '/update_charts', to: 'welcome#update_charts'
-  
-   get 'export_project_score_to_csv', to: 'welcome#export_project_score_to_csv'
+
+  get 'export_project_score_to_csv', to: 'welcome#export_project_score_to_csv'
   get 'watchers/autocomplete_for_mention', to: 'watchers#autocomplete_for_mention', via: [:get]
   get 'watchers/autocomplete_for_user', :to => 'watchers#autocomplete_for_user'
   # Specific routes for issue watchers API
@@ -182,13 +182,13 @@ root to: 'my#page', as: 'home'
             post 'accept'
             post 'reject'
           end
-          resources :remarks, only: [:create, :update, :destroy]  
+          resources :remarks, only: [:create, :update, :destroy]
         end
         member do
           post 'send_mom_email'
         end
       end
-      member do 
+      member do
         post 'send_meeting_invitation'
       end
     end
@@ -198,7 +198,7 @@ root to: 'my#page', as: 'home'
     collection do
       get 'autocomplete'
       delete 'bulk_destroy'
-       post 'update_revised_end_date'
+      post 'update_revised_end_date'
     end
 
     member do

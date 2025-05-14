@@ -558,7 +558,6 @@ module Redmine
       end
 
       def validate_single_value(custom_field, value, customized=nil)
-        
         if /\A\d{4}-\d{2}-\d{2}( 00:00:00)?\z/.match?(value.to_date.strftime("%Y-%m-%d")) && (value.to_date rescue false)
           []
         else

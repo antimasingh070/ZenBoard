@@ -46,12 +46,11 @@ class News < ActiveRecord::Base
 
   safe_attributes 'title', 'summary', 'description'
 
-
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity
-  after_save :update_project_timestamp
   after_destroy :update_project_timestamp
+  after_save :update_project_timestamp
 
   def update_project_timestamp
     project.touch if project.present?
@@ -67,6 +66,7 @@ class News < ActiveRecord::Base
       author_id: User.current.id
     )
   end
+
   # changes_hash
   def log_update_activity
     saved_changes.each do |field_name, values|

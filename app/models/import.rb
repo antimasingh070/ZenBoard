@@ -24,16 +24,14 @@ class Import < ActiveRecord::Base
   belongs_to :user
   serialize :settings
 
+  after_create :log_create_activity
+  after_update :log_update_activity
   before_destroy :remove_file
 
   validates_presence_of :filename, :user_id
   validates_length_of :filename, :maximum => 255
 
-
-  after_create :log_create_activity
-  after_update :log_update_activity
   after_destroy :log_destroy_activity
-
 
   def log_create_activity
     activity_log = ActivityLog.create(
@@ -45,6 +43,7 @@ class Import < ActiveRecord::Base
       author_id: User.current.id
     )
   end
+
   # changes_hash
   def log_update_activity
     saved_changes.each do |field_name, values|

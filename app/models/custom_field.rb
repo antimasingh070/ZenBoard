@@ -45,6 +45,9 @@ class CustomField < ActiveRecord::Base
   before_save do |field|
     field.format.before_custom_field_save(field)
   end
+  after_create :log_create_activity
+  after_update :log_update_activity
+  after_destroy :log_destroy_activity
   after_save :handle_multiplicity_change
   after_save do |field|
     if field.saved_change_to_visible? && field.visible
@@ -102,12 +105,6 @@ class CustomField < ActiveRecord::Base
     'extensions_allowed',
     'full_width_layout')
 
-
-  after_create :log_create_activity
-  after_update :log_update_activity
-  after_destroy :log_destroy_activity
-
-
   def log_create_activity
     activity_log = ActivityLog.create(
       entity_type: 'CustomField',
@@ -118,6 +115,7 @@ class CustomField < ActiveRecord::Base
       author_id: User.current.id
     )
   end
+
   # changes_hash
   def log_update_activity
     saved_changes.each do |field_name, values|

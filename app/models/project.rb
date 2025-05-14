@@ -66,7 +66,7 @@ class Project < ActiveRecord::Base
   has_many :changesets, :through => :repository
   has_one :wiki, :dependent => :destroy
   # Custom field for the project issues
-  belongs_to :br 
+  belongs_to :br
   has_and_belongs_to_many :issue_custom_fields,
                           lambda {order(:position)},
                           :class_name => 'IssueCustomField',
@@ -133,31 +133,29 @@ class Project < ActiveRecord::Base
   after_create :add_pmo
 
   def add_pmo
-    begin
-      group = Group.find_by_lastname("PMO")
-      user_ids = group.users.pluck(:id) if group.present?
-      role = Role.find_by!(name: "PMO")
+    group = Group.find_by_lastname("PMO")
+    user_ids = group.users.pluck(:id) if group.present?
+    role = Role.find_by!(name: "PMO")
 
-      user_ids.each do |user_id|
-        # Find or create the member for the current project
-        member = Member.find_or_initialize_by(user_id: user_id, project_id: self.id)
-        if member.new_record?
-          member.roles = [Role.find(role.id)]
-          member.save!
-        end
-        if member.persisted?
-          # Associate the member with the role
-          MemberRole.find_or_create_by(member_id: member.id, role_id: role.id, inherited_from: nil)
-        else
-          Rails.logger.error("Failed to create or find member with user_id: #{user_id} for project: #{project.id}")
-        end
+    user_ids.each do |user_id|
+      # Find or create the member for the current project
+      member = Member.find_or_initialize_by(user_id: user_id, project_id: self.id)
+      if member.new_record?
+        member.roles = [Role.find(role.id)]
+        member.save!
       end
-    rescue ActiveRecord::RecordNotFound => e
-      # Handle specific cases when role or project is not found
-      Rails.logger.error "Role or Project not found: #{e.message}"
-      flash[:error] = "PMO role not found. Please check your setup."
-    rescue StandardError => e
+      if member.persisted?
+        # Associate the member with the role
+        MemberRole.find_or_create_by(member_id: member.id, role_id: role.id, inherited_from: nil)
+      else
+        Rails.logger.error("Failed to create or find member with user_id: #{user_id} for project: #{project.id}")
+      end
     end
+  rescue ActiveRecord::RecordNotFound => e
+    # Handle specific cases when role or project is not found
+    Rails.logger.error "Role or Project not found: #{e.message}"
+    flash[:error] = "PMO role not found. Please check your setup."
+  rescue StandardError => e
   end
 
   def log_create_activity
@@ -170,6 +168,7 @@ class Project < ActiveRecord::Base
       author_id: User.current.id
     )
   end
+
   # changes_hash
   def log_update_activity
     saved_changes.except('updated_on').each do |field_name, values|
@@ -185,7 +184,7 @@ class Project < ActiveRecord::Base
         old_value = Project.find_by(id: values[0])&.name if values[0].present?
         new_value = Project.find_by(id: values[1])&.name if values[1].present?
       end
-  
+
       # Create ActivityLog entry
       ActivityLog.create(
         entity_type: 'Project',
@@ -197,7 +196,7 @@ class Project < ActiveRecord::Base
       )
     end
   end
-  
+
   def log_destroy_activity
     activity_log = ActivityLog.create(
       entity_type: 'Project',
@@ -208,7 +207,7 @@ class Project < ActiveRecord::Base
       author_id: User.current.id
     )
   end
-  
+
   def project_details
     {
       id: self.id,
@@ -223,20 +222,20 @@ class Project < ActiveRecord::Base
       custom_fields: custom_fields_details
     }
   end
-  
+
   def status_detail
     { id: self.status, name: STATUS_MAP[self.status] }
   end
-  
+
   def user_detail(user_id)
     user = User.find_by(id: user_id)
     { id: user&.id, name: user&.firstname }
   end
-  
+
   def project_detail(project)
     { id: project&.id, name: project&.name }
   end
-  
+
   def custom_fields_details
     self.custom_field_values.map do |cfv|
       { id: cfv.custom_field_id, name: cfv.custom_field.name, value: cfv.value }
@@ -254,79 +253,76 @@ class Project < ActiveRecord::Base
   end
 
   def auto_create_records(template_value)
-    begin
-      template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
-      template_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: self.id, custom_field_id: template_field.id, value: template_value)
-      custom_field_enumeration = CustomFieldEnumeration.find_by(id: template_value.value.to_i).name
-      tracker = Tracker.find_by(name: custom_field_enumeration)
-      master_project = Project.find_by(name: "Master Project")
-      issues = Issue.where(tracker_id: tracker.id, project_id: master_project.id)
-      plan_tracker = Tracker.find_by(name: "Project Plan- Activity List")
-      field_names = CustomField.where(type: "IssueCustomField").pluck(:name).uniq
-      create_issues_for_field_names(field_names, issues, plan_tracker, master_project)
-    rescue => e
-    end
+    template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
+    template_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: self.id, custom_field_id: template_field.id, value: template_value)
+    custom_field_enumeration = CustomFieldEnumeration.find_by(id: template_value.value.to_i).name
+    tracker = Tracker.find_by(name: custom_field_enumeration)
+    master_project = Project.find_by(name: "Master Project")
+    issues = Issue.where(tracker_id: tracker.id, project_id: master_project.id)
+    plan_tracker = Tracker.find_by(name: "Project Plan- Activity List")
+    field_names = CustomField.where(type: "IssueCustomField").pluck(:name).uniq
+    create_issues_for_field_names(field_names, issues, plan_tracker, master_project)
+  rescue => e
   end
 
   def create_issues_for_field_names(field_names, issues, plan_tracker, master_project)
-    begin
-      return unless Issue.where(tracker_id: plan_tracker.id, project_id: self.id).count.zero?
-      role_id = Role.find_by(name: "Project Manager")&.id
-      return unless role_id # Exit if the role does not exist
-      
-      # Fetch the first project manager's user ID for the current project
-      project_manager_id = MemberRole.where(role_id: role_id)
-                                     .where(member_id: Member.where(project_id: self.id).select(:id))
-                                     .pluck(:member_id)
-                                     .map { |member_id| Member.find_by(id: member_id)&.user_id }
-                                     .compact
-                                     .first
-      
-      issues.each do |issue|
-        @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: issue.subject)
-        @new_issue.assign_attributes(assigned_to_id: project_manager_id.present? ? project_manager_id : User.current.id, author: User.current, start_date: Date.today, due_date: Date.today + 10)
-  
-        # Handle parent issue
-        if issue.parent_id.present?
-          parent_issue = Issue.find_by(id: issue.parent_id, project_id: master_project.id)
-          if parent_issue
-            parent = Issue.find_by(project_id: self.id, subject: issue.subject)
-            unless parent
-              parent = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: parent_issue.subject, 
-                                 assigned_to_id: User.current.id, author: User.current, start_date: Date.today, due_date: Date.today + 10)
-              set_custom_fields(parent, issue, field_names)
-              parent.save!
-            end
-            @new_issue.parent_id = parent.id
+    return unless Issue.where(tracker_id: plan_tracker.id, project_id: self.id).count.zero?
+
+    role_id = Role.find_by(name: "Project Manager")&.id
+    return unless role_id # Exit if the role does not exist
+
+    # Fetch the first project manager's user ID for the current project
+    project_manager_id = MemberRole.where(role_id: role_id)
+                                   .where(member_id: Member.where(project_id: self.id).select(:id))
+                                   .pluck(:member_id)
+                                   .filter_map { |member_id| Member.find_by(id: member_id)&.user_id }
+                                   .first
+
+    issues.each do |issue|
+      @new_issue = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: issue.subject)
+      @new_issue.assign_attributes(assigned_to_id: (project_manager_id.presence || User.current.id), author: User.current, start_date: Date.today, due_date: Date.today + 10)
+
+      # Handle parent issue
+      if issue.parent_id.present?
+        parent_issue = Issue.find_by(id: issue.parent_id, project_id: master_project.id)
+        if parent_issue
+          parent = Issue.find_by(project_id: self.id, subject: issue.subject)
+          unless parent
+            parent = Issue.find_or_initialize_by(tracker_id: plan_tracker.id, project_id: self.id, subject: parent_issue.subject,
+                               assigned_to_id: User.current.id, author: User.current, start_date: Date.today, due_date: Date.today + 10)
+            set_custom_fields(parent, issue, field_names)
+            parent.save!
           end
+          @new_issue.parent_id = parent.id
         end
-  
-        # Set custom fields for the new issue
-        set_custom_fields(@new_issue, issue, field_names)
-  
-        # Save the new issue
-        @new_issue.save!
       end
-    rescue => e
-      # Handle or log the error as needed
+
+      # Set custom fields for the new issue
+      set_custom_fields(@new_issue, issue, field_names)
+
+      # Save the new issue
+      @new_issue.save!
     end
+  rescue => e
+    # Handle or log the error as needed
   end
 
   def set_custom_fields(issue, source_issue, field_names)
     field_names.each do |field_name|
       custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
       next unless custom_field
+
       custom_value = CustomValue.find_or_initialize_by(customized_type: "Issue", customized_id: source_issue.id, custom_field_id: custom_field.id)
       custom_value.value = custom_value.value.presence || ""
       issue.custom_field_values = { custom_field.id => custom_value }
     end
-  
+
     # Set the "Approval Required" custom field
     approval_required_custom_field = CustomField.find_by(type: "IssueCustomField", name: "Approval Required")
     approval_required_custom_value = CustomValue.find_or_initialize_by(customized_type: "Issue", customized_id: source_issue.id, custom_field_id: approval_required_custom_field.id)
     approval_required_custom_value.value = "0"
     issue.custom_field_values = { approval_required_custom_field.id => approval_required_custom_value }
-  
+
     # Set the "Project Activity" custom field
     project_activity_field = CustomField.find_by(type: "IssueCustomField", name: "Project Activity")
     project_activity_enumeration = CustomFieldEnumeration.find_by(custom_field_id: project_activity_field.id, name: source_issue.subject)
@@ -626,7 +622,7 @@ class Project < ActiveRecord::Base
   def hold?
     self.status == STATUS_HOLD
   end
-  
+
   def cancelled?
     self.status == STATUS_CANCELLED
   end
@@ -691,10 +687,9 @@ class Project < ActiveRecord::Base
     self_and_descendants.where(status: [Project::STATUS_CANCELLED, Project::STATUS_GO_LIVE, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_HOLD)
   end
 
-
   def cancelled
     self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_GO_LIVE, Project::STATUS_ACTIVE, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_CANCELLED)
-  end 
+  end
 
   def reopen
     self_and_descendants.where(status: [Project::STATUS_HOLD, Project::STATUS_GO_LIVE, Project::STATUS_CANCELLED, Project::STATUS_CLOSED]).update_all(status: Project::STATUS_ACTIVE)

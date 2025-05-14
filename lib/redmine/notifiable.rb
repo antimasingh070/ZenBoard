@@ -6,7 +6,7 @@ module Redmine
     def to_s
       name
     end
- 
+
     # TODO: Plugin API for adding a new notification?
     def self.all
       notifications = []

@@ -23,7 +23,7 @@ class WorkflowsController < ApplicationController
   before_action :find_trackers_roles_and_statuses_for_edit, only: [:edit, :update, :permissions, :update_permissions]
 
   before_action :require_admin
-  
+
   def index
     @roles = Role.sorted.select(&:consider_workflow?)
     @trackers = Tracker.sorted

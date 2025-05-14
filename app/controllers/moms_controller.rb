@@ -1,10 +1,10 @@
+# frozen_string_literal: true
+
 # app/controllers/moms_controller.rb
 class MomsController < ApplicationController
   before_action :set_meeting
 
-    
   def send_mom_email
-    
     @meeting = Meeting.find(params[:meeting_id])
     @mom = @meeting.mom
     @business_requirement = @meeting.business_requirement
@@ -17,7 +17,7 @@ class MomsController < ApplicationController
       redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Mail Sent.'
     else
       redirect_to business_requirement_meeting_path(@business_requirement, @meeting), alert: 'Cannot send email: there is not mom.'
-    end    
+    end
   end
 
   def show
@@ -25,7 +25,6 @@ class MomsController < ApplicationController
     @business_requirement = @meeting.business_requirement # Ensure that the business requirement is set here
   end
 
-  
   def new
     @mom = @meeting.build_mom  # Use build_mom for has_one association
     @function_name = fetch_custom_field_names('Function')
@@ -36,7 +35,7 @@ class MomsController < ApplicationController
     @meeting = @business_requirement.meetings.find(params[:meeting_id])
     @mom = @meeting.build_mom(mom_params)
     if @mom.save
-      
+
       redirect_to business_requirement_meeting_path(@business_requirement, @meeting), notice: 'Successfully created.'
     else
       render :new

@@ -21,7 +21,7 @@ class UsersController < ApplicationController
   layout 'admin'
   self.main_menu = false
 
-  before_action :require_admin, only: [:create, :update], unless: Proc.new { User.current.groups.include?(Group.find_by_lastname('UAM')) }
+  # before_action :require_admin, only: [:create, :update], unless: Proc.new { User.current.groups.include?(Group.find_by_lastname('UAM')) }
 
   before_action lambda {find_user(false)}, :only => :show
   before_action :find_user, :only => [:edit, :update, :destroy]
@@ -145,7 +145,7 @@ class UsersController < ApplicationController
     end
     @user.pref.safe_attributes = params[:pref]
 
-     if User.current.groups.include?(Group.find_by_lastname('UAM'))
+    if User.current.groups.include?(Group.find_by_lastname('UAM'))
       save_result = @user.save(validate: false) # Skip validation for UAM group
     else
       save_result = @user.save # Perform full validation for other users
@@ -190,12 +190,15 @@ class UsersController < ApplicationController
     if is_updating_password
       @user.password, @user.password_confirmation = params[:user][:password], params[:user][:password_confirmation]
     end
+
     @user.safe_attributes = params[:user]
+    if User.current.groups.include?(Group.find_by_lastname('UAM')) && params[:user][:status].present?
+      @user.status = params[:user][:status].to_i
+    end
     # Was the account actived ? (do it before User#save clears the change)
     was_activated = (@user.status_change == [User::STATUS_REGISTERED, User::STATUS_ACTIVE])
     # TODO: Similar to My#account
     @user.pref.safe_attributes = params[:pref]
-
     if @user.save
       @user.pref.save
 

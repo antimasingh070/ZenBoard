@@ -70,8 +70,8 @@ class Issue < ActiveRecord::Base
   validates_length_of :subject, :maximum => 255
   validates_inclusion_of :done_ratio, :in => 0..100
   validates :estimated_hours, :numericality => {:greater_than_or_equal_to => 0, :allow_nil => true, :message => :invalid}
-  validates :start_date, :date => true, if: -> { tracker != 5 }
-  validates :due_date, :date => true, if: -> { tracker != 5 }
+  validates :start_date, :date => true, :if => -> { tracker != 5 }
+  validates :due_date, :date => true, :if => -> { tracker != 5 }
   # validates :validate_issue, :validate_required_fields, :validate_permissions
 
   scope :visible, (lambda do |*args|
@@ -145,26 +145,26 @@ class Issue < ActiveRecord::Base
     update_project_date_from_issue("Go Live", "Actual Project Go Live Date")
     update_project_date_from_issue("Vendor Approval", "Revised End Date")
   end
-  
+
   def update_project_date_from_issue(issue_name, project_field_name)
- 
     if self.subject == issue_name
       field = CustomField.find_by(name: "Actual End Date")
       project_field = CustomField.find_by(name: project_field_name)
       return unless field && project_field
+
       value = CustomValue.find_by(customized: self, custom_field: field)&.value || self.due_date
       project = self.project
       return unless project
+
       project_value = CustomValue.find_or_initialize_by(customized: project, custom_field: project_field)
       project_value.update(value: value)
     end
   end
-  
 
   def update_project_timestamp
     project.touch if project.present?
   end
-  
+
   def log_create_activity
     ActivityLog.create(
       entity_type: 'Issue',
@@ -177,53 +177,51 @@ class Issue < ActiveRecord::Base
   end
 
   def log_update_activity
-  
     saved_changes.except('lock_version', 'updated_on').each do |field_name, values|
       old_value = values[0].to_s
       new_value = values[1].to_s
-        # Handle specific field conversions
-        case field_name
-        when 'tracker_id'
-          old_value = Tracker.find_by(id: values[0])&.name if values[0].present?
-          new_value = Tracker.find_by(id: values[1])&.name if values[1].present?
-        when 'project_id'
-          old_value = Project.find_by(id: values[0])&.name if values[0].present?
-          new_value = Project.find_by(id: values[1])&.name if values[1].present?
-        when 'category_id'
-          old_value = IssueCategory.find_by(id: values[0])&.name if values[0].present?
-          new_value = IssueCategory.find_by(id: values[1])&.name if values[1].present?
-        when 'status_id'
-          old_value = IssueStatus.find_by(id: values[0])&.name if values[0].present?
-          new_value = IssueStatus.find_by(id: values[1])&.name if values[1].present?
-        when 'assigned_to_id'
-          old_value = User.find_by(id: values[0])&.firstname if values[0].present?
-          new_value = User.find_by(id: values[1])&.firstname if values[1].present?
-        when 'priority_id'
-          old_value = IssuePriority.find_by(id: values[0])&.name if values[0].present?
-          new_value = IssuePriority.find_by(id: values[1])&.name if values[1].present?
-        when 'fixed_version_id'
-          old_value = Version.find_by(id: values[0])&.name if values[0].present?
-          new_value = Version.find_by(id: values[1])&.name if values[1].present?
-        when 'author_id'
-          old_value = User.find_by(id: values[0])&.firstname if values[0].present?
-          new_value = User.find_by(id: values[1])&.firstname if values[1].present?
-        when 'parent_id'
-          old_value = Issue.find_by(id: values[0])&.subject if values[0].present?
-          new_value = Issue.find_by(id: values[1])&.subject if values[1].present?
-        end
-  
-      # Create ActivityLog entry
-        ActivityLog.create(
-          entity_type: 'Issue',
-          entity_id: self.id,
-          field_name: field_name,
-          old_value: old_value,
-          new_value: new_value,
-          author_id: User.current.id
-        )
+      # Handle specific field conversions
+      case field_name
+      when 'tracker_id'
+        old_value = Tracker.find_by(id: values[0])&.name if values[0].present?
+        new_value = Tracker.find_by(id: values[1])&.name if values[1].present?
+      when 'project_id'
+        old_value = Project.find_by(id: values[0])&.name if values[0].present?
+        new_value = Project.find_by(id: values[1])&.name if values[1].present?
+      when 'category_id'
+        old_value = IssueCategory.find_by(id: values[0])&.name if values[0].present?
+        new_value = IssueCategory.find_by(id: values[1])&.name if values[1].present?
+      when 'status_id'
+        old_value = IssueStatus.find_by(id: values[0])&.name if values[0].present?
+        new_value = IssueStatus.find_by(id: values[1])&.name if values[1].present?
+      when 'assigned_to_id'
+        old_value = User.find_by(id: values[0])&.firstname if values[0].present?
+        new_value = User.find_by(id: values[1])&.firstname if values[1].present?
+      when 'priority_id'
+        old_value = IssuePriority.find_by(id: values[0])&.name if values[0].present?
+        new_value = IssuePriority.find_by(id: values[1])&.name if values[1].present?
+      when 'fixed_version_id'
+        old_value = Version.find_by(id: values[0])&.name if values[0].present?
+        new_value = Version.find_by(id: values[1])&.name if values[1].present?
+      when 'author_id'
+        old_value = User.find_by(id: values[0])&.firstname if values[0].present?
+        new_value = User.find_by(id: values[1])&.firstname if values[1].present?
+      when 'parent_id'
+        old_value = Issue.find_by(id: values[0])&.subject if values[0].present?
+        new_value = Issue.find_by(id: values[1])&.subject if values[1].present?
       end
+
+      # Create ActivityLog entry
+      ActivityLog.create(
+        entity_type: 'Issue',
+        entity_id: self.id,
+        field_name: field_name,
+        old_value: old_value,
+        new_value: new_value,
+        author_id: User.current.id
+      )
+    end
   end
-  
 
   def log_destroy_activity
     ActivityLog.create(
@@ -236,31 +234,26 @@ class Issue < ActiveRecord::Base
     )
   end
 
-
-
   def update_role
-    begin
-      custom_field = CustomField.find_by(type: "IssueCustomField", name: "Role")
-      custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
-      if custom_value.value.blank?
-        member = Member.find_by(user_id: self.assigned_to_id, project_id: self.project_id)
-        role_id = MemberRole.find_by(member_id: member.id).try(:role_id)
-        role_name = Role.find_by(id: role_id).try(:name)
-        custom_field_enumeration_id = CustomFieldEnumeration.find_by(name: role_name, custom_field_id: custom_field&.id).try(:id)
-        custom_value.update(value: custom_field_enumeration_id.to_s) unless custom_field_enumeration_id.nil?
-      end
-    rescue => e
+    custom_field = CustomField.find_by(type: "IssueCustomField", name: "Role")
+    custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
+    if custom_value.value.blank?
+      member = Member.find_by(user_id: self.assigned_to_id, project_id: self.project_id)
+      role_id = MemberRole.find_by(member_id: member.id).try(:role_id)
+      role_name = Role.find_by(id: role_id).try(:name)
+      custom_field_enumeration_id = CustomFieldEnumeration.find_by(name: role_name, custom_field_id: custom_field&.id).try(:id)
+      custom_value.update(value: custom_field_enumeration_id.to_s) unless custom_field_enumeration_id.nil?
     end
+  rescue => e
   end
 
   def send_back?
-    begin
-    self.assigned_to_id == self.author_id
+    self.assigned_to_id
+    self.author_id
     custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
     custom_value&.value == "18"
-    rescue => e
-    end
+  rescue => e
   end
 
   def approved?
@@ -270,7 +263,7 @@ class Issue < ActiveRecord::Base
   rescue NoMethodError, ActiveRecord::RecordNotFound
     false
   end
-  
+
   def declined?
     custom_field = CustomField.find_by(type: "IssueCustomField", name: "Workflow")
     custom_value = CustomValue.find_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field&.id)
@@ -278,7 +271,6 @@ class Issue < ActiveRecord::Base
   rescue NoMethodError, ActiveRecord::RecordNotFound
     false
   end
-  
 
   def self.visible_condition(user, options={})
     Project.allowed_to_condition(user, :view_issues, options) do |role, user|
@@ -1900,10 +1892,12 @@ class Issue < ActiveRecord::Base
   def update_done_ratio_from_issue_actual_end_Date
     custom_field = CustomField.find_by(type: "IssueCustomField", name: "Actual End Date")
     return unless custom_field
+
     custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field.id)
     return unless custom_value
+
     custom_value = custom_value.value
-    if !custom_value.nil?
+    unless custom_value.nil?
       begin
         formatted_date = Date.parse(custom_value)
         if formatted_date <= Date.today
@@ -1915,9 +1909,8 @@ class Issue < ActiveRecord::Base
   end
 
   def update_estimated_time
-    begin
     return unless due_date && start_date
-  
+
     holidays = [
       Date.new(Date.today.year, 1, 26),
       Date.new(Date.today.year, 8, 15),
@@ -1929,16 +1922,14 @@ class Issue < ActiveRecord::Base
     custom_field = CustomField.find_by(name: "Revised Planned Due Date")
     custom_value_date = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: self.id, custom_field_id: custom_field.id).try(:value)
     end_date = custom_value_date.present? ? custom_value_date.to_date : due_date
-  
+
     working_days = (start_date..end_date).reject do |date|
       date.sunday? || holidays.include?(date)
     end
-  
+
     self.estimated_hours = (working_days.count * 8).to_i
   rescue => e
   end
-  end
-  
 
   def user_tracker_permission?(user, permission)
     if project && !project.active?

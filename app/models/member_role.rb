@@ -38,8 +38,11 @@ class MemberRole < ActiveRecord::Base
 
   def add_to_business_requirement
     project = Project.find_by(id: Member.find_by(id: self.member_id).project_id)
+    return unless project.nil?
+
     br = BusinessRequirement.find_by(project_identifier: project.identifier)
     return unless br
+
     user_id = Member.find_by(id: self.member_id).user_id
     br.br_stakeholders.find_or_create_by(
       user_id: user_id,
@@ -49,8 +52,11 @@ class MemberRole < ActiveRecord::Base
 
   def remove_from_business_requirement
     project = Project.find_by(id: Member.find_by(id: self.member_id).project_id)
+    return unless project.nil?
+
     br = BusinessRequirement.find_by(project_identifier: project.identifier)
     return unless br
+
     user_id = Member.find_by(id: self.member_id).user_id
     stakeholder = br.br_stakeholders.find_by(
       user_id: user_id,

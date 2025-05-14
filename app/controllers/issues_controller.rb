@@ -41,14 +41,13 @@ class IssuesController < ApplicationController
   helper :repositories
   helper :timelog
 
-
   def download_sameple_workflow_template
     document = Document.find(params[:id]) # Fetch the document by ID
     # Check if the document has an associated attachment (or file)
     if document && document.attachments.any?
       # Send the file for download
       attachment = document.attachments.first
-      
+
       send_file attachment.diskfile,
                 filename: attachment.filename,
                 type: attachment.content_type,
@@ -63,7 +62,7 @@ class IssuesController < ApplicationController
     @issue = Issue.find(params[:id])
     @activities = @issue.activty_log.order(created_at: :desc)
   end
-  
+
   def update_custom_field(field_name, value)
     custom_field = CustomField.find_by(type: "IssueCustomField", name: field_name)
     custom_value = CustomValue.find_or_create_by(customized_type: "Issue", customized_id: @issue.id, custom_field_id: custom_field&.id)
@@ -79,7 +78,7 @@ class IssuesController < ApplicationController
     update_custom_field("Workflow", "18")
     update_custom_field("Approved By", User.current.name)
     update_custom_field("Approval Date", Date.today)
-    
+
     if @issue.send_back?
       # add_journal_entry(@issue, User.current, "")
       @auther = User.find_by(id: @issue.author_id)
@@ -279,6 +278,17 @@ class IssuesController < ApplicationController
 
   def update
     return unless update_issue_from_params
+
+    # Get custom field values as a hash: {custom_field_id => value}
+    custom_field_values = @issue.custom_field_values
+
+    revised_due_date = custom_field_values.find { |cf| cf.custom_field.name == "Revised Planned Due Date" }&.value.to_s.strip
+    reason_due_date  = custom_field_values.find { |cf| cf.custom_field.name == "Reason - Revised due date" }&.value.to_s.strip
+
+    if revised_due_date.present? && reason_due_date.blank?
+      flash.now[:error] = "Reason for Revised Due Date is required when Revised Planned Due Date is filled."
+      return render :edit
+    end
 
     attachments = params[:attachments] || params.dig(:issue, :uploads)
     if @issue.attachments_addable?
@@ -576,7 +586,7 @@ class IssuesController < ApplicationController
 
   def add_journal_entry(issue, user, notes = nil)
     issue.init_journal(user, notes)
-  
+
     # Assuming you want to log custom field changes
     issue.custom_field_values.each do |cf|
       if cf.value_was != cf.value
@@ -588,12 +598,11 @@ class IssuesController < ApplicationController
         )
       end
     end
-  
+
     # Save the journal (doesn't require saving the issue)
     issue.current_journal.save
   end
-    
-  
+
   def query_error(exception)
     session.delete(:issue_query)
     super
@@ -825,7 +834,4 @@ class IssuesController < ApplicationController
       redirect_back_or_default issue_path(@issue)
     end
   end
-
-
-
 end

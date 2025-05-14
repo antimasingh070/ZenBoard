@@ -46,14 +46,12 @@ class ProjectsController < ApplicationController
   helper :trackers
 
   def create_template_record
-    begin 
-      template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
-      return unless template_field
+    template_field = CustomField.find_by(type: "ProjectCustomField", name: "Template")
+    return unless template_field
 
-      custom_value = params[:project][:custom_field_values][template_field.id.to_s]
-      @project.auto_create_records(custom_value)
-    rescue => e
-    end
+    custom_value = params[:project][:custom_field_values][template_field.id.to_s]
+    @project.auto_create_records(custom_value)
+  rescue => e
   end
 
   def activty_logs
@@ -63,12 +61,12 @@ class ProjectsController < ApplicationController
 
   def update_revised_end_date
     @project = Project.find(params[:id])
-  
+
     if params[:reason].blank?
       flash[:error] = "Reason can't be blank."
       return
     end
-  
+
     new_revised_end_date = params[:revised_end_date]
     custom_field = CustomField.find_by(name: "Revised End Date")
 
@@ -83,7 +81,7 @@ class ProjectsController < ApplicationController
       end
     end
   end
-  
+
   # Lists visible projects
   def index
     # try to redirect to the requested menu item
@@ -123,7 +121,6 @@ class ProjectsController < ApplicationController
       format.json do
         @projects = scope.offset(@offset).limit(@limit).to_a
       end
-
     end
   end
 
@@ -154,41 +151,41 @@ class ProjectsController < ApplicationController
       # Mailer.deliver_membership_added_email(User.current, @project)
     end
   end
-  
+
   def create
     @issue_custom_fields = IssueCustomField.sorted.to_a
     @trackers = Tracker.sorted.to_a
     @project = Project.new
     @project.safe_attributes = params[:project]
-    if !@project.id.nil?
+    unless @project.id.nil?
       custom_field = CustomField.find_by(name: "author_id")
       custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project&.id, custom_field_id: custom_field&.id)
-      custom_value.update(value: (User.current.id).to_s)
+      custom_value.update(value: User.current.id.to_s)
     end
     pmo = Role.find_by(name: "PMO")
     if Member.joins(:member_roles).where(project_id: @project.id, member_roles: { role_id: pmo.id }).empty?
-    # Assuming user_id for PMO is known, you can replace this with the actual user_id
-    pmo_user = User.find_by(login: 'pmo_user_login') # Replace with actual PMO user login or ID
-    if pmo_user
-      member = Member.create!(project_id: @project.id, user_id: pmo_user.id)
-      MemberRole.create!(member_id: member.id, role_id: pmo.id)
+      # Assuming user_id for PMO is known, you can replace this with the actual user_id
+      pmo_user = User.find_by(login: 'pmo_user_login') # Replace with actual PMO user login or ID
+      if pmo_user
+        member = Member.create!(project_id: @project.id, user_id: pmo_user.id)
+        MemberRole.create!(member_id: member.id, role_id: pmo.id)
 
-      flash[:notice] = "PMO member has been automatically created for this project."
-    else
-      flash[:error] = "PMO user not found. Please add a member for the PMO role manually."
+        flash[:notice] = "PMO member has been automatically created for this project."
+      else
+        flash[:error] = "PMO user not found. Please add a member for the PMO role manually."
+      end
     end
-  end
     # @project.author_id = User.current.id
     @parent = Project.where(id: @project&.parent_id)&.first
     if @project&.id&.nil? && !@project&.parent_id&.nil? && !@parent&.nil?
-      new_identifier = "#{Project.where(parent_id: @project.parent_id).count + 1}"
+      new_identifier = (Project.where(parent_id: @project.parent_id).count + 1).to_s
       @project.identifier = "#{@parent.identifier}_#{new_identifier}"
     elsif @project.id.nil? && !@project.parent_id.nil?
       new_identifier = "#{@project.parent_id}_#{Project.where(parent_id: @project.parent_id).count + 1}"
       @project.identifier = "neo_#{new_identifier}"
     else
       @project.identifier = "neo_#{Project.where(parent_id: @project.parent_id).last.id + 1
-      }"
+                                 }"
     end
     if @project.save
       Mailer.deliver_project_created(User.current, @project)
@@ -256,7 +253,7 @@ class ProjectsController < ApplicationController
     if params[:jump] && redirect_to_project_menu_item(@project, params[:jump])
       return
     end
-    
+
     @revised_end_date_history = @project.revised_end_date_history
     @status_reason_history = @project.status_reason_history
     respond_to do |format|
@@ -300,7 +297,7 @@ class ProjectsController < ApplicationController
   end
 
   def update
-    old_custom_field_values = @project.custom_field_values.map { |cfv| [cfv.custom_field_id, cfv.value] }.to_h
+    old_custom_field_values = @project.custom_field_values.to_h { |cfv| [cfv.custom_field_id, cfv.value] }
     @project.safe_attributes = params[:project]
     @project.status = params[:project][:status] if params[:project][:status].present?
     @parent = Project.where(id: @project.parent_id).first
@@ -310,7 +307,8 @@ class ProjectsController < ApplicationController
     if @project.save
       updated_fields = {}
       @project.previous_changes.each do |key, values|
-        next if key == 'updated_on' || key == '11'   # Skip the 'updated_on' field
+        next if ['updated_on', '11'].include?(key)   # Skip the 'updated_on' field
+
         updated_fields[key] = { before: values[0], after: values[1] }
       end
 
@@ -318,18 +316,19 @@ class ProjectsController < ApplicationController
       custom_field_values.each do |custom_field_id, value|
         custom_field = CustomField.find_by(id: custom_field_id)
         next if custom_field.nil?
+
         custom_field_name = custom_field.name
         old_value = old_custom_field_values[custom_field_id.to_i]
-  
+
         next if old_value == value  # Skip if the value has not changed
 
         if custom_field.field_format == 'enumeration'
           if old_value.is_a?(Array)
-            old_value_name = old_value.map { |val| CustomFieldEnumeration.find_by(id: val.to_i, custom_field_id: custom_field_id).try(:name) }.compact
-            new_value_name = value.map { |val| CustomFieldEnumeration.find_by(id: val.to_i, custom_field_id: custom_field_id).try(:name) }.compact
+            old_value_name = old_value.filter_map { |val| CustomFieldEnumeration.find_by(id: val.to_i, custom_field_id: custom_field_id).try(:name) }
+            new_value_name = value.filter_map { |val| CustomFieldEnumeration.find_by(id: val.to_i, custom_field_id: custom_field_id).try(:name) }
           else
             old_value_name = CustomFieldEnumeration.find_by(id: old_value.to_i, custom_field_id: custom_field_id).try(:name)
-            new_value_name = CustomFieldEnumeration.find_by(id: value.to_i, custom_field_id: custom_field_id).try(:name)  
+            new_value_name = CustomFieldEnumeration.find_by(id: value.to_i, custom_field_id: custom_field_id).try(:name)
           end
         elsif custom_field.field_format == 'date' || custom_field.field_format == 'string' || custom_field.field_format == 'bool' || custom_field.field_format == 'int'
           old_value_name = old_value
@@ -340,8 +339,8 @@ class ProjectsController < ApplicationController
         end
         updated_fields[custom_field_name] = { before: old_value_name, after: new_value_name }
       end
-   
-      Mailer.deliver_project_updated(User.current, @project, updated_fields)  
+
+      Mailer.deliver_project_updated(User.current, @project, updated_fields)
       respond_to do |format|
         format.html do
           flash[:notice] = l(:notice_successful_update)
@@ -413,7 +412,7 @@ class ProjectsController < ApplicationController
       return
     end
     old_status = @project.status
-  
+
     # Check if there are any issues in the project that are not closed
     open_issues = Issue.where(project_id: @project.id).where.not(status_id: [5,7]) # Assuming status_id: 5 means 'closed'
 
@@ -421,22 +420,22 @@ class ProjectsController < ApplicationController
       flash[:error] = "Project cannot be closed. Please close the pending activities"
       redirect_to project_path(@project) and return
     end
-  
+
     @project.close
     Mailer.deliver_project_status(User.current, old_status, @project)
-  
+
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_ok }
     end
   end
-  
 
   def reopen
     old_status = @project.status
     @project.reopen
     custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Reason", reason: params[:remarks])
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Reason",
+reason: params[:remarks])
     new_status = @project.status
     Mailer.deliver_project_status(User.current, old_status, @project)
     respond_to do |format|
@@ -449,8 +448,9 @@ class ProjectsController < ApplicationController
     @old_status = @project.status
     @project.hold
     custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Hold", reason: params[:remarks])
-    
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Hold",
+reason: params[:remarks])
+
     Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
@@ -474,7 +474,8 @@ class ProjectsController < ApplicationController
     @old_status = @project.status
     @project.go_live
     custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Gone Live", reason: params[:remarks])
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id, custom_field_id: custom_field&.id, author_id: User.current.id, value: "Gone Live",
+reason: params[:remarks])
     Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
@@ -486,15 +487,15 @@ class ProjectsController < ApplicationController
     @old_status = @project.status
     @project.cancelled
     custom_field = CustomField.find_by(type: "ProjectCustomField", name: "Status Reason")
-    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id,  author_id: User.current.id, custom_field_id: custom_field&.id, value: "Cancelled", reason: params[:remarks])
-    
+    custom_value = CustomValue.find_or_create_by(customized_type: "Project", customized_id: @project.id,  author_id: User.current.id, custom_field_id: custom_field&.id, value: "Cancelled",
+reason: params[:remarks])
+
     Mailer.deliver_project_status(User.current, @old_status, @project)
     respond_to do |format|
       format.html { redirect_to project_path(@project) }
       format.api { render_api_cancelled }
     end
   end
-
 
   # Delete @project
   def destroy

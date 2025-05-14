@@ -33,6 +33,8 @@ class Group < Principal
 
   self.valid_statuses = [STATUS_ACTIVE]
 
+  after_create :log_create_activity
+  after_update :log_update_activity
   before_destroy :remove_references_before_destroy
 
   scope :sorted, lambda {order(:type => :asc, :lastname => :asc)}
@@ -47,11 +49,7 @@ class Group < Principal
     'custom_fields',
     :if => lambda {|group, user| user.admin? && !group.builtin?})
 
-
-  after_create :log_create_activity
-  after_update :log_update_activity
   after_destroy :log_destroy_activity
-
 
   def log_create_activity
     activity_log = ActivityLog.create(
@@ -63,6 +61,7 @@ class Group < Principal
       author_id: User.current.id
     )
   end
+
   # changes_hash
   def log_update_activity
     saved_changes.each do |field_name, values|

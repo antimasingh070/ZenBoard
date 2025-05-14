@@ -22,11 +22,9 @@ class WorkflowPermission < WorkflowRule
   validates_presence_of :old_status
   validate :validate_field_name
 
-
   after_create :log_create_activity
   after_update :log_update_activity
   after_destroy :log_destroy_activity
-
 
   def log_create_activity
     ActivityLog.create(

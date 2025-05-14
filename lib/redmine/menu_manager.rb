@@ -109,16 +109,16 @@ module Redmine
         menu_name = controller.current_menu(project)
         menu_name.present? && Redmine::MenuManager.items(menu_name).children.present?
       end
-      
+
       def render_menu(menu, project=nil)
         links = []
         menu_items_for(menu, project) do |node|
           links << render_menu_node(node, project)
         end
-      
+
         links.empty? ? nil : content_tag('ul', links.join.html_safe)
       end
-      
+
       def render_menu_node(node, project=nil)
         if node.children.present? || !node.child_menus.nil?
           return render_menu_node_with_children(node, project)

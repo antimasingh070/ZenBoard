@@ -28,6 +28,8 @@ class Tracker < ActiveRecord::Base
        start_date due_date estimated_hours done_ratio description priority_id).freeze
   CORE_FIELDS_ALL = (CORE_FIELDS_UNDISABLABLE + CORE_FIELDS).freeze
 
+  after_create :log_create_activity
+  after_update :log_update_activity
   before_destroy :check_integrity
   belongs_to :default_status, :class_name => 'IssueStatus'
   has_many :issues
@@ -80,10 +82,7 @@ class Tracker < ActiveRecord::Base
     'project_ids',
     'description')
 
-  after_create :log_create_activity
-  after_update :log_update_activity
   after_destroy :log_destroy_activity
-
 
   def log_create_activity
     ActivityLog.create(

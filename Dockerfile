@@ -1,16 +1,17 @@
-FROM ruby:slim
+FROM ruby:3.2.2-slim
 
-LABEL Name=zenboard Version=0.0.1
-
-EXPOSE 3000
-
-# throw errors if Gemfile has been modified since Gemfile.lock
-RUN bundle config --global frozen 1
+# Dependencies इंस्टॉल करें
+RUN apt-get update -qq && \
+    apt-get install -y build-essential libpq-dev nodejs git
 
 WORKDIR /app
-COPY . /app
+
+# Bundler वर्जन फिक्स करें
+RUN gem install bundler -v 2.6.6
 
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
-CMD ["ruby", "zenboard.rb"]
+COPY . .
+
+CMD ["rails", "server", "-b", "0.0.0.0"]

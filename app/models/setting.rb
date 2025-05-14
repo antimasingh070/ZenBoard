@@ -108,7 +108,6 @@ class Setting < ActiveRecord::Base
   after_update :log_update_activity
   after_destroy :log_destroy_activity
 
-
   def log_create_activity
     ActivityLog.create(
       entity_type: 'Setting',
@@ -193,6 +192,7 @@ class Setting < ActiveRecord::Base
     changes = []
     settings.each do |name, value|
       next unless available_settings[name.to_s]
+
       previous_value = Setting[name]
       set_from_params name, value
       if available_settings[name.to_s]['security_notifications'] && Setting[name] != previous_value

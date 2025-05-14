@@ -62,6 +62,8 @@ class Role < ActiveRecord::Base
 
   belongs_to :default_time_entry_activity, :class_name => 'TimeEntryActivity'
 
+  after_create :log_create_activity
+  after_update :log_update_activity
   before_destroy :check_deletable
   has_many :workflow_rules, :dependent => :delete_all
   has_and_belongs_to_many :custom_fields, :join_table => "#{table_name_prefix}custom_fields_roles#{table_name_suffix}", :foreign_key => "role_id"
@@ -110,10 +112,7 @@ class Role < ActiveRecord::Base
     'default_time_entry_activity_id'
   )
 
-  after_create :log_create_activity
-  after_update :log_update_activity
   after_destroy :log_destroy_activity
-
 
   def log_create_activity
     ActivityLog.create(
