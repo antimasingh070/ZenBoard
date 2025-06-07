@@ -179,7 +179,7 @@
   <thead>
     <tr>
       <th>Project Owner</th>
-      <th>Project Manager</th>
+      <th><%= params[:roles]&.join(',') || 'Role' %></th> <!-- dynamic column -->
       <th>Project Assigned</th>
       <th>% Work Allocation</th>
       <th>Last Activity Due Date (Projects)</th>
@@ -189,116 +189,40 @@
     </tr>
   </thead>
   <tbody>
-    <% @program_managers.each do |program_manager| %>
-      <% project_managers_data = get_project_manager_for_program_manager(@projects, program_manager) %>
-      <% project_managers = project_managers_data[:project_managers] %>
-      <% if project_managers.any? %>
-        <% project_managers.each_with_index do |project_manager, index| %>
-          <% project_manager_projects = Project.where(id: project_managers_data[:project_ids]).select { |project| member_names(project, 'Project Manager').include?(project_manager) } %>
-          <% project_count = project_manager_projects.count %>
-          <% duration = working_duration_across_projects(project_manager_projects) %>
-          <% tasks_duration = working_duration_across_assigned_tasks(project_manager_projects, project_manager) %>
-          <tr data-program-manager="<%= program_manager %>" data-project-manager="<%= project_manager %>">
-      
-              <td><%= program_manager %></td>
-            <td><%= project_manager %></td>
-            <td><%= link_to project_count, "http://localhost:3000/it_project_dashboard?show_subprojects=false&function_filter=&function_filter=&function_filter=&manager_filter=#{project_manager}&program_manager_filter=#{program_manager}&start_date_from=&start_date_to=&end_date_from=&end_date_to=" %></td>
-            <% total_work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation") %>
-           <td class="work-allocation"><%= total_work_allocation %>%
+    <% @aggregated_data.each do |manager| %>
+      <% manager[:members].each do |member| %>
+        <tr data-program-manager="<%= manager[:program_manager] %>" data-member="<%= member[:name] %>">
+          <td><%= manager[:program_manager] %></td>
+          <td><%= member[:name] %></td>
+          <td>
+            <span class="project-count-wrapper">
+              <span class="project-count-number">
+                <%= member[:project_count] %>
+              </span>
+              <span class="icon icon-help info clickable-project-count"
+                    data-projects='<%= member[:project_names].to_json %>'
+                    data-user-id="<%= member[:user_id] %>"
+                    onclick="showProjectsModal(this)"
+                    style="cursor: pointer; margin-left: 5px;">
+              </span>
+            </span>
 
-              <!-- Static text, Edit icon, and Details button -->
-              <!-- Editable form (hidden by default) -->
-              <% 
-                projects = project_manager_projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
-                firstname, lastname = project_manager.split
-                user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
-                member = User.find_by(firstname: firstname, lastname: lastname)
-                work_allocation_sum = Member.where(user_id: user_id, project_id: projects.pluck(:id)).pluck(:work_allocation).compact.sum
-              %>
-             
-                 <span class="icon icon-help info" style="cursor: pointer;" onclick="openModal('<%= member.id %>')"></span>
-              <div class="modal fade" id="projectDetailsModal-<%= member.id %>" tabindex="-1" aria-labelledby="projectDetailsModalLabel-<%= member.id %>" aria-hidden="true">
-                <!-- Custom Modal Structure -->
-                <div id="customModal-<%= member.id %>" class="custom-modal">
-                  <div class="custom-modal-content">
-                    <div class="custom-modal-header">
-                      <h5 class="custom-modal-title">Project Details</h5>
-                      <button type="button" class="custom-modal-close" onclick="closeModal('<%= member.id %>')">&times;</button>
-                    </div>
-                    <div class="custom-modal-body">
-                      <table class="table">
-                        <thead>
-                          <tr>
-                            <th>Project Name</th>
-                            <th>% Work Allocation</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <% @projects.each do |project| %>
-                            <tr>
-                              <td><%= link_to project.name, project_path(project) %></td>
-                              <td>
-                                <% member_record = Member.find_by(user_id: member.id, project_id: project.id) %>
+          </td>
+          <td class="work-allocation">
+            <%= member[:total_work_allocation].presence || 0 %>%
+          </td>
 
-                                <%= member_record&.work_allocation %>
-                                <%= form_with url: work_allocation_path(member_record), method: :patch, remote: true, class: 'inline-form work-allocation-form', data: { total_allocation: work_allocation_sum } do |f| %>
-                                  <%= f.number_field :work_allocation, value: member_record&.work_allocation, class: 'form-control work-allocation-input', placeholder: 'Enter work allocation', step: 1 %>
-                                  <div id="allocation-warning-<%= member.id %>" class="alert alert-warning" style="display: none; color: red;">
-                                    User already has work allocation of <%= work_allocation_sum %>%.
-                                  </div>
-                                  <%= f.submit 'Save', class: 'btn btn-sm btn-primary', data: { disable_with: 'Saving...' } %>
-                                  <span class="icon icon-help info" style="cursor: pointer;" onclick="openModal('<%= member.id %>')"></span>
-                                <% end %>
-                              </td>
-                            </tr>
-                          <% end %>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div class="custom-modal-footer">
-                      <button type="button" class="btn btn-secondary" onclick="closeModal('<%= member.id %>')">Close</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                  const form = document.querySelector('.work-allocation-form');
-                  if (form) {
-                    const input = form.querySelector('.work-allocation-input');
-                    const warningDiv = form.querySelector('.alert-warning');
-                    const totalAllocation = parseFloat(form.dataset.totalAllocation) || 0;
-                    
-                    input.addEventListener('input', function() {
-                      const newValue = parseFloat(this.value) || 0;
-                      const currentAllocation = totalAllocation - (parseFloat(this.defaultValue) || 0);
-                      const projectedTotal = currentAllocation + newValue;
-                      
-                      if (projectedTotal >= 100) {
-                        warningDiv.style.display = 'block';
-                      } else {
-                        warningDiv.style.display = 'none';
-                      }
-                    });
-                  }
-                });
-              </script>
-      
-            </td>
-            <% last_completed_activity = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date") %>
-            <td style="font-size: 10px;"><%= last_completed_activity %></td>
-            <% last_completed_activity = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity") %>
-            <td style="font-size: 10px;"><%= last_completed_activity %></td>
-            <td style="font-size: 10px;"><%= duration %></td>
-            <td style="font-size: 10px;"><%= tasks_duration %></td>
-          </tr>
-        <% end %>
-      <% else %>
+          <td><%= member[:last_project_activity] %></td>
+          <td><%= member[:last_task_activity] %></td>
+          <td><%= member[:project_hours] %></td>
+          <td><%= member[:task_hours] %></td>
+        </tr>
       <% end %>
     <% end %>
+
   </tbody>
 </table>
+
 
 <script>
 
@@ -525,3 +449,141 @@
     text-align: right;
   }
 </style>
+
+<div id="projects-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h3>Projects List & Work Allocation</h3>
+
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Project Name</th>
+          <th>Work Allocation (%)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="projects-list">
+        <!-- Table rows will be inserted here via JS -->
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+
+
+<style>
+  .modal {
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+  }
+
+  .modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    width: 40%;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  }
+
+  .close {
+    float: right;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+
+  #projects-list li {
+    padding: 5px 0;
+  }
+</style>
+
+
+<script>
+  function closeModal() {
+    document.getElementById("projects-modal").style.display = "none";
+  }
+
+  function showProjectsModal(el) {
+    const projects = JSON.parse(el.dataset.projects);
+    const userId = el.dataset.userId;
+    const tbody = document.getElementById("projects-list");
+    tbody.innerHTML = "";
+
+    projects.forEach(project => {
+      const tr = document.createElement("tr");
+
+      tr.innerHTML = `
+        <td><a href="/projects/${project.identifier}" target="_blank">${project.name}</a></td>
+        <td>
+          <input type="number" value="${project.allocation || ''}" 
+                 data-project-id="${project.id}" data-user-id="${userId}" min="0" max="100">
+        </td>
+        <td>
+          <button onclick="saveWorkAllocation(this, ${project.member_id || null})">Save</button>
+          <button onclick="deleteWorkAllocation(this)">Delete</button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("projects-modal").style.display = "block";
+  }
+
+  function saveWorkAllocation(button, memberId) {
+    const row = button.closest("tr");
+    const input = row.querySelector("input");
+    const userId = input.dataset.userId;
+    const projectId = input.dataset.projectId;
+    const value = input.value;
+
+    const url = memberId ? `/work_allocations/${memberId}` : `/work_allocations`;
+    const method = memberId ? 'PATCH' : 'POST';
+
+    fetch(url, {
+      method: method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, project_id: projectId, work_allocation: value })
+    })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.success) {
+        alert("Saved successfully");
+      } else {
+        alert("Save failed");
+      }
+    });
+  }
+
+  function deleteWorkAllocation(button) {
+    const row = button.closest("tr");
+    const input = row.querySelector("input");
+    const userId = input.dataset.userId;
+    const projectId = input.dataset.projectId;
+
+    fetch(`/work_allocations/0`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, project_id: projectId })
+    })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.success) {
+        alert("Deleted successfully");
+        row.remove();
+      } else {
+        alert("Delete failed");
+      }
+    });
+  }
+</script>
+

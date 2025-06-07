@@ -1,6 +1,13 @@
 source 'https://rubygems.org'
 
 ruby '3.3.0'
+gem 'passenger', '~> 6.0.19'
+gem 'webrick'
+gem 'bundler', '~>2.4.22'
+gem 'nio4r', '~>2.7.0'
+gem 'racc', '1.7.3'
+gem 'websocket-driver', '~>0.7.6'
+gem 'kaminari'
 gem 'omniauth'
 gem 'rails', '6.1.7.6'
 gem 'rouge', '~> 4.2.0'
@@ -103,7 +110,7 @@ else
 end
 
 group :development do
-  # gem 'listen', '~> 3.3'
+  gem 'listen', '~> 3.3'
   gem "yard"
 end
 

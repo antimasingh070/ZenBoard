@@ -1,31 +1,35 @@
-# frozen_string_literal: true
-
 class WorkAllocationsController < ApplicationController
-  before_action :find_member, only: [:update, :destroy]
+  protect_from_forgery with: :null_session
+  skip_before_action :verify_authenticity_token
+
+  def create
+    member = Member.find_by(user_id: params[:user_id], project_id: params[:project_id])
+    unless member
+      member = Member.create(user_id: params[:user_id], project_id: params[:project_id])
+    end
+
+    if member.update(work_allocation: params[:work_allocation])
+      render json: { success: true }
+    else
+      render json: { success: false, errors: member.errors.full_messages }
+    end
+  end
 
   def update
-    if @member.update(work_allocation: params[:work_allocation])
-      redirect_to "http://localhost:3000/projects/#{@member.project.identifier}/settings/members"
+    member = Member.find_by(user_id: params[:user_id], project_id: params[:project_id])
+    if member&.update(work_allocation: params[:work_allocation])
+      render json: { success: true }
     else
-      redirect_to "http://localhost:3000/projects/#{@member.project.identifier}/settings/members"
+      render json: { success: false, message: 'Update failed' }
     end
   end
 
   def destroy
-    @member.update(work_allocation: nil)
-    respond_to do |format|
-      format.js   # Renders destroy.js.erb
-      format.json { render json: { status: 'success', message: 'Member deleted' } }
+    member = Member.find_by(user_id: params[:user_id], project_id: params[:project_id])
+    if member&.update(work_allocation: nil)
+      render json: { success: true }
+    else
+      render json: { success: false, message: 'Delete failed' }
     end
-  end
-
-  private
-
-  def find_member
-    @member = Member.find(params[:id])
-  end
-
-  def work_allocation_params
-    params.require(:member).permit(:work_allocation)
   end
 end

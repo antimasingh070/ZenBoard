@@ -615,7 +615,16 @@ content_type: attachment.content_type, digest: attachment.digest, downloads: 0, 
   end
 
   def business_requirement_params
-    params.require(:business_requirement).permit(:requirement_case, :identifier, :description, :cost_benefits, :status, :project_sponsor, :requirement_submitted_date, :scheduled_end_date,
-:actual_start_date, :actual_end_date, :revised_end_date, :business_need_as_per_business_case, :planned_project_go_live_date, :is_it_project, :project_category, :vendor_name, :priority_level, :project_enhancement, :template, portfolio_category: [], requirement_received_from: [], application_name: [], br_stakeholders_attributes: [:id, :user_id, :role_id, :_destroy])
-  end
+    params.require(:business_requirement).permit(
+      :requirement_case, :identifier, :description, :cost_benefits, :status,
+      :project_sponsor, :scheduled_start_date, :scheduled_end_date, 
+      :actual_start_date, :actual_end_date, :revised_end_date,
+      :business_need_as_per_business_case, :planned_project_go_live_date,
+      :is_it_project, :project_category, :vendor_name, :priority_level,
+      :project_enhancement, :template, :requirement_submitted_date,
+      :portfolio_category => [], :requirement_received_from => [], :application_name => [],
+      business_benefit_categories: [],
+      business_benefit_data: {}, br_stakeholders_attributes: [:id, :user_id, :role_id, :_destroy]
+    )
+  end  
 end

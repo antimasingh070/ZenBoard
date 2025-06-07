@@ -1,3 +1,0 @@
-dn: ou=users,dc=mydomain,dc=com
-objectClass: organizationalUnit
-ou: users

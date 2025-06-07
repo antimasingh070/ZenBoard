@@ -37,221 +37,6 @@ module WelcomeHelper
     Date.new(Date.today.year, 12, 25)  # Christmas
   ].freeze
 
-  def working_duration_across_assigned_tasks(projects, project_manager)
-    projects = [projects] unless projects.is_a?(Array)
-    # Select only projects managed by the given Project Manager
-    projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
-    return "NA" if project_manager.blank?
-    return "" if projects.blank?
-
-    field_name = "Project Activity"
-    custom_field = CustomField.find_by(name: field_name)
-    return "" unless custom_field
-
-    # Split project_manager into firstname and lastname
-    first_name, last_name = project_manager.split(" ", 2)
-
-    # Find the project_manager user object
-    project_user = User.find_by(firstname: first_name, lastname: last_name)
-    return "" unless project_user
-
-    # Fetch the most recently updated issue where the project_manager is the assignee
-    last_issue = Issue.where(
-      project_id: projects.map(&:id),
-      assigned_to_id: project_user.id
-    ).where.not(status: 5).order(updated_on: :desc).first
-
-    return "" unless last_issue
-
-    first_issue = Issue.where(
-      project_id: projects.map(&:id),
-      assigned_to_id: project_user.id
-    ).where.not(status: 5).order(updated_on: :desc).last
-
-    return "" unless first_issue
-
-    # Convert to Date objects and find min/max dates
-    min_start_date = first_issue.start_date
-    max_end_date = last_issue.due_date
-
-    return "N/A" unless min_start_date && max_end_date
-
-    # Calculate working days between min_start_date and max_end_date
-    working_days = []
-    current_date = min_start_date
-
-    while current_date <= max_end_date
-      working_days << current_date if working_day?(current_date)
-      current_date = current_date.next_day
-    end
-
-    total_days = working_days.count
-    hours = total_days * 8
-
-    # Format output
-    formatted_duration = []
-    formatted_duration << "#{hours}h" if hours.positive?
-
-    formatted_duration.join(":")
-  end
-
-  def last_activity_from_all_assigned_task(project_manager, projects, field_name)
-    projects = [projects] unless projects.is_a?(Array)
-    return "" if projects.blank? || field_name.blank?
-    return "" if project_manager.blank?
-
-    # Select only projects managed by the given Project Manager
-    projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
-    return "" if projects.blank?
-
-    if field_name == "Project Activity"
-      custom_field = CustomField.find_by(name: field_name)
-      return "" unless custom_field
-
-      # Split project_manager into firstname and lastname
-      first_name, last_name = project_manager.split(" ", 2)
-
-      # Find the Project Manager user object
-      project_manager_user = User.find_by(firstname: first_name, lastname: last_name)
-      return "" unless project_manager_user
-
-      # Fetch the most recently updated issue where the Project Manager is the assignee
-      last_issue = Issue.where(
-        project_id: projects.map(&:id),
-        assigned_to_id: project_manager_user.id
-      ).where.not(status: 5).order(updated_on: :desc).first
-
-      return "" unless last_issue
-
-      # Fetch relevant custom value for the last issue
-      custom_value = CustomValue.find_by(
-        customized_type: "Issue",
-        customized_id: last_issue.id,
-        custom_field_id: custom_field.id
-      )
-
-      # Fetch enumeration if it exists
-      activity_name = CustomFieldEnumeration.find_by(id: custom_value&.value.to_i)&.name if custom_value
-
-      # Format due date
-      formatted_due_date = last_issue.due_date.strftime("%d %b %y") if last_issue.due_date
-
-      # Return formatted last activity only if an activity name is found
-      return "#{activity_name} (#{formatted_due_date})" if activity_name.present?
-    end
-
-    ""
-  end
-
-  def last_activity_from_all_projects(project_manager, projects, field_name)
-    projects = [projects] unless projects.is_a?(Array)
-    return "" if projects.blank? || field_name.blank?
-    return "" if project_manager.blank?
-
-    # Select only projects managed by the given Project Manager
-    projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
-    return "" if projects.blank?
-
-    custom_field = CustomField.find_by(name: field_name)
-    return "" unless custom_field
-
-    # Find the project with the latest Scheduled End Date
-    last_project = @projects.compact.max_by do |project|
-      end_date_str = date_value(project, 'Scheduled End Date')
-      next Date.new(0) if end_date_str.blank? # Default to a very old date if missing
-
-      begin
-        Date.parse(end_date_str) # Convert to Date for comparison
-      rescue ArgumentError
-        Date.new(0) # Handle invalid date strings
-      end
-    end
-    return "" unless last_project
-
-    # Get the Schedule End Date
-    schedule_end_date  = begin
-      CustomValue.find_by(customized_type: "Project", customized_id: last_project&.id, custom_field_id: custom_field&.id).value
-    rescue
-      nil
-    end
-    return "" unless schedule_end_date
-
-    # Return formatted last activity
-    return schedule_end_date.to_date.strftime('%d %b %y').to_s if schedule_end_date.present?
-  end
-
-  def total_work_allocation(project_manager, projects, field_name)
-    projects = [projects] unless projects.is_a?(Array)
-    return "" if projects.blank? || field_name.blank?
-    return "" if project_manager.blank?
-
-    # Select only projects managed by the given Project Manager
-    projects = projects.select { |project| member_names(project, "Project Manager").include?(project_manager) } if project_manager.present?
-    return "" if projects.blank?
-
-    # Split the full name into first and last name
-    firstname, lastname = project_manager.split
-    # Find the user by firstname and lastname
-    user_id = User.find_by(firstname: firstname, lastname: lastname)&.id
-    work_allocation = Member.where(user_id: user_id, project_id: @projects.ids).pluck(:work_allocation)
-    work_allocation.compact.sum
-  end
-
-  # Method to calculate working duration between earliest start and latest end date
-  def working_duration_across_projects(projects)
-    projects = [projects] unless projects.is_a?(Array)
-    # Get all "Scheduled Start Dates" and "Scheduled End Dates"
-    start_dates = projects.filter_map { |project| date_value(project, 'Scheduled Start Date') }
-    end_dates = projects.filter_map { |project| date_value(project, 'Scheduled End Date') }
-
-    return "N/A" if start_dates.empty? || end_dates.empty?
-
-    # Convert to Date objects and find min/max dates
-    min_start_date = start_dates.filter_map do |d|
-      Date.parse(d)
-    rescue
-      nil
-    end.min
-    max_end_date = end_dates.filter_map do |d|
-      Date.parse(d)
-    rescue
-      nil
-    end.max
-
-    return "N/A" unless min_start_date && max_end_date
-
-    # Calculate working days between min_start_date and max_end_date
-    working_days = []
-    current_date = min_start_date
-
-    while current_date <= max_end_date
-      working_days << current_date if working_day?(current_date)
-      current_date = current_date.next_day
-    end
-
-    total_days = working_days.count
-    hours = total_days * 8
-
-    # Format output
-    formatted_duration = []
-    formatted_duration << "#{hours}h" if hours.positive?
-
-    formatted_duration.join(":")
-  end
-
-  def get_project_manager_for_program_manager(projects, program_manager)
-    # Filter projects where the given program manager is involved
-    projects = projects.select { |project| member_names(project, 'Program Manager').include?(program_manager) }
-    # Extract all unique project managers from the filtered projects
-    @project_managers = projects.flat_map { |project| member_names(project, 'Project Manager') }.compact.uniq.sort
-
-    # Return a hash with project_managers as an array of names
-    {
-      project_managers: @project_managers,
-      project_ids: projects.pluck(:id)
-    }
-  end
-
   def business_requirement_count(business_requirements, type, field_name, program_manager, project_manager, status = nil)
     # Filter by status if provided
     business_requirements = business_requirements.select { |br| br.status == status } if status.present?
@@ -323,18 +108,20 @@ module WelcomeHelper
     projects
   end
 
-  def member_names(project, field_name)
+
+ def member_names(project, field_name)
     role = Role.find_by(name: field_name)
+    if role.present?
+      member_role_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
+      member_ids = Member.where(project_id: project.id, id: member_role_ids).pluck(:user_id)
 
-    member_role_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
-    member_ids = Member.where(project_id: project.id, id: member_role_ids).pluck(:user_id)
-
-    if member_ids.present?
-      users = User.where(id: member_ids)
-      full_names = users.pluck(:firstname, :lastname)
-      return full_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
-    else
-      return []
+      if member_ids.present?
+        users = User.where(id: member_ids)
+        full_names = users.pluck(:firstname, :lastname)
+        return full_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
+      else
+        return []
+      end
     end
   end
 

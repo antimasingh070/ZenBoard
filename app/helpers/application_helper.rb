@@ -32,18 +32,19 @@ module ApplicationHelper
   extend Forwardable
   def_delegators :wiki_helper, :wikitoolbar_for, :heads_for_wiki_formatter
 
-  def member_names(project, field_name)
+ def member_names(project, field_name)
     role = Role.find_by(name: field_name)
+    if role.present?
+      member_role_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
+      member_ids = Member.where(project_id: project.id, id: member_role_ids).pluck(:user_id)
 
-    member_role_ids = MemberRole.where(role_id: role.id).pluck(:member_id)
-    member_ids = Member.where(project_id: project.id, id: member_role_ids).pluck(:user_id)
-
-    if member_ids.present?
-      users = User.where(id: member_ids)
-      full_names = users.pluck(:firstname, :lastname)
-      return full_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
-    else
-      return []
+      if member_ids.present?
+        users = User.where(id: member_ids)
+        full_names = users.pluck(:firstname, :lastname)
+        return full_names.map { |firstname, lastname| "#{firstname} #{lastname}" }
+      else
+        return []
+      end
     end
   end
 

@@ -21,7 +21,7 @@ class WelcomeController < ApplicationController
   self.main_menu = false
   include WelcomeHelper
   before_action :set_projects, only: [:project_score_card,  :calculate_delay_percentage, :resource_management, :export_resource_management_to_csv, :export_project_score_to_csv]
-
+  before_action :initialize_resource_management_service, only: [:resource_management, :export_resource_management_to_csv]
   skip_before_action :check_if_login_required, only: [:robots]
 
   def download_help_documents
@@ -41,91 +41,17 @@ class WelcomeController < ApplicationController
     end
   end
 
-  def resource_management
-    @projects = @projects.where(status: 1)
-    @roles = Role.where.not(name: ["Anonymous", "Non member"]).pluck(:name)
-    @members = Member.includes(:user).where(project_id: @project.id)
-    if params[:roles].present? && params[:members].present?
-      role = Role.where(name: params[:roles])
-      member = User.where(firstname: params[:members].map { |name| name.split.first }, lastname: params[:members].map { |name| name.split.last })
 
-      if role && member
-        member_role_ids = MemberRole.where(role_id: role.pluck(:id)).pluck(:member_id)
-        member_ids = Member.where(id: member_role_ids, user_id: member.pluck(:id)).pluck(:project_id)
-        @projects = @projects.where(id: member_ids)
-        # Extract project owner names for the filtered project
-        if role.count == 1 && member.count == 1 && role.first.name == "Program Manager"
-          @program_managers = ["#{member.first.firstname} #{member.first.lastname}"]
-        else
-          @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
-        end
-        @program_managers.compact
-      else
-        return []
-      end
-    else
-      @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
-    end
+  def resource_management
+    @aggregated_data = @resource_service.aggregated_table_data(params[:roles])
   end
 
   def export_resource_management_to_csv
-    @projects = @projects.where(status: 1)
-    @roles = Role.where.not(name: ["Anonymous", "Non member"]).pluck(:name)
-    @members = User.all
-    if params[:roles].present? && params[:members].present?
-      role = Role.where(name: params[:roles])
-      member = User.where(firstname: params[:members].map { |name| name.split.first }, lastname: params[:members].map { |name| name.split.last })
-
-      if role && member
-        member_role_ids = MemberRole.where(role_id: role.pluck(:id)).pluck(:member_id)
-        member_ids = Member.where(id: member_role_ids, user_id: member.pluck(:id)).pluck(:project_id)
-        @projects = @projects.where(id: member_ids)
-        # Extract project owner names for the filtered projects
-        @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
-        @program_managers.compact
-      else
-        return []
-      end
-    else
-      @program_managers = @projects.flat_map { |project| member_names(project, 'Program Manager') }.compact.uniq.sort
-    end
-    # Generate CSV based on filtered projects
-    csv_data = CSV.generate(headers: true) do |csv|
-      # Adding header row to CSV
-      csv << ["Program Manager", "Project Manager", "Project Assigned", "% Work Allocation", "Last Activity Due Date (Projects)", "Last Activity Due Date (Tasks)",
-              "Total Hours/Month (Project Overview)", "Total Hours/Month (Assigned Activity)"]
-
-      @program_managers.each do |program_manager|
-        project_managers_data = get_project_manager_for_program_manager(@projects, program_manager)
-        project_managers = project_managers_data[:project_managers]
-
-        project_managers.each do |project_manager|
-          project_manager_projects = @projects.select { |project| member_names(project, 'Project Manager').include?(project_manager) }
-          project_count = project_manager_projects.count
-          work_allocation = total_work_allocation(project_manager, project_manager_projects, "Work Allocation").join(", ")
-          last_activity_due_date_project = last_activity_from_all_projects(project_manager, project_manager_projects, "Scheduled End Date")
-          last_activity_due_date_task = last_activity_from_all_assigned_task(project_manager, project_manager_projects, "Project Activity")
-          total_hours_project = working_duration_across_projects(project_manager_projects)
-          total_hours_task = working_duration_across_assigned_tasks(project_manager_projects, project_manager)
-
-          # Write a row to the CSV
-          csv << [
-            program_manager,
-            project_manager,
-            project_count,
-            work_allocation.empty? ? "" : work_allocation,
-            last_activity_due_date_project,
-            last_activity_due_date_task,
-            total_hours_project,
-            total_hours_task
-          ]
-        end
-      end
-    end
-
-    # Send the CSV data as a response for download
+    csv_data = @resource_service.generate_csv_from_aggregated_data(params[:roles])
     send_data csv_data, filename: "resource_management.csv", type: "text/csv"
   end
+
+
 
   def member_names_by_role(projects, role)
     projects.flat_map { |project| member_names(project, role) }.compact.uniq.sort
@@ -508,7 +434,6 @@ class WelcomeController < ApplicationController
     customized_ids = CustomValue.where(custom_field_id: custom_field.id, value: "1").pluck(:customized_id)
     @projects = @projects.where.not(name: "Master Project").where(id: customized_ids)
     @projects = @projects.where(status: Array(params[:status_filter])) if params[:status_filter].present?
-
     @projects = @projects.select { |project| member_names(project, 'Project Manager').include?(params[:manager_filter]) } if params[:manager_filter].present?
     @projects = @projects.select { |project| member_names(project, 'Program Manager').include?(params[:program_manager_filter]) } if params[:program_manager_filter].present?
     @projects = @projects.select{|project| custom_field_value(project, 'Project Category')&.include?(params[:category_filter])} if params[:category_filter].present?
@@ -552,7 +477,6 @@ class WelcomeController < ApplicationController
     else
       @projects = @projects.select { |project| project.members.exists?(user_id: current_user_id) }  # Show only projects the user is a member of
     end
-    binding.pry
     # Projects going live next week
     start_date_next_week = Date.today.next_week.beginning_of_week
     end_date_next_week = Date.today.next_week.end_of_week
@@ -698,6 +622,16 @@ class WelcomeController < ApplicationController
   end
 
   private
+
+  def initialize_resource_management_service
+    current_projects = Project.all # Adjust scoping as needed
+    @resource_service = ResourceManagementService.new(params: params, current_projects: current_projects)
+    @resource_service.call
+    @projects = @resource_service.projects
+    @roles = @resource_service.roles
+    @members = @resource_service.members
+    @program_managers = @resource_service.program_managers
+  end
 
   def set_projects
     @projects = Project.all

@@ -5,6 +5,8 @@ class BusinessRequirement< ActiveRecord::Base
   serialize :portfolio_category
   serialize :requirement_received_from
   serialize :application_name
+  serialize :business_benefit_categories, Array
+
   # Project statuses
   STATUS_IN_DISCUSSION = 1
   STATUS_REQUIREMENT_FINILIZED = 2
@@ -52,7 +54,7 @@ class BusinessRequirement< ActiveRecord::Base
                   'actual_start_date', 'actual_end_date', 'revised_end_date',
                   'business_need', 'planned_project_go_live_date', 'is_it_project',
                   'project_category', 'vendor_name', 'priority_level', 'project_enhancement',
-                   'template', 'portfolio_category', 'requirement_received_from', 'application_name'
+                   'template', 'portfolio_category', 'requirement_received_from', 'application_name', 'business_benefit_categories', 'business_benefit_data'
 
   after_create :log_create_activity
   after_update :log_update_activity

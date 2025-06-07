@@ -31,6 +31,19 @@
   </p>
   
   <p>
+    <%= f.label :business_benefit_categories, "Business Benefit Category" %><sup style="color: red;">*</sup>
+    <%= select_tag "business_requirement[business_benefit_categories][]",
+          options_for_select(["Staff Time Saved", "Cost avoidance", "Increased Revenue", "Financial Benefits", "IT & Cybersecurity"], @business_requirement.business_benefit_categories),
+          multiple: true, class: "form-control", id: "business-benefit-category" %>
+  </p>
+
+  <div id="benefit-fields"
+     data-benefit-data='<%= @business_requirement.business_benefit_data.to_json.html_safe %>'>
+  </div>
+
+
+
+  <p>
     <%= f.label :description, "Description" %><sup style="color: red;">*</sup>
     <%= f.text_area :description, 
                     rows: 4, 
@@ -45,19 +58,6 @@
                     rows: 1, 
                     class: 'form-control', 
                     placeholder: 'Enter the cost benefits here' %>
-  </p>
-  
-  <% excluded_statuses = [BusinessRequirement::STATUS_ACCEPTED, BusinessRequirement::STATUS_CANCELLED, BusinessRequirement::STATUS_CLOSED] %>
-  <p>
-    <%= f.label :cost_benefits, "Status" %>
-    <%= f.select :status, 
-                 options_for_select(
-                   BusinessRequirement::STATUS_MAP.reject { |k, _| excluded_statuses.include?(k) }
-                                                 .map { |k, v| [v, k] }, 
-                   @business_requirement.status
-                 ), 
-                 {}, 
-                 class: 'form-control' %>
   </p>
   
   <p>
@@ -219,32 +219,126 @@
 </script>
 
 
-          <style>
-          .required {
-  color: red;
-  font-weight: bold;
-   font-size: 0.02em;
-}
+<style>
+.required {
+    color: red;
+    font-weight: bold;
+    font-size: 0.02em;
+  }
 
-            .stakeholders-list {
-              padding: 0; /* Remove any default padding */
-            }
-          
-            .stakeholder-item {
-              border-bottom: 1px solid #e0e0e0; /* Light separator */
-              padding: 5px 0; /* Reduced padding for compactness */
-            }
-          
-            .stakeholder-info {
-              font-size: 14px; /* Smaller font size for compactness */
-            }
-          
-            .stakeholder-info strong {
-              margin-right: 5px; /* Space between label and value */
-            }
-          
-            .stakeholder-item:last-child {
-              border-bottom: none; /* Remove border for the last item */
-            }
-          </style>
+  .stakeholders-list {
+    padding: 0; /* Remove any default padding */
+  }
+
+  .stakeholder-item {
+    border-bottom: 1px solid #e0e0e0; /* Light separator */
+    padding: 5px 0; /* Reduced padding for compactness */
+  }
+
+  .stakeholder-info {
+    font-size: 14px; /* Smaller font size for compactness */
+  }
+
+  .stakeholder-info strong {
+    margin-right: 5px; /* Space between label and value */
+  }
+
+  .stakeholder-item:last-child {
+    border-bottom: none; /* Remove border for the last item */
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const benefitSelect = document.getElementById('business-benefit-category');
+    const benefitFieldsDiv = document.getElementById('benefit-fields');
+    const savedData = benefitFieldsDiv.dataset.benefitData ? JSON.parse(benefitFieldsDiv.dataset.benefitData) : {};
+
+    function renderBenefitFields(selectedOptions) {
+      benefitFieldsDiv.innerHTML = '';
+
+      const fields = {
+        "Staff Time Saved": `
+          <p><label>Current Time Spent on Task (hrs/week or month)*</label>
+          <input required name="business_requirement[business_benefit_data][staff_time][current]" class="form-control" placeholder="E.g., 10 hrs/week"></p>
+
+          <p><label>Expected Time Reduction*</label>
+          <input required name="business_requirement[business_benefit_data][staff_time][expected]" class="form-control" placeholder="Projected savings in hours"></p>
+
+          <p><label>Efficiency Improvement Percentage*</label>
+          <input required name="business_requirement[business_benefit_data][staff_time][efficiency]" class="form-control" placeholder="Expected % increase"></p>
+        `,
+        "Cost avoidance": `
+          <p><label>Process Automation Savings (Rs)</label>
+          <input name="business_requirement[business_benefit_data][cost_avoidance][automation]" class="form-control" placeholder="Reducing manual work through automation" style="color: grey;"></p>
+
+          <p><label>Error Reduction Costs (Rs)</label>
+          <input name="business_requirement[business_benefit_data][cost_avoidance][error]" class="form-control" placeholder="Avoiding rework and inefficiencies." style="color: grey;"></p>
+
+          <p><label>Preventive Maintenance (Rs)</label>
+          <input name="business_requirement[business_benefit_data][cost_avoidance][maintenance]" class="form-control" placeholder="Reducing downtime and repair costs." style="color: grey;"></p>
+        `,
+        "Increased Revenue": `
+          <p><label>Sales Growth Impact (Rs)</label>
+          <input name="business_requirement[business_benefit_data][increased_revenue][sales]" class="form-control" placeholder="Expected revenue increase from new customers" style="color: grey;"></p>
+
+          <p><label>Additional Revenue (Rs)</label>
+          <input name="business_requirement[business_benefit_data][increased_revenue][additional]" class="form-control" placeholder="Revenue from expanded offerings" style="color: grey;"></p>
+        `,
+        "Financial Benefits": `
+          <p><label>Cost Reduction Savings (Rs)</label>
+          <input name="business_requirement[business_benefit_data][financial][cost_reduction]" class="form-control" placeholder="Lower operational or procurement costs" style="color: grey;"></p>
+
+          <p><label>Return on Investment (ROI %)</label>
+          <input name="business_requirement[business_benefit_data][financial][roi]" class="form-control" placeholder="Expected ROI from the project" style="color: grey;"></p>
+
+          <p><label>Profit Margin Improvement (+%)</label>
+          <input name="business_requirement[business_benefit_data][financial][profit]" class="form-control" placeholder="Increase in profitability post implementation" style="color: grey;"></p>
+        `,
+        "IT & Cybersecurity": `
+          <p><label>Security Breach Prevention</label>
+          <input name="business_requirement[business_benefit_data][it_security][breach]" class="form-control" placeholder="Avoiding financial losses from cyberattacks" style="color: grey;"></p>
+
+          <p><label>Software License Optimization</label>
+          <input name="business_requirement[business_benefit_data][it_security][license]" class="form-control" placeholder="Preventing unnecessary software purchases" style="color: grey;"></p>
+
+          <p><label>Cloud Cost Management (Rs)</label>
+          <input name="business_requirement[business_benefit_data][it_security][cloud]" class="form-control" placeholder="Optimizing cloud resources to prevent overspending" style="color: grey;"></p>
+        `
+      };
+
+      selectedOptions.forEach(option => {
+        if (fields[option]) {
+          const section = document.createElement('div');
+          section.innerHTML = `<fieldset><legend>${option}</legend>${fields[option]}</fieldset>`;
+          benefitFieldsDiv.appendChild(section);
+
+          // Prefill values if present
+          const key = option.toLowerCase().replace(/[\s&]/g, '_'); // e.g., "Staff Time Saved" => "staff_time_saved"
+          const dataKey = Object.keys(savedData).find(k => option.toLowerCase().includes(k.replace(/_/g, ' ')));
+
+          if (dataKey && savedData[dataKey]) {
+            const inputs = section.querySelectorAll('input');
+            inputs.forEach(input => {
+              const nameMatch = input.name.match(/\[(\w+)\]$/); // get the inner field name
+              if (nameMatch && savedData[dataKey][nameMatch[1]]) {
+                input.value = savedData[dataKey][nameMatch[1]];
+              }
+            });
+          }
+        }
+      });
+    }
+
+    benefitSelect.addEventListener('change', function () {
+      const selected = Array.from(this.selectedOptions).map(opt => opt.value);
+      renderBenefitFields(selected);
+    });
+
+    const preSelected = Array.from(benefitSelect.selectedOptions).map(opt => opt.value);
+    renderBenefitFields(preSelected);
+  });
+</script>
+
+
           

@@ -30,8 +30,6 @@ Rails.application.routes.draw do
   end
 
 
-
-
   root to: 'my#page', as: 'home'
   get 'it_project_dashboard', :to => 'welcome#it_project_dashboard'
   get 'non_it_project_dashboard', :to => 'welcome#non_it_project_dashboard'
@@ -160,7 +158,8 @@ Rails.application.routes.draw do
   # Specific routes for issue watchers API
   post 'issues/:object_id/watchers', :to => 'watchers#create', :object_type => 'issue'
   delete 'issues/:object_id/watchers/:user_id' => 'watchers#destroy', :object_type => 'issue'
-  resources :work_allocations, only: [:update, :destroy]
+  resources :work_allocations, only: [:create, :update, :destroy]
+
 
   resources :business_requirements do
     resources :br_stakeholders, only: [:new, :create, :edit, :update, :destroy]

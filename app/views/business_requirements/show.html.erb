@@ -28,7 +28,27 @@
       <li><span class="label">Project Identifier: <%=  link_to @business_requirement.requirement_case, project_path(@business_requirement.project_identifier) %></span></li>
     <% end %>
     
-  
+    <% if @business_requirement.business_benefit_data.present? %>
+      <li><strong>Business Benefit Details:</strong>
+        <ul>
+          <% @business_requirement.business_benefit_data.each do |category, fields| %>
+            <% if fields.present? && fields.values.any?(&:present?) %>
+              <li>
+                <strong><%= category.to_s.humanize %>:</strong>
+                <ul>
+                  <% fields.each do |field, value| %>
+                    <% if value.present? %>
+                      <li><%= field.to_s.humanize %>: <%= value %></li>
+                    <% end %>
+                  <% end %>
+                </ul>
+              </li>
+            <% end %>
+          <% end %>
+        </ul>
+      </li>
+    <% end %>
+
     
     <% if @business_requirement.cost_benefits.present? %>
       <li><span class="label">Cost Benefits: <%= @business_requirement.cost_benefits %></span></li>
@@ -124,6 +144,10 @@
                   <%= link_to 'Edit', edit_business_requirement_path(@business_requirement), class: 'btn btn-warning btn-sm', title: 'Edit business_requirementD' %> 
         <%= link_to "Hold", "#", class: 'btn btn-primary', id: "holdLink" %>
         <%= link_to "Decline", "#", class: 'btn btn-primary', id: "declineLink" %>
+        <%= link_to "Awaiting Details", "#", class: 'btn btn-primary', id: "awaitingDetailsLink" %>
+        <%= link_to "Awaiting Business Case", "#", class: 'btn btn-primary', id: "awaitingBusinessCaseLink" %>
+        <%= link_to "In Discussion", "#", class: 'btn btn-primary', id: "inDiscussionLink" %>
+        <%= link_to "Requirement Finalized", "#", class: 'btn btn-primary', id: "requirementFinalizedLink" %>
         <%= link_to "Accept", "#", class: 'btn btn-success btn-sm', id: "acceptLink", title: "Accept Business Requirement" %>
         <%= link_to 'Dashboard', business_requirements_path, class: 'btn btn-secondary' %>
     </div>
